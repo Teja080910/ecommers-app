@@ -1,0 +1,12 @@
+[
+  { "id": 1, "name": "Veg Thali" },
+  { "id": 2, "name": "Main Course" },
+  { "id": 3, "name": "Breads" },
+  { "id": 4, "name": "Paratha" },
+  { "id": 5, "name": "Salad" },
+  { "id": 6, "name": "Raita" },
+  { "id": 7, "name": "Poori & Bhatura" },
+  { "id": 8, "name": "Rice" },
+  { "id": 9, "name": "Juice" },
+  { "id": 10, "name": "Sweets" }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Ready To Cook",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfvGh3WvK9NknLMCS-kW4QW24fKvLdQ4e08g&s"
+  },
+  {
+    "id": 2,
+    "name": "Cut Vegetables",
+    "image": "https://hasora.in/cdn/shop/products/DSC02415.jpg?v=1617272454"
+  },
+  {
+    "id": 3,
+    "name": "Vegetables",
+    "image": "https://png.pngtree.com/png-clipart/20241016/original/pngtree-fruit-and-vegetable-png-image_16343587.png"
+  },
+  {
+    "id": 4,
+    "name": "Exotic Vegetables",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2ZK0aBG_I2bid-t2cWlQw8jqh5MvQGMhoJg&s"
+  },
+  {
+    "id": 5,
+    "name": "Exotic Fruits",
+    "image": "https://png.pngtree.com/png-clipart/20240430/original/pngtree-tropical-fruits-exotic-berries-of-fruitarian-diet-png-image_14977729.png"
+  },
+  {
+    "id": 6,
+    "name": "Paneer & Others",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGNm2J8nTP7Ea5TymVjWfGP2PIm1pIX78ylw&s"
+  },
+  {
+    "id": 7,
+    "name": "Bread",
+    "image": "https://creativewithmedia.com/Ecommerce/www.jiomart.com/images/product/420x420/491127282/britannia-100-whole-wheat-bread-400-g-0-20200604.jpg"
+  },
+  {
+    "id": 8,
+    "name": "Organic Grocery",
+    "image": "https://www.cnet.com/a/img/resize/dbed84cf05d4062585e920c5ceec6e521be24711/hub/2022/11/08/db7191db-b197-4375-b042-cdbab4d3cec7/screen-shot-2022-11-08-at-1-49-01-pm.png?auto=webp&fit=crop&height=900&width=1200"
+  }
+]

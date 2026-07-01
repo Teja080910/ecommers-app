@@ -1,0 +1,114 @@
+[
+  {
+    "category_id": 1,
+    "products": [
+      { "name": "Adrakhi Aloo Gobhi", "price": 50, "type": "fixed" },
+      { "name": "Aloo Shimla Mirch Dry", "price": 70, "type": "fixed" },
+      { "name": "Aloo Sem Dry", "price": 45, "type": "fixed" },
+      { "name": "Aloo Baigan Dry", "price": 70, "type": "fixed" },
+      { "name": "Aloo Palak", "price": 75, "type": "fixed" },
+      { "name": "Aloo Jeera Dry", "price": 35, "type": "fixed" },
+      { "name": "Aloo Tamatar Gravy", "price": 45, "type": "fixed" },
+      { "name": "Aloo Matar Tamatar Gravy", "price": 70, "type": "fixed" },
+      { "name": "Aloo Beans Dry", "price": 60, "type": "fixed" },
+      { "name": "Aloo Matar Dry", "price": 45, "type": "fixed" },
+      { "name": "Aloo Methi", "price": 50, "type": "fixed" },
+      { "name": "Arbi Masala Dry", "price": 60, "type": "fixed" },
+      { "name": "Gajar Matar", "price": 60, "type": "fixed" },
+      { "name": "Patta Gobhi Aloo", "price": 65, "type": "fixed" },
+      { "name": "Phool Gobhi Matar", "price": 75, "type": "fixed" },
+      { "name": "Khatta Meetha Kaddu", "price": 35, "type": "fixed" },
+      { "name": "Karela Fry", "price": 50, "type": "fixed" },
+      { "name": "Bhindi Masala", "price": 55, "type": "fixed" },
+      { "name": "Baigan Bharta Dry", "price": 75, "type": "fixed" },
+      { "name": "Mix Veg", "price": 80, "type": "fixed" },
+      { "name": "Mooli ki Bhurji", "price": 65, "type": "fixed" }
+    ]
+  },
+  {
+    "category_id": 2,
+    "products": [
+      { "name": "Beans Cut", "price": 90, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Bhindi Cut", "price": 120, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Phool Gobhi Cut", "price": 50, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Phool Gobhi Grated", "price": 50, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Patta Gobhi Cut", "price": 40, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Palak Cut", "price": 40, "weight": 350, "unit": "g", "type": "fixed" },
+      { "name": "Methi Cut", "price": 40, "weight": 350, "unit": "g", "type": "fixed" },
+      { "name": "Kaddu Cut", "price": 40, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Garlic Peeled", "price": 120, "weight": 200, "unit": "g", "type": "fixed" },
+      { "name": "Ginger Peeled", "price": 90, "weight": 200, "unit": "g", "type": "fixed" },
+      { "name": "Anar Seeds", "price": 280, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Gajar Cut", "price": 50, "weight": 500, "unit": "g", "type": "fixed" },
+      { "name": "Gajar Grated", "price": 50, "weight": 500, "unit": "g", "type": "fixed" }
+    ]
+  },
+  {
+    "category_id": 3,
+    "products": [
+      { "name": "Aloo Chota", "price_per_kg": 30, "min_weight": 1000, "step": 500, "unit": "g", "type": "weight" },
+      { "name": "Onion", "price_per_kg": 32, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Tamatar Hybrid", "price_per_kg": 40, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Tamatar Desi", "price_per_kg": 35, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Bhindi", "price_per_kg": 85, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Brinjal Long", "price_per_kg": 60, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Gajar Red", "price_per_kg": 45, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Karela", "price_per_kg": 85, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Lauki", "price_per_kg": 40, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Mooli", "price_per_kg": 35, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Palak", "price_per_kg": 30, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Phool Gobhi", "price_per_kg": 60, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Patta Gobhi", "price_per_kg": 40, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Shimla Mirch", "price_per_kg": 65, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" }
+    ]
+  },
+  {
+    "category_id": 4,
+    "products": [
+      { "name": "Baby Corn", "price": 40, "type": "packet" },
+      { "name": "Mushroom", "price": 55, "type": "packet" },
+      { "name": "Broccoli", "price_per_kg": 220, "min_weight": 250, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Capsicum Red/Yellow", "price": 30, "weight": 100, "unit": "g", "type": "fixed" },
+      { "name": "Sweet Corn", "price": 25, "type": "packet" },
+      { "name": "Sprouts", "price": 15, "type": "packet" },
+      { "name": "Salad Patta", "price": 20, "weight": 100, "unit": "g", "type": "fixed" }
+    ]
+  },
+  {
+    "category_id": 5,
+    "products": [
+      { "name": "Anar", "price_per_kg": 280, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Apple Adani", "price_per_kg": 220, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Apple Fuji", "price_per_kg": 350, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Banana", "price_per_kg": 80, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Papaya", "price_per_kg": 70, "min_weight": 500, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Kiwi", "price": 140, "type": "fixed" },
+      { "name": "Watermelon", "price_per_kg": 25, "min_weight": 1000, "step": 500, "unit": "g", "type": "weight" }
+    ]
+  },
+  {
+    "category_id": 6,
+    "products": [
+      { "name": "Fresh Paneer", "price_per_kg": 300, "min_weight": 250, "step": 250, "unit": "g", "type": "weight" },
+      { "name": "Khoya", "price_per_kg": 400, "min_weight": 250, "step": 250, "unit": "g", "type": "weight" }
+    ]
+  },
+  {
+    "category_id": 7,
+    "products": [
+      { "name": "Atta Bread", "price": 55, "type": "fixed" },
+      { "name": "Brown Bread", "price": 55, "type": "fixed" },
+      { "name": "White Bread", "price": 30, "type": "fixed" },
+      { "name": "Burger Bun", "price": 45, "type": "fixed" },
+      { "name": "Pav Bun", "price": 40, "type": "fixed" },
+      { "name": "Pizza Base", "price": 48, "type": "fixed" }
+    ]
+  },
+  {
+    "category_id": 8,
+    "products": [
+      { "name": "Lal Mirch Achar", "price": 99, "type": "fixed" },
+      { "name": "Chana Sattu", "price": 150, "type": "fixed" }
+    ]
+  }
+]

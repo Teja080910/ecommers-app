@@ -1,0 +1,59 @@
+[
+  { "id": 1, "name": "Veg Thali", "price": 80, "category_id": 1 },
+  { "id": 2, "name": "Deluxe Thali", "price": 120, "category_id": 1 },
+
+  { "id": 3, "name": "Matar Paneer", "half_price": 120, "full_price": 170, "category_id": 2 },
+  { "id": 4, "name": "Kadai Paneer", "half_price": 120, "full_price": 170, "category_id": 2 },
+  { "id": 5, "name": "Shahi Paneer", "half_price": 120, "full_price": 170, "category_id": 2 },
+  { "id": 6, "name": "Mix Veg", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 7, "name": "Dal Makhani", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 8, "name": "Dal Tadka", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 9, "name": "Aloo Jeera Dry", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 10, "name": "Rajma", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 11, "name": "Chole", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 12, "name": "Kadhi Pakoda", "half_price": 80, "full_price": 120, "category_id": 2 },
+  { "id": 13, "name": "Mix Kofta", "half_price": 80, "full_price": 120, "category_id": 2 },
+
+  { "id": 14, "name": "Tawa Roti", "price": 10, "category_id": 3 },
+  { "id": 15, "name": "Tawa Butter Roti", "price": 15, "category_id": 3 },
+
+  { "id": 16, "name": "Paneer Paratha With Curd", "price": 60, "category_id": 4 },
+  { "id": 17, "name": "Aloo Paratha With Curd", "price": 40, "category_id": 4 },
+  { "id": 18, "name": "Mix Paratha With Curd", "price": 50, "category_id": 4 },
+
+  { "id": 19, "name": "Mix Fruit Salad", "price": 50, "category_id": 5 },
+  { "id": 20, "name": "Papaya Salad", "price": 50, "category_id": 5 },
+  { "id": 21, "name": "Vegetables Salad", "price": 30, "category_id": 5 },
+
+  { "id": 22, "name": "Veg Raita", "price": 30, "category_id": 6 },
+
+  { "id": 23, "name": "Aloo Poori Sabji (6pc)", "price": 50, "category_id": 7 },
+  { "id": 24, "name": "Chole Bhature (2pc)", "price": 80, "category_id": 7 },
+  { "id": 25, "name": "Extra Poori (1pc)", "price": 10, "category_id": 7 },
+  { "id": 26, "name": "Extra Bhatura (1pc)", "price": 20, "category_id": 7 },
+
+  { "id": 27, "name": "Plain Rice", "price": 40, "category_id": 8 },
+  { "id": 28, "name": "Jeera Rice", "price": 50, "category_id": 8 },
+  { "id": 29, "name": "Veg Biryani", "price": 80, "category_id": 8 },
+  { "id": 30, "name": "Rajma Chawal", "price": 80, "category_id": 8 },
+  { "id": 31, "name": "Kadhi Chawal", "price": 80, "category_id": 8 },
+  { "id": 32, "name": "Chole Chawal", "price": 80, "category_id": 8 },
+  { "id": 33, "name": "Dal Makhani with Chawal", "price": 80, "category_id": 8 },
+  { "id": 34, "name": "Dal Tadka with Chawal", "price": 80, "category_id": 8 },
+
+  { "id": 35, "name": "Mango Shake", "price": 50, "category_id": 9 },
+  { "id": 36, "name": "Banana Shake", "price": 50, "category_id": 9 },
+  { "id": 37, "name": "Mix Fruit Juice", "price": 50, "category_id": 9 },
+  { "id": 38, "name": "Anar Juice", "price": 50, "category_id": 9 },
+  { "id": 39, "name": "Mix Veg Juice", "price": 50, "category_id": 9 },
+  { "id": 40, "name": "Watermelon Juice", "price": 50, "category_id": 9 },
+  { "id": 41, "name": "Lemon Shikanji", "price": 20, "category_id": 9 },
+  { "id": 42, "name": "Mineral Water", "price": 0, "category_id": 9, "note": "MRP" },
+  { "id": 43, "name": "Coke", "price": 0, "category_id": 9, "note": "MRP" },
+  { "id": 44, "name": "Pepsi", "price": 0, "category_id": 9, "note": "MRP" },
+  { "id": 45, "name": "Thums Up", "price": 0, "category_id": 9, "note": "MRP" },
+
+  { "id": 46, "name": "Gulab Jamun (1pc)", "price": 15, "category_id": 10 },
+  { "id": 47, "name": "Fruit Custard (250ml)", "price": 40, "category_id": 10 },
+  { "id": 48, "name": "Halwa (250gm)", "price": 50, "category_id": 10 }
+]

@@ -1,0 +1,11 @@
+Array
+(
+    [action] => place_order
+    [user_id] => 10
+    [address_id] => 8
+    [coupon_code] => 
+    [discount_amount] => 0.0
+    [subtotal] => 12499.0
+    [total_amount] => 12549.0
+    [payment_method] => wallet
+)
