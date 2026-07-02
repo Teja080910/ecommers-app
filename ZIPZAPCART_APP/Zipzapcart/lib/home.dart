@@ -19,7 +19,6 @@ import 'view_product.dart';
 import 'search.dart';
 import 'topdeals.dart';
 import 'translator_service.dart';
-import 'widgets/shimmer_card.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -303,7 +302,7 @@ class _HomePageState extends State<HomePage> {
 
     banners = await ApiService.getBanners();
 
-    portraitBanners = await ApiService.getOnboardingBanners();
+    portraitBanners = await ApiService.getPortraitBanners();
 
     categories =
     await ApiService.getCategories();
@@ -351,8 +350,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // 🔥 LANDSCAPE CARD FOR TOP DEALS ROW
-  // 🔥 PORTRAIT HERO CAROUSEL (left column)
+  // 🔥 PORTRAIT HERO CAROUSEL (top section, local bundled assets)
   Widget _portraitCarousel() {
 
     if (portraitBanners.isEmpty) {
@@ -374,7 +372,9 @@ class _HomePageState extends State<HomePage> {
           return Container(
             width: _portraitCardWidth,
             margin: EdgeInsets.only(
-              right: i == portraitBanners.length - 1 ? 0 : _bannerCardGap,
+              right: i == portraitBanners.length - 1
+                  ? 0
+                  : _bannerCardGap,
             ),
 
             decoration: BoxDecoration(
@@ -1057,35 +1057,9 @@ class _HomePageState extends State<HomePage> {
       ),
       body: loading
 
-          ? SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: ShimmerBlock(
-                  width: double.infinity,
-                  height: 180,
-                  radius: 28,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              SizedBox(
-                height: 250,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  itemCount: 4,
-                  itemBuilder: (_, __) => const ShimmerProductCard(),
-                ),
-              ),
-            ],
-          ),
+          ? Center(
+        child: CircularProgressIndicator(
+          color: primaryColor,
         ),
       )
           : SafeArea(

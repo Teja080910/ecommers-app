@@ -451,6 +451,32 @@ if ($action == "get_banners") {
 }
 
 /* =====================================
+   GET PORTRAIT BANNERS
+===================================== */
+if ($action == "get_portrait_banners") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM portrait_banners ORDER BY id ASC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "image" => $row['image']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "banners" => $data
+    ]);
+
+    exit;
+}
+
+/* =====================================
    GET MY ORDERS
 ===================================== */
 if ($action == "get_my_orders") {

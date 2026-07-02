@@ -253,6 +253,28 @@ class ApiService {
     }
   }
 
+// 🔥 GET PORTRAIT BANNERS
+  static Future<List> getPortraitBanners() async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_portrait_banners",
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["banners"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
 
 // 🔥 GET CATEGORIES
   static Future<List> getCategories() async {
