@@ -44,6 +44,7 @@ class _HomePageState extends State<HomePage> {
   bool loading = true;
 
   int userId = 0;
+  int cartCount = 0;
   Map? deliveryAddress;
 
   final Set<String> wishlistedIds = {};
@@ -315,9 +316,38 @@ class _HomePageState extends State<HomePage> {
 
     await loadDeliveryAddress();
 
+    await loadCartCount();
+
     setState(() {
       loading = false;
     });
+  }
+
+  Future<void> loadCartCount() async {
+
+    if (userId == 0) {
+      return;
+    }
+
+    final items = await ApiService.getCart(userId);
+
+    cartCount = items.length;
+  }
+
+  Future<void> openCart() async {
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CartPage(),
+      ),
+    );
+
+    await loadCartCount();
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> loadDeliveryAddress() async {
@@ -1081,46 +1111,98 @@ class _HomePageState extends State<HomePage> {
                 ),
 
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+
                   children: [
 
-                    const SizedBox(width: 42),
-
                     Expanded(
-                      child: Center(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
                         child: FittedBox(
                           fit: BoxFit.contain,
                           child: Image.asset(
                             "assets/images/logo.png",
-                            height: 42,
+                            height: 36,
                           ),
                         ),
                       ),
                     ),
 
+                    const SizedBox(width: 12),
+
                     GestureDetector(
 
-                      onTap: () {
+                      onTap: openCart,
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CartPage(),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+
+                        children: [
+
+                          Container(
+                            height: 46,
+                            width: 46,
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F7F7),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFF0F0F0),
+                              ),
+                            ),
+
+                            child: Center(
+                              child: SvgPicture.asset(
+                                "assets/icons/cart.svg",
+
+                                height: 20,
+                                width: 20,
+
+                                colorFilter:
+                                ColorFilter.mode(
+                                  primaryColor,
+                                  BlendMode.srcIn,
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      },
 
-                      child: SvgPicture.asset(
-                        "assets/icons/cart.svg",
+                          if (cartCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
 
-                        height: 22,
-                        width: 22,
+                                constraints: const BoxConstraints(
+                                  minWidth: 20,
+                                  minHeight: 20,
+                                ),
 
-                        colorFilter:
-                        ColorFilter.mode(
-                          primaryColor,
-                          BlendMode.srcIn,
-                        ),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+
+                                child: Center(
+                                  child: Text(
+                                    cartCount > 9 ? "9+" : "$cartCount",
+
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],

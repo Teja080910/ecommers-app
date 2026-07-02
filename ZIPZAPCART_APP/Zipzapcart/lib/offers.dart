@@ -53,24 +53,64 @@ class _OffersPageState extends State<OffersPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.black87,
+        surfaceTintColor: Colors.white,
         title: Text(
           "Offers & Discounts",
           style: GoogleFonts.poppins(
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Colors.black87,
           ),
         ),
       ),
 
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(color: primaryColor),
+      )
           : offers.isEmpty
           ? Center(
-        child: Text(
-          "No offers available right now",
-          style: GoogleFonts.poppins(color: Colors.grey),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+
+            Container(
+              padding: const EdgeInsets.all(24),
+
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+
+              child: Icon(
+                Icons.local_offer_outlined,
+                size: 42,
+                color: primaryColor,
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            Text(
+              "No offers available right now",
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              "Check back later for new deals",
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
         ),
       )
           : ListView.builder(
@@ -87,15 +127,38 @@ class _OffersPageState extends State<OffersPage> {
 
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: primaryColor.withOpacity(0.2),
-                style: BorderStyle.solid,
+                color: const Color(0xFFF0F0F0),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
 
             child: Row(
               children: [
+
+                Container(
+                  padding: const EdgeInsets.all(12),
+
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+
+                  child: Icon(
+                    Icons.sell_rounded,
+                    size: 22,
+                    color: primaryColor,
+                  ),
+                ),
+
+                const SizedBox(width: 14),
 
                 Expanded(
                   child: Column(
@@ -118,6 +181,7 @@ class _OffersPageState extends State<OffersPage> {
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
 
@@ -134,6 +198,8 @@ class _OffersPageState extends State<OffersPage> {
                   ),
                 ),
 
+                const SizedBox(width: 10),
+
                 ElevatedButton(
 
                   onPressed: () {
@@ -143,12 +209,23 @@ class _OffersPageState extends State<OffersPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
 
-                  child: const Text("Apply"),
+                  child: Text(
+                    "Apply",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ],
             ),

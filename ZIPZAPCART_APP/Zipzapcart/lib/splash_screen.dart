@@ -15,13 +15,35 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState
-    extends State<SplashScreen> {
+    extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
 
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+
+    _fadeController.forward();
+
     goNext();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> goNext() async {
@@ -63,9 +85,18 @@ class _SplashScreenState
 
       context,
 
-      MaterialPageRoute(
-        builder:
-            (_) => nextPage,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 550),
+
+        pageBuilder: (_, animation, __) => nextPage,
+
+        transitionsBuilder: (_, animation, __, child) {
+
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
       ),
     );
   }
@@ -78,126 +109,22 @@ class _SplashScreenState
     return Scaffold(
 
       backgroundColor:
-      Colors.white,
+      Colors.black,
 
-      body:
+      body: FadeTransition(
 
-      Center(
+        opacity: _fadeAnimation,
 
-        child:
+        child: SizedBox.expand(
 
-        Column(
+          child: Image.asset(
 
-          mainAxisAlignment:
-          MainAxisAlignment.center,
+            "assets/images/intro.jpeg",
 
-          children: [
-
-            FittedBox(
-
-              fit: BoxFit.contain,
-
-              child: Image.asset(
-
-                "assets/logo.png",
-
-                width: 220,
-
-              ),
-            ),
-
-            const SizedBox(
-              height: 40,
-            ),
-
-            const _PulsingDotsLoader(
-              color: Color(0xFFEF4138),
-            ),
-
-          ],
+            fit: BoxFit.cover,
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _PulsingDotsLoader extends StatefulWidget {
-
-  final Color color;
-
-  const _PulsingDotsLoader({
-    required this.color,
-  });
-
-  @override
-  State<_PulsingDotsLoader> createState() =>
-      _PulsingDotsLoaderState();
-}
-
-class _PulsingDotsLoaderState
-    extends State<_PulsingDotsLoader>
-    with SingleTickerProviderStateMixin {
-
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  double _scaleFor(int index) {
-
-    final t = (_controller.value - (index * 0.2)) % 1.0;
-
-    final bump = (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
-
-    return 0.6 + (bump * 0.6);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return AnimatedBuilder(
-      animation: _controller,
-
-      builder: (_, __) {
-
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-
-          children: List.generate(3, (index) {
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-
-              child: Transform.scale(
-                scale: _scaleFor(index),
-
-                child: Container(
-                  width: 10,
-                  height: 10,
-
-                  decoration: BoxDecoration(
-                    color: widget.color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            );
-          }),
-        );
-      },
     );
   }
 }

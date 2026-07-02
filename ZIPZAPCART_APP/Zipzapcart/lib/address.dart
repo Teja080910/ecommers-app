@@ -25,7 +25,7 @@ class _AddressPageState
   List addresses = [];
 
   final Color primaryColor =
-  const Color(0xFFDF6907);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -532,13 +532,15 @@ class _AddressPageState
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        surfaceTintColor: Colors.white,
 
-        title: const Text(
+        title: Text(
           "Saved Addresses",
 
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            fontSize: 18,
+            fontSize: 17,
+            color: Colors.black87,
           ),
         ),
 
@@ -608,42 +610,53 @@ class _AddressPageState
 
               const SizedBox(height: 20),
 
-              const Text(
+              Text(
                 "No Saved Address",
 
                 textAlign:
                 TextAlign.center,
 
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight:
-                  FontWeight.w800,
+                  FontWeight.w700,
 
                   color:
-                  Color(0xFF111111),
+                  const Color(0xFF111111),
                 ),
               ),
 
               const SizedBox(height: 8),
 
-              const Text(
-                "You haven’t added any address yet.\nAdd a delivery address to continue shopping.",
+              Text(
+                "You haven't added any address yet.\nAdd a delivery address to continue shopping.",
 
                 textAlign:
                 TextAlign.center,
 
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   color: Colors.black54,
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
 
               const SizedBox(height: 26),
 
-              SizedBox(
+              Container(
                 width: double.infinity,
-                height: 52,
+                height: 54,
+
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.30),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
 
                 child: ElevatedButton(
 
@@ -661,17 +674,17 @@ class _AddressPageState
                     RoundedRectangleBorder(
                       borderRadius:
                       BorderRadius.circular(
-                        14,
+                        16,
                       ),
                     ),
 
                     elevation: 0,
                   ),
 
-                  child: const Text(
+                  child: Text(
                     "Add New Address",
 
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontWeight:
                       FontWeight.w700,
 
@@ -727,7 +740,11 @@ class _AddressPageState
 
                 borderRadius:
                 BorderRadius.circular(
-                  24,
+                  22,
+                ),
+
+                border: Border.all(
+                  color: const Color(0xFFF0F0F0),
                 ),
 
                 boxShadow: [
@@ -736,15 +753,15 @@ class _AddressPageState
                     color:
                     Colors.black
                         .withOpacity(
-                      0.03,
+                      0.05,
                     ),
 
-                    blurRadius: 12,
+                    blurRadius: 18,
 
                     offset:
                     const Offset(
                       0,
-                      4,
+                      8,
                     ),
                   ),
                 ],
