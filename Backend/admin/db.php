@@ -3,8 +3,8 @@
 
 $host = "localhost";
 $dbname = "u272105386_zipzapcart";
-$username = "u272105386_zipzapcart";
-$password = "Heritage@3205";
+$username = "root";
+$password = "";
 
 try{
 

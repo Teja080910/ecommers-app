@@ -92,6 +92,9 @@ class _AddressPageState
     double longitude=0;
 
     bool fetching=false;
+
+    String errorMessage = '';
+
     showModalBottomSheet(
 
       context: context,
@@ -195,23 +198,9 @@ class _AddressPageState
 
               }catch(e){
 
-                ScaffoldMessenger.of(
-                  context,
-                )
-
-                    .showSnackBar(
-
-                  SnackBar(
-
-                    content:
-
-                    Text(
-                      e.toString(),
-                    ),
-
-                  ),
-
-                );
+                setStateSheet((){
+                  errorMessage = e.toString();
+                });
 
               }
 
@@ -296,7 +285,33 @@ class _AddressPageState
                     ),
 
                     const SizedBox(
-                      height: 22,
+                      height: 16,
+                    ),
+
+                    if (errorMessage.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 16),
+
+                        decoration: BoxDecoration(
+                          color: const Color(0x20DC2626),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+
+                        child: Text(
+                          errorMessage,
+
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFFB91C1C),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(
+                      height: 6,
                     ),
 
                     field(
@@ -457,18 +472,11 @@ class _AddressPageState
 
                           } else {
 
-                            ScaffoldMessenger
-                                .of(
-                              context,
-                            )
-                                .showSnackBar(
-                              SnackBar(
-                                content:
-                                Text(
-                                  data["message"],
-                                ),
-                              ),
-                            );
+                            setStateSheet(() {
+                              errorMessage =
+                                  data["message"] ??
+                                  "Failed to save address";
+                            });
                           }
                         },
 

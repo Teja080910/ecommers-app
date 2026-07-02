@@ -93,12 +93,17 @@ class _SplashScreenState
 
           children: [
 
-            Image.asset(
+            FittedBox(
 
-              "assets/logo.png",
+              fit: BoxFit.contain,
 
-              width: 220,
+              child: Image.asset(
 
+                "assets/logo.png",
+
+                width: 220,
+
+              ),
             ),
 
             const SizedBox(

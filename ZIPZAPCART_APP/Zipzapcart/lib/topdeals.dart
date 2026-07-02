@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api_service.dart';
 import 'constants.dart';
 import 'view_product.dart';
+import 'widgets/shimmer_card.dart';
 
 class TopDealsPage
     extends StatefulWidget{
@@ -423,15 +424,15 @@ class _TopDealsPageState
 
           ?
 
-      Center(
+      ListView.builder(
 
-        child:
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
 
-        CircularProgressIndicator(
+        itemCount: 6,
 
-          color:
-          primaryColor,
-
+        itemBuilder: (_, __) => const ShimmerBlock(
+          width: double.infinity,
+          height: 144,
         ),
 
       )

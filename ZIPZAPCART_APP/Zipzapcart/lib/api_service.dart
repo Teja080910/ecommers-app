@@ -1920,4 +1920,79 @@ class ApiService {
       return [];
     }
   }
+
+// 🔥 GET SIMILAR PRODUCTS
+  static Future<List> getSimilarProducts(
+      int subcatId,
+      int excludeId,
+      ) async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_similar_products",
+          "subcat_id": subcatId.toString(),
+          "exclude_id": excludeId.toString(),
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["products"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
+// 🔥 GET OFFERS
+  static Future<List> getOffers() async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_offers",
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["offers"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
+// 🔥 CHECK DELIVERY
+  static Future<Map<String, dynamic>> checkDelivery(
+      String pincode,
+      ) async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "check_delivery",
+          "pincode": pincode,
+        },
+      );
+
+      return json.decode(res.body);
+
+    } catch (e) {
+
+      return {
+        "status": false,
+        "deliverable": false,
+      };
+    }
+  }
 }

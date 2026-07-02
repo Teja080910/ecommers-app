@@ -1,8 +1,8 @@
 <?php
 
 $host = "localhost";        // your server (usually localhost)
-$user = "u272105386_zipzapcart";     // DB username
-$pass = "Heritage@3205"; // DB password
+$user = "root";     // DB username
+$pass = ""; // DB password
 $db   = "u272105386_zipzapcart";     // DB name
 
 $conn = mysqli_connect($host, $user, $pass, $db);

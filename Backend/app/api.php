@@ -1051,6 +1051,44 @@ exit;
 
 }
 /* =====================================
+   GET SIMILAR PRODUCTS
+===================================== */
+if ($action == "get_similar_products") {
+
+    $subcat_id = $_POST['subcat_id'] ?? '';
+    $exclude_id = $_POST['exclude_id'] ?? '';
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM products
+         WHERE subcat_id='$subcat_id'
+         AND id != '$exclude_id'
+         AND stock > 0
+         ORDER BY id DESC
+         LIMIT 10");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "name" => $row['name'],
+            "rate" => $row['rate'],
+            "saleprice" => $row['saleprice'],
+            "image" => $row['image'],
+            "stock" => $row['stock'],
+            "hasvarients" => $row['hasvarients']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "products" => $data
+    ]);
+
+    exit;
+}
+/* =====================================
    HOME CATEGORY PRODUCTS
 ===================================== */
 if ($action == "home_category_products") {
@@ -1503,6 +1541,67 @@ if ($action == "apply_coupon") {
     echo json_encode([
         "status" => true,
         "discount" => $discount
+    ]);
+
+    exit;
+}
+/* =====================================
+   GET OFFERS
+===================================== */
+if ($action == "get_offers") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM coupons
+         WHERE status='active'
+         ORDER BY id DESC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "code" => $row['code'],
+            "discount_type" => $row['discount_type'],
+            "discount_amount" => $row['discount_amount'],
+            "min_amount" => $row['min_amount']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "offers" => $data
+    ]);
+
+    exit;
+}
+/* =====================================
+   CHECK DELIVERY
+===================================== */
+if ($action == "check_delivery") {
+
+    $pincode = $_POST['pincode'] ?? '';
+
+    $deliverable = false;
+
+    if (!empty($pincode)) {
+
+        $check = mysqli_query($conn,
+            "SELECT id FROM service_pincodes
+             WHERE pincode='$pincode'
+             LIMIT 1");
+
+        $deliverable = mysqli_num_rows($check) > 0;
+    }
+
+    $estimate = $deliverable
+        ? date('Y-m-d', strtotime('+1 day'))
+        : null;
+
+    echo json_encode([
+        "status" => true,
+        "deliverable" => $deliverable,
+        "delivery_estimate" => $estimate
     ]);
 
     exit;

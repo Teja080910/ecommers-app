@@ -22,6 +22,11 @@ if(isset($_POST['add_subscription'])){
     $days =
     intval($_POST['days']);
 
+    $audience =
+    in_array($_POST['audience'], ['customer','seller','both'])
+        ? $_POST['audience']
+        : 'customer';
+
     $stmt =
     $pdo->prepare(
 
@@ -30,12 +35,14 @@ if(isset($_POST['add_subscription'])){
     (
     title,
     amount,
-    days
+    days,
+    audience
     )
 
     VALUES
 
     (
+    ?,
     ?,
     ?,
     ?
@@ -47,7 +54,8 @@ if(isset($_POST['add_subscription'])){
 
         $title,
         $amount,
-        $days
+        $days,
+        $audience
     ]);
 
     $success =
@@ -81,7 +89,8 @@ body{
     max-width:700px;
 }
 
-input{
+input,
+select{
     width:100%;
     height:55px;
     border:none;
@@ -149,6 +158,12 @@ type="number"
 name="days"
 placeholder="Days"
 required>
+
+<select name="audience" required>
+<option value="customer">Customer</option>
+<option value="seller">Seller</option>
+<option value="both">Both</option>
+</select>
 
 <button
 type="submit"

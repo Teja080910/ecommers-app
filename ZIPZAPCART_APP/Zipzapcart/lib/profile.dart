@@ -273,6 +273,8 @@ class _ProfilePageState
 
                         Icons.edit,
 
+                        size: 20,
+
                         color:
                         Color(
                           0xFFDF6907,
@@ -914,6 +916,8 @@ class _ProfilePageState
                             child: const Icon(
                               Icons.card_giftcard,
 
+                              size: 20,
+
                               color:
                               Color(
                                 0xFFDF6907,
@@ -1507,6 +1511,7 @@ class _ProfilePageState
 
              Icon(
               Icons.chevron_right_rounded,
+              size: 20,
               color:
 
               isDark

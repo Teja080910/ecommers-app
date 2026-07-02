@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import 'api_service.dart';
 import 'constants.dart';
 import 'view_product.dart';
+import 'widgets/shimmer_card.dart';
 
 class SearchPage
     extends StatefulWidget{
@@ -38,6 +40,60 @@ class _SearchPageState
   const Color(
     0xFFEF4138,
   );
+
+  final stt.SpeechToText _speech = stt.SpeechToText();
+
+  bool _isListening = false;
+
+  Future<void> toggleListening() async {
+
+    if (_isListening) {
+
+      await _speech.stop();
+
+      setState(() {
+        _isListening = false;
+      });
+
+      return;
+    }
+
+    final available = await _speech.initialize();
+
+    if (!available) {
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+
+    _speech.listen(
+      onResult: (result) {
+
+        controller.text = result.recognizedWords;
+
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
+
+        if (result.finalResult) {
+
+          setState(() {
+            _isListening = false;
+          });
+
+          search();
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _speech.stop();
+    super.dispose();
+  }
 
   Future search()
   async{
@@ -508,7 +564,7 @@ class _SearchPageState
 
                 decoration:
 
-                const InputDecoration(
+                InputDecoration(
 
                   border:
                   InputBorder.none,
@@ -517,8 +573,24 @@ class _SearchPageState
                   "Search products...",
 
                   icon:
-                  Icon(
+                  const Icon(
                     Icons.search,
+                  ),
+
+                  suffixIcon:
+                  IconButton(
+
+                    onPressed: toggleListening,
+
+                    icon: Icon(
+                      _isListening
+                          ? Icons.mic
+                          : Icons.mic_none,
+
+                      color: _isListening
+                          ? primaryColor
+                          : Colors.grey,
+                    ),
                   ),
 
                 ),
@@ -537,15 +609,15 @@ class _SearchPageState
 
                 ?
 
-            Center(
+            ListView.builder(
 
-              child:
+              padding: const EdgeInsets.symmetric(horizontal: 18),
 
-              CircularProgressIndicator(
+              itemCount: 6,
 
-                color:
-                primaryColor,
-
+              itemBuilder: (_, __) => const ShimmerBlock(
+                width: double.infinity,
+                height: 110,
               ),
 
             )

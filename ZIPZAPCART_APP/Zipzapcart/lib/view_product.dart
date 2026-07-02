@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'api_service.dart';
 import 'cart.dart';
 import 'checkout.dart';
@@ -50,13 +51,29 @@ class _ViewProductPageState
 
   List images = [];
 
+  List similarProducts = [];
+
+  bool deliverable = false;
+  String? deliveryEstimate;
+
   final TextEditingController reviewController =
   TextEditingController();
 
   double userRating = 5;
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
+
+  List<String> get productHighlights {
+
+    final lines = selectedDescription
+        .split(RegExp(r'\r\n|\n|\r'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+
+    return lines.take(6).toList();
+  }
 
   @override
   void initState() {
@@ -162,11 +179,60 @@ class _ViewProductPageState
               .split(","),
         );
       }
+
+      loadSimilarProducts();
+      loadDeliveryEstimate();
     }
 
     setState(() {
       loading = false;
     });
+  }
+
+  Future<void> loadSimilarProducts() async {
+
+    final subcatId = int.tryParse(
+      product["subcat_id"].toString(),
+    );
+
+    if (subcatId == null) {
+      return;
+    }
+
+    final list = await ApiService.getSimilarProducts(
+      subcatId,
+      widget.productId,
+    );
+
+    if (mounted) {
+      setState(() {
+        similarProducts = list;
+      });
+    }
+  }
+
+  Future<void> loadDeliveryEstimate() async {
+
+    final address = await ApiService.getDefaultAddress(userId);
+
+    if (address["status"] != true || address["address"] == null) {
+      return;
+    }
+
+    final pincode = address["address"]["pincode"]?.toString() ?? "";
+
+    if (pincode.isEmpty) {
+      return;
+    }
+
+    final result = await ApiService.checkDelivery(pincode);
+
+    if (mounted) {
+      setState(() {
+        deliverable = result["deliverable"] == true;
+        deliveryEstimate = result["delivery_estimate"]?.toString();
+      });
+    }
   }
 
   Future<void> addToCart({
@@ -292,7 +358,29 @@ class _ViewProductPageState
                   ? Icons.favorite
                   : Icons.favorite_border,
 
+              size: 20,
               color: Colors.red,
+            ),
+          ),
+
+          IconButton(
+
+            onPressed: () {
+
+              SharePlus.instance.share(
+                ShareParams(
+                  text:
+                  "${product["name"] ?? "Check this product"} - "
+                  "${AppConstants.imageUrl}${product["image"] ?? ""}\n\n"
+                  "Get the app: ${AppConstants.imageUrl}",
+                ),
+              );
+            },
+
+            icon: const Icon(
+              Icons.share,
+              size: 20,
+              color: Colors.black87,
             ),
           ),
         ],
@@ -749,6 +837,46 @@ class _ViewProductPageState
                     ),
                   ),
 
+                  // 🔥 DELIVERY ESTIMATE
+                  if (deliverable && deliveryEstimate != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+
+                            const Icon(
+                              Icons.local_shipping_outlined,
+                              size: 16,
+                              color: Colors.black87,
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            Text(
+                              "Delivery by $deliveryEstimate",
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                   // 🔥 VARIANTS
                   if (variants.isNotEmpty)
                     Column(
@@ -900,6 +1028,54 @@ class _ViewProductPageState
                     ),
 
                   const SizedBox(height: 30),
+
+                  // 🔥 HIGHLIGHTS
+                  if (productHighlights.isNotEmpty) ...[
+
+                    Text(
+                      "Highlights",
+
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    ...productHighlights.map(
+
+                          (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            Icon(
+                              Icons.check_circle,
+                              size: 16,
+                              color: primaryColor,
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            Expanded(
+                              child: Text(
+                                line,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+                  ],
 
                   // 🔥 DESCRIPTION
                   Text(
@@ -1181,6 +1357,110 @@ class _ViewProductPageState
                       );
                     },
                   ),
+
+                  if (similarProducts.isNotEmpty) ...[
+
+                    const SizedBox(height: 30),
+
+                    Text(
+                      "Similar Products",
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    SizedBox(
+                      height: 230,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: similarProducts.length,
+                        itemBuilder: (_, index) {
+
+                          final item = similarProducts[index];
+
+                          return GestureDetector(
+
+                            onTap: () {
+
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ViewProductPage(
+                                    productId: int.parse(
+                                      item["id"].toString(),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+
+                            child: Container(
+                              width: 150,
+                              margin: const EdgeInsets.only(right: 12),
+
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(18),
+                                    ),
+                                    child: Image.network(
+                                      AppConstants.imageUrl +
+                                          (item["image"] ?? ""),
+                                      height: 130,
+                                      width: 150,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+
+                                  Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+
+                                        Text(
+                                          item["name"] ?? "",
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 6),
+
+                                        Text(
+                                          "₹${item["saleprice"] ?? item["rate"] ?? ""}",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 120),
                 ],
