@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -65,7 +65,7 @@ class _CheckoutPageState
   TextEditingController();
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -205,7 +205,11 @@ class _CheckoutPageState
         context,
         MaterialPageRoute(
           builder: (_) =>
-          const OrderPlacedPage(),
+          OrderPlacedPage(
+            orderId: int.parse(
+              order["order_id"].toString(),
+            ),
+          ),
         ),
       );
     }
@@ -1075,7 +1079,11 @@ class _CheckoutPageState
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                      const OrderPlacedPage(),
+                      OrderPlacedPage(
+                        orderId: int.parse(
+                          order["order_id"].toString(),
+                        ),
+                      ),
                     ),
                   );
 
@@ -1108,7 +1116,7 @@ class _CheckoutPageState
             ),
 
             child: Text(
-              "Place Order ₹$finalTotal",
+              "Place Order ${AppConstants.formatPrice(finalTotal)}",
 
               style:
               GoogleFonts.poppins(
@@ -1469,7 +1477,7 @@ class _CheckoutPageState
                             ),
 
                             Text(
-                              "₹${item["saleprice"]}",
+                              AppConstants.formatPrice(item["saleprice"]),
 
                               style:
                               GoogleFonts.poppins(
@@ -1640,7 +1648,7 @@ class _CheckoutPageState
 
                       Text(
 
-                        "Wallet (₹${walletBalance.toStringAsFixed(0)})",
+                        "Wallet (${AppConstants.formatPrice(walletBalance)})",
 
                         style:
 
@@ -1751,7 +1759,7 @@ class _CheckoutPageState
                       ),
 
                       Text(
-                        "₹$finalTotal",
+                        AppConstants.formatPrice(finalTotal),
 
                         style:
                         GoogleFonts.poppins(
@@ -1799,7 +1807,7 @@ class _CheckoutPageState
         ),
 
         Text(
-          "₹$value",
+          AppConstants.formatPrice(value),
 
           style:
           GoogleFonts.poppins(

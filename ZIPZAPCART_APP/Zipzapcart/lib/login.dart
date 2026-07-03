@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
-import 'referral.dart';
 import 'api_service.dart';
 import 'home.dart';
 class LoginPage extends StatefulWidget {
@@ -117,30 +116,12 @@ class _LoginPageState extends State<LoginPage> {
 
       setState(() => isLoading = false);
 
-      // 🔥 CHECK SPONSOR CODE
-      if (res["user"]["sponsor_code"] == null ||
-          res["user"]["sponsor_code"].toString().isEmpty) {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReferralPage(
-              userId: int.parse(
-                res["user"]["id"].toString(),
-              ),
-            ),
-          ),
-        );
-
-      } else {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HomePage(),
-          ),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomePage(),
+        ),
+      );
 
     } catch (e) {
 
@@ -763,7 +744,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 10),
 
                         Text(
-                          "India’s Smart Shopping Experience",
+                          "India's Smart Shopping Experience",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.78),
                             fontSize: 12,

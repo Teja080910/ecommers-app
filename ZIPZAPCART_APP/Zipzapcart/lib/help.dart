@@ -152,7 +152,9 @@ class _HelpPageState
 
         child:
 
-        CircularProgressIndicator(),
+        CircularProgressIndicator(
+          color: Color(0xFFEF4138),
+        ),
 
       )
 

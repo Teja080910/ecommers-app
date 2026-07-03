@@ -1,16 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'about.dart';
 import 'address.dart';
 import 'api_service.dart';
 import 'cart.dart';
 import 'category.dart';
 import 'constants.dart';
+import 'help.dart';
+import 'language.dart';
+import 'login.dart';
 import 'myorder.dart';
+import 'notification.dart';
 import 'offers.dart';
 import 'posts.dart';
 import 'profile.dart';
@@ -19,6 +24,9 @@ import 'view_product.dart';
 import 'search.dart';
 import 'topdeals.dart';
 import 'translator_service.dart';
+import 'wallet.dart';
+import 'widgets/shimmer_card.dart';
+import 'wishlist.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -39,6 +47,8 @@ class _HomePageState extends State<HomePage> {
   static const double _landscapeCardWidth = 250;
   static const double _bannerCardGap = 12;
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   int selectedBottom = 0;
 
   bool loading = true;
@@ -46,6 +56,8 @@ class _HomePageState extends State<HomePage> {
   int userId = 0;
   int cartCount = 0;
   Map? deliveryAddress;
+  String userName = "";
+  double walletBalance = 0;
 
   final Set<String> wishlistedIds = {};
 
@@ -54,6 +66,17 @@ class _HomePageState extends State<HomePage> {
   List categories = [];
   List topDeals = [];
   List homeCategories = [];
+  List wishlistProducts = [];
+  List offers = [];
+
+  static const List<Color> _categoryTileColors = [
+    Color(0xFFF3E8FF),
+    Color(0xFFFFE1E9),
+    Color(0xFFFFF4D6),
+    Color(0xFFE3F2FD),
+    Color(0xFFE8F5E9),
+    Color(0xFFFFE9DC),
+  ];
 
   final List<String> bottomIcons = [
     "assets/icons/home.svg",
@@ -295,11 +318,557 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  // 🔥 SECTION HEADER (title + optional "View All" pill)
+  Widget sectionHeader(
+      String title, {
+        VoidCallback? onViewAll,
+      }) {
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+        children: [
+
+          Row(
+            children: [
+              Container(
+                height: 18,
+                width: 4,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              t(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+
+          if (onViewAll != null)
+            GestureDetector(
+              onTap: onViewAll,
+
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    t(
+                      "View All",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 10,
+                      color: primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 🔥 OFFER COUPON CARD
+  Widget offerCouponCard(Map offer) {
+
+    final String code = (offer["code"] ?? "").toString();
+
+    final String discountText =
+    offer["discount_type"] == "flat"
+        ? "${AppConstants.formatPrice(offer["discount_amount"])} OFF"
+        : "${offer["discount_amount"]}% OFF";
+
+    return GestureDetector(
+
+      onTap: () async {
+
+        await Clipboard.setData(ClipboardData(text: code));
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Code \"$code\" copied"),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+
+      child: Container(
+        width: 210,
+        margin: const EdgeInsets.only(right: 14),
+        padding: const EdgeInsets.all(16),
+
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: primaryColor.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            Row(
+              children: [
+                Icon(Icons.sell_rounded, size: 16, color: primaryColor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: t(
+                    discountText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 9,
+              ),
+
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: primaryColor.withOpacity(0.3),
+                  style: BorderStyle.solid,
+                ),
+              ),
+
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      code,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.copy_rounded, size: 13, color: primaryColor),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            t(
+              "Min order ${AppConstants.formatPrice(offer["min_amount"])}",
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 10.5,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🔥 WALLET PILL (dynamic balance, tap opens Wallet / Login)
+  Widget _walletPill() {
+
+    return GestureDetector(
+      onTap: () {
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => userId == 0
+                ? const LoginPage()
+                : const WalletPage(),
+          ),
+        );
+      },
+
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.account_balance_wallet_rounded,
+              size: 15,
+              color: primaryColor,
+            ),
+            const SizedBox(width: 6),
+            t(
+              AppConstants.formatPrice(walletBalance),
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: primaryColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+
+    return ListTile(
+      onTap: onTap,
+
+      leading: Container(
+        height: 38,
+        width: 38,
+
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+
+        child: Icon(icon, size: 18, color: primaryColor),
+      ),
+
+      title: t(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 12,
+        color: Colors.black26,
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+
+    return Drawer(
+      backgroundColor: Colors.white,
+
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+
+          children: [
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [primaryColor, primaryColor.withOpacity(0.85)],
+                ),
+              ),
+
+              child: GestureDetector(
+
+                onTap: () {
+
+                  Navigator.pop(context);
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => userId == 0
+                          ? const LoginPage()
+                          : const ProfilePage(),
+                    ),
+                  );
+                },
+
+                child: Row(
+                  children: [
+
+                    Container(
+                      height: 54,
+                      width: 54,
+
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+
+                      child: Icon(
+                        Icons.person,
+                        size: 28,
+                        color: primaryColor,
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          t(
+                            userId == 0
+                                ? "Login / Sign up"
+                                : (userName.isNotEmpty
+                                    ? userName
+                                    : "My Account"),
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          t(
+                            userId == 0
+                                ? "Tap to access your account"
+                                : "View & edit profile",
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            _drawerItem(
+              icon: Icons.shopping_bag_outlined,
+              title: "My Orders",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyOrderPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.favorite_border,
+              title: "Wishlist",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WishlistPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.account_balance_wallet_outlined,
+              title: "My Wallet",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        userId == 0 ? const LoginPage() : const WalletPage(),
+                  ),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.notifications_none_rounded,
+              title: "Notifications",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.language_rounded,
+              title: "Language",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LanguagePage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.support_agent_rounded,
+              title: "Help & Support",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HelpPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.info_outline_rounded,
+              title: "About Us",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AboutPage()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 10),
+
+            if (userId != 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+
+                child: GestureDetector(
+
+                  onTap: () async {
+
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear();
+
+                    if (!mounted) return;
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                    );
+                  },
+
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F0),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFFD8D4)),
+                    ),
+
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          size: 16,
+                          color: Color(0xFFE53935),
+                        ),
+                        const SizedBox(width: 8),
+                        t(
+                          "Logout",
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE53935),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> loadData() async {
 
     final prefs = await SharedPreferences.getInstance();
 
     userId = prefs.getInt("user_id") ?? 0;
+    userName = prefs.getString("name") ?? "";
 
     banners = await ApiService.getBanners();
 
@@ -314,13 +883,48 @@ class _HomePageState extends State<HomePage> {
     homeCategories =
     await ApiService.getHomeCategoryProducts();
 
+    offers = await ApiService.getOffers();
+
     await loadDeliveryAddress();
 
     await loadCartCount();
 
+    await loadWallet();
+
+    await loadWishlist();
+
     setState(() {
       loading = false;
     });
+  }
+
+  Future<void> loadWishlist() async {
+
+    if (userId == 0) {
+      return;
+    }
+
+    wishlistProducts = await ApiService.getWishlist(userId);
+
+    wishlistedIds
+      ..clear()
+      ..addAll(
+        wishlistProducts.map((e) => e["id"].toString()),
+      );
+  }
+
+  Future<void> loadWallet() async {
+
+    if (userId == 0) {
+      return;
+    }
+
+    final data = await ApiService.getWallet();
+
+    if (data["status"] == true) {
+      walletBalance =
+          double.tryParse(data["wallet_balance"].toString()) ?? 0;
+    }
   }
 
   Future<void> loadCartCount() async {
@@ -497,6 +1101,9 @@ class _HomePageState extends State<HomePage> {
         ? (((rate - saleprice) / rate) * 100).round()
         : 0;
 
+    final stock = int.tryParse(item["stock"]?.toString() ?? "");
+    final lowStock = stock != null && stock > 0 && stock <= 5;
+
     return GestureDetector(
 
       onTap: () {
@@ -637,12 +1244,14 @@ class _HomePageState extends State<HomePage> {
 
                   const SizedBox(height: 8),
 
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    spacing: 6,
+                    runSpacing: 2,
                     children: [
 
                       Text(
-                        "₹${saleprice.toStringAsFixed(0)}",
+                        AppConstants.formatPrice(saleprice),
                         style: GoogleFonts.poppins(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -651,11 +1260,10 @@ class _HomePageState extends State<HomePage> {
                       ),
 
                       if (hasDiscount) ...[
-                        const SizedBox(width: 6),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 2),
                           child: Text(
-                            "₹${rate.toStringAsFixed(0)}",
+                            AppConstants.formatPrice(rate),
                             style: GoogleFonts.poppins(
                               fontSize: 11.5,
                               decoration: TextDecoration.lineThrough,
@@ -664,9 +1272,45 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            "$discountPercent% off",
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
+
+                  if (lowStock) ...[
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          "Only $stock left",
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -690,6 +1334,9 @@ class _HomePageState extends State<HomePage> {
 
     final isWishlisted = wishlistedIds.contains(id);
     final hasVariants = item["hasvarients"] == "yes";
+
+    final stock = int.tryParse(item["stock"]?.toString() ?? "");
+    final lowStock = stock != null && stock > 0 && stock <= 5;
 
     return GestureDetector(
 
@@ -812,8 +1459,12 @@ class _HomePageState extends State<HomePage> {
                       setState(() {
                         if (isWishlisted) {
                           wishlistedIds.remove(id);
+                          wishlistProducts.removeWhere(
+                                (e) => e["id"].toString() == id,
+                          );
                         } else {
                           wishlistedIds.add(id);
+                          wishlistProducts.add(item);
                         }
                       });
 
@@ -939,16 +1590,19 @@ class _HomePageState extends State<HomePage> {
 
                   const SizedBox(height: 8),
 
-                  Row(
+                  Wrap(
 
                     crossAxisAlignment:
-                    CrossAxisAlignment.end,
+                    WrapCrossAlignment.end,
+
+                    spacing: 6,
+                    runSpacing: 2,
 
                     children:[
 
                       t(
 
-                        "₹${saleprice.toStringAsFixed(0)}",
+                        AppConstants.formatPrice(saleprice),
 
                         maxLines:1,
 
@@ -972,38 +1626,44 @@ class _HomePageState extends State<HomePage> {
 
                       if (hasDiscount) ...[
 
-                        const SizedBox(
-                          width:6,
-                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 1.5),
+                          child: t(
 
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 1.5),
-                            child: t(
+                            AppConstants.formatPrice(rate),
 
-                              "₹${rate.toStringAsFixed(0)}",
+                            maxLines:1,
 
-                              maxLines:1,
+                            overflow:
+                            TextOverflow.ellipsis,
 
-                              overflow:
-                              TextOverflow.ellipsis,
+                            style:
+                            GoogleFonts.poppins(
 
-                              style:
-                              GoogleFonts.poppins(
+                              fontSize:11.5,
 
-                                fontSize:11.5,
+                              decoration:
+                              TextDecoration.lineThrough,
 
-                                decoration:
-                                TextDecoration.lineThrough,
+                              decorationColor: Colors.grey.shade400,
 
-                                decorationColor: Colors.grey.shade400,
-
-                                color:
-                                Colors.grey.shade400,
-
-                              ),
+                              color:
+                              Colors.grey.shade400,
 
                             ),
+
+                          ),
+                        ),
+
+                        t(
+                          "$discountPercent% off",
+
+                          maxLines: 1,
+
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: primaryColor,
                           ),
                         ),
                       ],
@@ -1011,6 +1671,31 @@ class _HomePageState extends State<HomePage> {
                     ],
 
                   ),
+
+                  if (lowStock) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        t(
+                          "Only $stock left",
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1025,9 +1710,13 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
 
+      key: _scaffoldKey,
+
+      drawer: _buildDrawer(),
+
       backgroundColor:
       const Color(
-        0xFFFFFFFF,
+        0xFFF8F8FA,
       ),
       bottomNavigationBar: Container(
         height: 82,
@@ -1087,13 +1776,60 @@ class _HomePageState extends State<HomePage> {
       ),
       body: loading
 
-          ? Center(
-        child: CircularProgressIndicator(
-          color: primaryColor,
+          ? SafeArea(
+        child: SingleChildScrollView(
+
+          physics: const NeverScrollableScrollPhysics(),
+
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              const ShimmerBlock(width: double.infinity, height: 44, radius: 16),
+
+              const SizedBox(height: 16),
+
+              const ShimmerBlock(width: double.infinity, height: 58, radius: 22),
+
+              const SizedBox(height: 22),
+
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 6,
+                  itemBuilder: (_, i) => const ShimmerBlock(width: 74, height: 100, radius: 20),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              const ShimmerBlock(width: double.infinity, height: 220, radius: 20),
+
+              const SizedBox(height: 10),
+
+              SizedBox(
+                height: 250,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 3,
+                  itemBuilder: (_, i) => const ShimmerProductCard(),
+                ),
+              ),
+            ],
+          ),
         ),
       )
           : SafeArea(
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+
+          color: primaryColor,
+
+          onRefresh: loadData,
+
+          child: SingleChildScrollView(
 
           physics:
           const BouncingScrollPhysics(),
@@ -1115,6 +1851,34 @@ class _HomePageState extends State<HomePage> {
 
                   children: [
 
+                    GestureDetector(
+
+                      onTap: () {
+                        _scaffoldKey.currentState?.openDrawer();
+                      },
+
+                      child: Container(
+                        height: 44,
+                        width: 44,
+
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F7F7),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFF0F0F0),
+                          ),
+                        ),
+
+                        child: const Icon(
+                          Icons.menu_rounded,
+                          size: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerLeft,
@@ -1122,13 +1886,16 @@ class _HomePageState extends State<HomePage> {
                           fit: BoxFit.contain,
                           child: Image.asset(
                             "assets/images/logo.png",
-                            height: 36,
+                            height: 32,
                           ),
                         ),
                       ),
                     ),
 
-                    const SizedBox(width: 12),
+                    if (userId != 0) ...[
+                      _walletPill(),
+                      const SizedBox(width: 10),
+                    ],
 
                     GestureDetector(
 
@@ -1218,42 +1985,56 @@ class _HomePageState extends State<HomePage> {
 
                   onTap: openLocationPicker,
 
-                  child: Row(
-                    children: [
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
 
-                      Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: primaryColor,
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF0F0F0)),
+                    ),
 
-                      const SizedBox(width: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
 
-                      Flexible(
-                        child: t(
-                          deliveryAddress != null
-                              ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
-                              : "Select Location",
+                        Icon(
+                          Icons.location_on,
+                          size: 15,
+                          color: primaryColor,
+                        ),
 
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 6),
 
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                        Flexible(
+                          child: t(
+                            deliveryAddress != null
+                                ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
+                                : "Select Location",
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
 
-                      const SizedBox(width: 4),
+                        const SizedBox(width: 4),
 
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 16,
-                        color: Colors.black54,
-                      ),
-                    ],
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1356,34 +2137,23 @@ class _HomePageState extends State<HomePage> {
               ),
 
               const SizedBox(height: 20),
-              Padding(
-                padding:
-                const EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
 
-                child: Row(
-                  children: [
-
-                    t(
-                      "Shop By Category",
-
-                      style:
-                      GoogleFonts.poppins(
-                        fontSize: 15,
-
-                        fontWeight:
-                        FontWeight.w700,
-                      ),
+              sectionHeader(
+                "Shop By Category",
+                onViewAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CategoryPage(),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               SizedBox(
-                height: 122,
+                height: 104,
 
                 child: ListView.builder(
                   scrollDirection:
@@ -1402,6 +2172,9 @@ class _HomePageState extends State<HomePage> {
 
                     final item =
                     categories[index];
+
+                    final tileColor = _categoryTileColors[
+                        index % _categoryTileColors.length];
 
                     return GestureDetector(
 
@@ -1426,7 +2199,7 @@ class _HomePageState extends State<HomePage> {
                       },
 
                       child: Container(
-                        width: 92,
+                        width: 72,
 
                         margin:
                         const EdgeInsets.only(
@@ -1437,57 +2210,34 @@ class _HomePageState extends State<HomePage> {
                           children: [
 
                             Container(
-                              height: 78,
-                              width: 78,
+                              height: 60,
+                              width: 60,
+
+                              padding: const EdgeInsets.all(12),
 
                               decoration:
                               BoxDecoration(
+                                color: tileColor,
                                 borderRadius:
                                 BorderRadius.circular(
-                                  24,
+                                  18,
                                 ),
-
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                    Colors.black
-                                        .withOpacity(
-                                      0.05,
-                                    ),
-
-                                    blurRadius:
-                                    12,
-
-                                    offset:
-                                    const Offset(
-                                      0,
-                                      5,
-                                    ),
-                                  ),
-                                ],
                               ),
 
-                              child: ClipRRect(
-                                borderRadius:
-                                BorderRadius.circular(
-                                  24,
-                                ),
+                              child:
+                              Image.network(
+                                AppConstants
+                                    .imageUrl +
+                                    item[
+                                    "image"],
 
-                                child:
-                                Image.network(
-                                  AppConstants
-                                      .imageUrl +
-                                      item[
-                                      "image"],
-
-                                  fit:
-                                  BoxFit.cover,
-                                ),
+                                fit:
+                                BoxFit.contain,
                               ),
                             ),
 
                             const SizedBox(
-                              height: 10,
+                              height: 8,
                             ),
 
                             t(
@@ -1504,11 +2254,12 @@ class _HomePageState extends State<HomePage> {
 
                               style:
                               GoogleFonts.poppins(
-                                fontSize: 13,
+                                fontSize: 11.5,
 
                                 fontWeight:
                                 FontWeight
                                     .w600,
+                                color: Colors.black87,
                               ),
                             ),
                           ],
@@ -1533,7 +2284,43 @@ class _HomePageState extends State<HomePage> {
                 child: _landscapeCarousel(),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 26),
+
+              // 🔥 OFFERS FOR YOU
+              if (offers.isNotEmpty) ...[
+
+                sectionHeader(
+                  "Offers For You",
+                  onViewAll: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const OffersPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 128,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+
+                    itemCount: offers.length,
+
+                    itemBuilder: (_, index) {
+                      return offerCouponCard(offers[index]);
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+              ],
 
               Padding(
                 padding:
@@ -1555,48 +2342,95 @@ class _HomePageState extends State<HomePage> {
 
                   child: Container(
 
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+                    padding: const EdgeInsets.all(18),
 
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFF0F0F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
 
                     child: Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
-
                       children: [
 
-                        Row(
-                          children: [
+                        Container(
+                          height: 48,
+                          width: 48,
 
-                            Icon(
-                              Icons.local_offer_outlined,
-                              size: 18,
-                              color: primaryColor,
-                            ),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
 
-                            const SizedBox(width: 10),
-
-                            t(
-                              "See all offers & discounts",
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: primaryColor,
-                              ),
-                            ),
-                          ],
+                          child: Icon(
+                            Icons.local_offer_rounded,
+                            size: 22,
+                            color: primaryColor,
+                          ),
                         ),
 
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: primaryColor,
+                        const SizedBox(width: 14),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+
+                              t(
+                                "Exclusive Offers",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                ),
+                              ),
+
+                              const SizedBox(height: 3),
+
+                              t(
+                                "Save more on every order",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+
+                          child: t(
+                            "View",
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1608,80 +2442,19 @@ class _HomePageState extends State<HomePage> {
 
 
 
-              Padding(
-                padding:
-                const EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
-
-                child: Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment
-                      .spaceBetween,
-
-                  children: [
-
-                    t(
-                      "Top Deals",
-
-                      style:
-                      GoogleFonts.poppins(
-                        fontSize: 15,
-
-                        fontWeight:
-                        FontWeight.w700,
-                      ),
+              sectionHeader(
+                "Top Deals",
+                onViewAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TopDealsPage(),
                     ),
-
-                    GestureDetector(
-
-                      onTap:(){
-
-                        Navigator.push(
-
-                          context,
-
-                          MaterialPageRoute(
-
-                            builder:
-                                (_)=>
-
-                            const TopDealsPage(),
-
-                          ),
-
-                        );
-
-                      },
-
-                      child:
-
-                      t(
-
-                        "View All",
-
-                        style:
-
-                        GoogleFonts.poppins(
-
-                          fontSize:13,
-
-                          fontWeight:
-                          FontWeight.w600,
-
-                          color:
-                          primaryColor,
-
-                        ),
-
-                      ),
-
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               SizedBox(
                 height: 150,
@@ -1708,6 +2481,42 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
+              // 🔥 FROM YOUR WISHLIST
+              if (wishlistProducts.isNotEmpty) ...[
+
+                const SizedBox(height: 28),
+
+                sectionHeader(
+                  "From Your Wishlist",
+                  onViewAll: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const WishlistPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 265,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+
+                    itemCount: wishlistProducts.length,
+
+                    itemBuilder: (_, index) {
+                      return productCard(wishlistProducts[index]);
+                    },
+                  ),
+                ),
+              ],
+
               ...List.generate(
                 homeCategories.length,
 
@@ -1730,30 +2539,25 @@ class _HomePageState extends State<HomePage> {
                         height: 28,
                       ),
 
-                      Padding(
-                        padding:
-                        const EdgeInsets.symmetric(
-                          horizontal:
-                          18,
-                        ),
-
-                        child: t(
-                          category["name"],
-
-                          style:
-                          GoogleFonts.poppins(
-                            fontSize:
-                            15,
-
-                            fontWeight:
-                            FontWeight
-                                .w700,
-                          ),
-                        ),
+                      sectionHeader(
+                        category["name"],
+                        onViewAll: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SubCategoryPage(
+                                categoryId: int.parse(
+                                  category["id"].toString(),
+                                ),
+                                categoryName: category["name"],
+                              ),
+                            ),
+                          );
+                        },
                       ),
 
                       const SizedBox(
-                        height: 18,
+                        height: 16,
                       ),
 
                       products.isEmpty
@@ -1781,7 +2585,7 @@ class _HomePageState extends State<HomePage> {
                       )
 
                           : SizedBox(
-                        height: 265,
+                        height: 288,
 
                         child:
                         ListView.builder(
@@ -1966,6 +2770,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,7 +24,7 @@ class _CartPageState
   double total = 0;
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -135,7 +135,7 @@ class _CartPageState
                     ),
 
                     Text(
-                      "₹$total",
+                      AppConstants.formatPrice(total),
 
                       style:
                       GoogleFonts.poppins(
@@ -251,7 +251,7 @@ class _CartPageState
             ),
 
             Text(
-              "Looks like you haven’t\nadded anything yet.",
+              "Looks like you haven't\nadded anything yet.",
 
               textAlign:
               TextAlign.center,
@@ -449,7 +449,7 @@ class _CartPageState
                       ),
 
                       Text(
-                        "₹${item["saleprice"]}",
+                        AppConstants.formatPrice(item["saleprice"]),
 
                         style:
                         GoogleFonts.poppins(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api_service.dart';
@@ -33,7 +33,7 @@ class _ProductListPageState
   String sortType = "default";
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -539,7 +539,7 @@ class _ProductListPageState
 
                         Text(
 
-                          "₹${item["saleprice"]}",
+                          AppConstants.formatPrice(item["saleprice"]),
 
                           maxLines:1,
 
@@ -581,7 +581,7 @@ class _ProductListPageState
 
                           Text(
 
-                            "₹${item["rate"]}",
+                            AppConstants.formatPrice(item["rate"]),
 
                             maxLines:1,
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:lottie/lottie.dart';
 
@@ -187,7 +187,7 @@ class _NotificationPageState
           color:
 
           Color(
-            0xFFDF6907,
+            0xFFEF4138,
           ),
 
         ),
@@ -279,7 +279,7 @@ class _NotificationPageState
         color:
 
         const Color(
-          0xFFDF6907,
+          0xFFEF4138,
         ),
 
         onRefresh:
@@ -377,7 +377,7 @@ class _NotificationPageState
                       color:
 
                       const Color(
-                        0xFFDF6907,
+                        0xFFEF4138,
                       )
 
                           .withOpacity(
@@ -398,7 +398,7 @@ class _NotificationPageState
                       color:
 
                       Color(
-                        0xFFDF6907,
+                        0xFFEF4138,
                       ),
 
                     ),

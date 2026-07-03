@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -750,7 +750,7 @@ class _ViewProductPageState
                     children: [
 
                       Text(
-                        "₹$selectedSaleRate",
+                        AppConstants.formatPrice(selectedSaleRate),
 
                         style:
                         GoogleFonts.poppins(
@@ -767,7 +767,7 @@ class _ViewProductPageState
                       const SizedBox(width: 10),
 
                       Text(
-                        "₹$selectedRate",
+                        AppConstants.formatPrice(selectedRate),
 
                         style:
                         GoogleFonts.poppins(
@@ -1443,7 +1443,7 @@ class _ViewProductPageState
                                         const SizedBox(height: 6),
 
                                         Text(
-                                          "₹${item["saleprice"] ?? item["rate"] ?? ""}",
+                                          AppConstants.formatPrice(item["saleprice"] ?? item["rate"]),
                                           style: GoogleFonts.poppins(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,

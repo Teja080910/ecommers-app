@@ -501,6 +501,24 @@ if ($action == "get_my_orders") {
         $itemData =
         mysqli_fetch_assoc($itemQuery);
 
+        $previewQuery = mysqli_query($conn,
+            "SELECT order_items.quantity, products.name, products.image
+             FROM order_items
+             LEFT JOIN products ON products.id = order_items.product_id
+             WHERE order_items.order_id='".$row['id']."'
+             ORDER BY order_items.id ASC
+             LIMIT 3");
+
+        $previewItems = [];
+
+        while ($p = mysqli_fetch_assoc($previewQuery)) {
+            $previewItems[] = [
+                "name" => $p['name'],
+                "image" => $p['image'],
+                "quantity" => $p['quantity'],
+            ];
+        }
+
         $orders[] = [
 
             "id" => $row['id'],
@@ -525,6 +543,9 @@ if ($action == "get_my_orders") {
 
             "items_count" =>
             $itemData['total'],
+
+            "preview_items" =>
+            $previewItems,
         ];
     }
 

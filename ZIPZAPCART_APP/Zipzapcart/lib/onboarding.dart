@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -119,7 +119,9 @@ class _OnboardingPageState
 
           ? const Center(
         child:
-        CircularProgressIndicator(),
+        CircularProgressIndicator(
+          color: Color(0xFFEF4138),
+        ),
       )
 
           : GestureDetector(

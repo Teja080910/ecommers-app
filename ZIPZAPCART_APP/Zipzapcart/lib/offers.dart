@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api_service.dart';
+import 'constants.dart';
 
 class OffersPage extends StatefulWidget {
 
@@ -37,7 +38,7 @@ class _OffersPageState extends State<OffersPage> {
   String discountText(Map item) {
 
     if (item["discount_type"] == "flat") {
-      return "₹${item["discount_amount"]} OFF";
+      return "${AppConstants.formatPrice(item["discount_amount"])} OFF";
     }
 
     return "${item["discount_amount"]}% OFF";
@@ -188,7 +189,7 @@ class _OffersPageState extends State<OffersPage> {
                       const SizedBox(height: 4),
 
                       Text(
-                        "Min order ₹${item["min_amount"]}",
+                        "Min order ${AppConstants.formatPrice(item["min_amount"])}",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey,

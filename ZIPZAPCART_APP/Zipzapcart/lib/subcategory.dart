@@ -1,4 +1,4 @@
-// 🔥 CREATE subcategory.dart
+﻿// 🔥 CREATE subcategory.dart
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,7 +31,7 @@ class _SubCategoryPageState
   bool loading = true;
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +25,7 @@ class _WishlistPageState
   List products = [];
 
   final Color primaryColor =
-  const Color(0xFFDF6907);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -86,7 +86,9 @@ class _WishlistPageState
 
           ? const Center(
         child:
-        CircularProgressIndicator(),
+        CircularProgressIndicator(
+          color: Color(0xFFEF4138),
+        ),
       )
 
           : products.isEmpty
@@ -361,7 +363,7 @@ class _WishlistPageState
 
                                 Text(
 
-                                  "₹${item["saleprice"]}",
+                                  AppConstants.formatPrice(item["saleprice"]),
 
                                   maxLines:1,
 
@@ -404,7 +406,7 @@ class _WishlistPageState
 
                                   Text(
 
-                                    "₹${item["rate"]}",
+                                    AppConstants.formatPrice(item["rate"]),
 
                                     maxLines:1,
 

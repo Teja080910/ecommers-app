@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -337,7 +337,7 @@ class _SearchPageState
 
                         Text(
 
-                          "₹${item["saleprice"]}",
+                          AppConstants.formatPrice(item["saleprice"]),
 
                           maxLines:1,
 
@@ -379,7 +379,7 @@ class _SearchPageState
 
                           Text(
 
-                            "₹${item["rate"]}",
+                            AppConstants.formatPrice(item["rate"]),
 
                             maxLines:1,
 
