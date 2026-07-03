@@ -101,12 +101,12 @@ class _TopDealsPageState
           14,
           0,
           14,
-          14,
+          10,
         ),
 
         padding:
         const EdgeInsets.all(
-          12,
+          10,
         ),
 
         decoration:
@@ -118,7 +118,7 @@ class _TopDealsPageState
 
           borderRadius:
           BorderRadius.circular(
-            22,
+            16,
           ),
 
           boxShadow:[
@@ -147,13 +147,13 @@ class _TopDealsPageState
 
             Container(
 
-              height:120,
+              height:88,
 
-              width:120,
+              width:88,
 
               padding:
               const EdgeInsets.all(
-                12,
+                8,
               ),
 
               decoration:
@@ -167,7 +167,7 @@ class _TopDealsPageState
 
                 borderRadius:
                 BorderRadius.circular(
-                  18,
+                  14,
                 ),
 
               ),
@@ -189,7 +189,7 @@ class _TopDealsPageState
             ),
 
             const SizedBox(
-              width:14,
+              width:12,
             ),
 
             Expanded(
@@ -216,7 +216,7 @@ class _TopDealsPageState
 
                     GoogleFonts.poppins(
 
-                      fontSize:15,
+                      fontSize:12.5,
 
                       fontWeight:
                       FontWeight.w600,
@@ -226,7 +226,7 @@ class _TopDealsPageState
                   ),
 
                   const SizedBox(
-                    height:12,
+                    height:8,
                   ),
 
                   Row(
@@ -252,7 +252,7 @@ class _TopDealsPageState
 
                           GoogleFonts.poppins(
 
-                            fontSize:20,
+                            fontSize:15.5,
 
                             fontWeight:
                             FontWeight.w800,
@@ -267,7 +267,7 @@ class _TopDealsPageState
                       ),
 
                       const SizedBox(
-                        width:8,
+                        width:6,
                       ),
 
                       Expanded(
@@ -294,7 +294,7 @@ class _TopDealsPageState
 
                             GoogleFonts.poppins(
 
-                              fontSize:13,
+                              fontSize:11,
 
                               decoration:
                               TextDecoration.lineThrough,
@@ -315,12 +315,12 @@ class _TopDealsPageState
                   ),
 
                   const SizedBox(
-                    height:16,
+                    height:8,
                   ),
 
                   Container(
 
-                    height:44,
+                    height:34,
 
                     alignment:
                     Alignment.center,
@@ -334,7 +334,7 @@ class _TopDealsPageState
 
                       borderRadius:
                       BorderRadius.circular(
-                        12,
+                        10,
                       ),
 
                     ),
@@ -354,6 +354,8 @@ class _TopDealsPageState
 
                         fontWeight:
                         FontWeight.w700,
+
+                        fontSize: 11.5,
 
                       ),
 

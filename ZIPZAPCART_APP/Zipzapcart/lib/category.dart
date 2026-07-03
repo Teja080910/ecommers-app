@@ -577,7 +577,19 @@ class _CategoryPageState
 
                             child:
 
-                            Image.network(
+                            (item["image"] == null ||
+                                item["image"]
+                                    .toString()
+                                    .isEmpty)
+
+                                ? Icon(
+                              Icons
+                                  .category_rounded,
+                              color: themeRed
+                                  .withOpacity(0.5),
+                            )
+
+                                : Image.network(
 
                               AppConstants
                                   .imageUrl +
@@ -587,6 +599,15 @@ class _CategoryPageState
 
                               fit:
                               BoxFit.contain,
+
+                              errorBuilder:
+                                  (_, _, _) =>
+                                  Icon(
+                                    Icons
+                                        .category_rounded,
+                                    color: themeRed
+                                        .withOpacity(0.5),
+                                  ),
                             ),
                           ),
                         ),

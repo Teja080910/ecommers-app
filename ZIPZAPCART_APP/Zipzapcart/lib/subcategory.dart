@@ -166,12 +166,36 @@ class _SubCategoryPageState
                         borderRadius:
                         BorderRadius.circular(22),
 
-                        child: Image.network(
+                        child: (item["image"] == null ||
+                            item["image"]
+                                .toString()
+                                .isEmpty)
+
+                            ? Icon(
+                          Icons
+                              .category_rounded,
+                          color:
+                          Colors.grey.shade400,
+                          size: 34,
+                        )
+
+                            : Image.network(
                           AppConstants
                               .imageUrl +
                               item["image"],
 
                           fit: BoxFit.contain,
+
+                          errorBuilder:
+                              (_, _, _) =>
+                              Icon(
+                                Icons
+                                    .category_rounded,
+                                color: Colors
+                                    .grey
+                                    .shade400,
+                                size: 34,
+                              ),
                         ),
                       ),
                     ),

@@ -204,69 +204,93 @@ class _NotificationPageState
 
         child:
 
-        Column(
+        Padding(
 
-          mainAxisAlignment:
+          padding:
+          const EdgeInsets.symmetric(
+            horizontal: 32,
+          ),
 
-          MainAxisAlignment.center,
+          child:
 
-          children:[
+          Column(
 
-            SizedBox(
+            mainAxisAlignment:
 
-              height:220,
+            MainAxisAlignment.center,
 
-              child:
+            children:[
 
-              Lottie.asset(
+              SizedBox(
 
-                "assets/animations/nodata.json",
+                height:200,
 
-              ),
+                child:
 
-            ),
+                Lottie.asset(
 
-            const SizedBox(
-              height:14,
-            ),
+                  "assets/images/nodata.json",
 
-            const Text(
-
-              "No Notifications Yet",
-
-              style:
-
-              TextStyle(
-
-                fontSize:22,
-
-                fontWeight:
-                FontWeight.w800,
+                ),
 
               ),
 
-            ),
+              const SizedBox(
+                height:18,
+              ),
 
-            const SizedBox(
-              height:8,
-            ),
+              const Text(
 
-            const Text(
+                "No Notifications Yet",
 
-              "You'll see updates here",
+                textAlign:
+                TextAlign.center,
 
-              style:
+                style:
 
-              TextStyle(
+                TextStyle(
 
-                color:
-                Colors.grey,
+                  fontSize:18,
+
+                  fontWeight:
+                  FontWeight.w800,
+
+                  color:
+                  Color(0xFF111111),
+
+                ),
 
               ),
 
-            ),
+              const SizedBox(
+                height:8,
+              ),
 
-          ],
+              const Text(
+
+                "You don't have any notifications right now.\nWe'll let you know when something new arrives.",
+
+                textAlign:
+                TextAlign.center,
+
+                style:
+
+                TextStyle(
+
+                  color:
+                  Colors.black54,
+
+                  fontSize:13,
+
+                  height:1.4,
+
+                ),
+
+              ),
+
+            ],
+
+          ),
 
         ),
 

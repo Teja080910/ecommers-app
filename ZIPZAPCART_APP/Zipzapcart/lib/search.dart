@@ -183,12 +183,12 @@ class _SearchPageState
 
         margin:
         const EdgeInsets.only(
-          bottom:14,
+          bottom:10,
         ),
 
         padding:
         const EdgeInsets.all(
-          12,
+          10,
         ),
 
         decoration:
@@ -200,7 +200,7 @@ class _SearchPageState
 
           borderRadius:
           BorderRadius.circular(
-            22,
+            16,
           ),
 
         ),
@@ -213,13 +213,13 @@ class _SearchPageState
 
             Container(
 
-              height:110,
+              height:88,
 
-              width:110,
+              width:88,
 
               padding:
               const EdgeInsets.all(
-                10,
+                8,
               ),
 
               decoration:
@@ -233,7 +233,7 @@ class _SearchPageState
 
                 borderRadius:
                 BorderRadius.circular(
-                  18,
+                  14,
                 ),
 
               ),
@@ -255,7 +255,7 @@ class _SearchPageState
             ),
 
             const SizedBox(
-              width:14,
+              width:12,
             ),
 
             Expanded(
@@ -282,6 +282,8 @@ class _SearchPageState
 
                     GoogleFonts.poppins(
 
+                      fontSize:12.5,
+
                       fontWeight:
                       FontWeight.w600,
 
@@ -290,7 +292,7 @@ class _SearchPageState
                   ),
 
                   const SizedBox(
-                    height:8,
+                    height:6,
                   ),
 
                   Text(
@@ -312,7 +314,7 @@ class _SearchPageState
 
                     GoogleFonts.poppins(
 
-                      fontSize:12,
+                      fontSize:10.5,
 
                       color:
                       Colors.grey,
@@ -322,7 +324,7 @@ class _SearchPageState
                   ),
 
                   const SizedBox(
-                    height:12,
+                    height:8,
                   ),
 
                   Row(
@@ -348,7 +350,7 @@ class _SearchPageState
 
                           GoogleFonts.poppins(
 
-                            fontSize:20,
+                            fontSize:15.5,
 
                             fontWeight:
                             FontWeight.w800,
@@ -363,7 +365,7 @@ class _SearchPageState
                       ),
 
                       const SizedBox(
-                        width:8,
+                        width:6,
                       ),
 
                       Expanded(
@@ -390,7 +392,7 @@ class _SearchPageState
 
                             GoogleFonts.poppins(
 
-                              fontSize:13,
+                              fontSize:11,
 
                               decoration:
                               TextDecoration.lineThrough,
@@ -411,12 +413,12 @@ class _SearchPageState
                   ),
 
                   const SizedBox(
-                    height:12,
+                    height:8,
                   ),
 
                   Container(
 
-                    height:40,
+                    height:34,
 
                     alignment:
                     Alignment.center,
@@ -430,7 +432,7 @@ class _SearchPageState
 
                       borderRadius:
                       BorderRadius.circular(
-                        12,
+                        10,
                       ),
 
                     ),
@@ -450,6 +452,8 @@ class _SearchPageState
 
                         fontWeight:
                         FontWeight.w700,
+
+                        fontSize: 11.5,
 
                       ),
 

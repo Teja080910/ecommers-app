@@ -1611,6 +1611,7 @@ class _CheckoutPageState
 
                       style:
                       GoogleFonts.poppins(
+                        fontSize: 13,
                         fontWeight:
                         FontWeight
                             .w600,
@@ -1654,6 +1655,8 @@ class _CheckoutPageState
 
                         GoogleFonts.poppins(
 
+                          fontSize: 13,
+
                           fontWeight:
                           FontWeight.w600,
 
@@ -1679,10 +1682,11 @@ class _CheckoutPageState
                     primaryColor,
 
                     title: Text(
-                      "Online UPI/CARD/NETBANKING",
+                      "Online UPI / Card / NetBanking",
 
                       style:
                       GoogleFonts.poppins(
+                        fontSize: 13,
                         fontWeight:
                         FontWeight
                             .w600,

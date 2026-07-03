@@ -242,12 +242,12 @@ class _WishlistPageState
 
                 margin:
                 const EdgeInsets.only(
-                  bottom: 16,
+                  bottom: 10,
                 ),
 
                 padding:
                 const EdgeInsets.all(
-                  14,
+                  10,
                 ),
 
                 decoration:
@@ -256,7 +256,7 @@ class _WishlistPageState
 
                   borderRadius:
                   BorderRadius.circular(
-                    22,
+                    16,
                   ),
 
                   boxShadow: [
@@ -283,12 +283,12 @@ class _WishlistPageState
                   children: [
 
                     Container(
-                      height: 95,
-                      width: 95,
+                      height: 82,
+                      width: 82,
 
                       padding:
                       const EdgeInsets.all(
-                        10,
+                        8,
                       ),
 
                       decoration:
@@ -300,7 +300,7 @@ class _WishlistPageState
 
                         borderRadius:
                         BorderRadius.circular(
-                          20,
+                          15,
                         ),
                       ),
 
@@ -316,7 +316,7 @@ class _WishlistPageState
                     ),
 
                     const SizedBox(
-                      width: 16,
+                      width: 12,
                     ),
 
                     Expanded(
@@ -343,12 +343,12 @@ class _WishlistPageState
                                   .w600,
 
                               fontSize:
-                              15,
+                              12.5,
                             ),
                           ),
 
                           const SizedBox(
-                            height: 12,
+                            height: 8,
                           ),
 
                           Row(
@@ -378,7 +378,7 @@ class _WishlistPageState
                                     primaryColor,
 
                                     fontSize:
-                                    20,
+                                    15,
 
                                     fontWeight:
                                     FontWeight.w700,
@@ -390,7 +390,7 @@ class _WishlistPageState
                               ),
 
                               const SizedBox(
-                                width:8,
+                                width:6,
                               ),
 
                               Expanded(
@@ -418,7 +418,7 @@ class _WishlistPageState
                                     GoogleFonts.poppins(
 
                                       fontSize:
-                                      13,
+                                      11,
 
                                       decoration:
                                       TextDecoration.lineThrough,
@@ -438,16 +438,16 @@ class _WishlistPageState
 
                           ),
                           const SizedBox(
-                            height: 12,
+                            height: 8,
                           ),
 
                           Container(
                             padding:
                             const EdgeInsets.symmetric(
                               horizontal:
-                              12,
+                              10,
 
-                              vertical: 6,
+                              vertical: 4,
                             ),
 
                             decoration:
@@ -477,7 +477,7 @@ class _WishlistPageState
                                     .w600,
 
                                 fontSize:
-                                12,
+                                10,
                               ),
                             ),
                           ),

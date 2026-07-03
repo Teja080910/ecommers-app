@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +15,6 @@ import 'language.dart';
 import 'login.dart';
 import 'myorder.dart';
 import 'notification.dart';
-import 'offers.dart';
 import 'posts.dart';
 import 'profile.dart';
 import 'subcategory.dart';
@@ -67,7 +65,6 @@ class _HomePageState extends State<HomePage> {
   List topDeals = [];
   List homeCategories = [];
   List wishlistProducts = [];
-  List offers = [];
 
   static const List<Color> _categoryTileColors = [
     Color(0xFFF3E8FF),
@@ -392,130 +389,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
         ],
-      ),
-    );
-  }
-
-  // 🔥 OFFER COUPON CARD
-  Widget offerCouponCard(Map offer) {
-
-    final String code = (offer["code"] ?? "").toString();
-
-    final String discountText =
-    offer["discount_type"] == "flat"
-        ? "${AppConstants.formatPrice(offer["discount_amount"])} OFF"
-        : "${offer["discount_amount"]}% OFF";
-
-    return GestureDetector(
-
-      onTap: () async {
-
-        await Clipboard.setData(ClipboardData(text: code));
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Code \"$code\" copied"),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-
-      child: Container(
-        width: 210,
-        margin: const EdgeInsets.only(right: 14),
-        padding: const EdgeInsets.all(16),
-
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: primaryColor.withOpacity(0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            Row(
-              children: [
-                Icon(Icons.sell_rounded, size: 16, color: primaryColor),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: t(
-                    discountText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w800,
-                      color: primaryColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 9,
-              ),
-
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: primaryColor.withOpacity(0.3),
-                  style: BorderStyle.solid,
-                ),
-              ),
-
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      code,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.copy_rounded, size: 13, color: primaryColor),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            t(
-              "Min order ${AppConstants.formatPrice(offer["min_amount"])}",
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
-                fontSize: 10.5,
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -883,8 +756,6 @@ class _HomePageState extends State<HomePage> {
     homeCategories =
     await ApiService.getHomeCategoryProducts();
 
-    offers = await ApiService.getOffers();
-
     await loadDeliveryAddress();
 
     await loadCartCount();
@@ -1121,13 +992,13 @@ class _HomePageState extends State<HomePage> {
       },
 
       child: Container(
-        width: 264,
-        margin: const EdgeInsets.only(right: 14),
-        padding: const EdgeInsets.all(12),
+        width: 225,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(10),
 
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFF0F0F0)),
           boxShadow: [
             BoxShadow(
@@ -1147,9 +1018,9 @@ class _HomePageState extends State<HomePage> {
               children: [
 
                 Container(
-                  height: 100,
-                  width: 100,
-                  padding: const EdgeInsets.all(10),
+                  height: 78,
+                  width: 78,
+                  padding: const EdgeInsets.all(8),
 
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -1157,7 +1028,7 @@ class _HomePageState extends State<HomePage> {
                       end: Alignment.bottomRight,
                       colors: [Color(0xFFF9F9F9), Color(0xFFEFEFEF)],
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(13),
                   ),
 
                   child: Image.network(
@@ -1172,13 +1043,13 @@ class _HomePageState extends State<HomePage> {
                     left: -4,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 4,
+                        horizontal: 6,
+                        vertical: 3,
                       ),
 
                       decoration: BoxDecoration(
                         color: primaryColor,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(7),
                         boxShadow: [
                           BoxShadow(
                             color: primaryColor.withOpacity(0.35),
@@ -1191,7 +1062,7 @@ class _HomePageState extends State<HomePage> {
                       child: Text(
                         "$discountPercent% OFF",
                         style: GoogleFonts.poppins(
-                          fontSize: 9.5,
+                          fontSize: 8,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -1201,7 +1072,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
 
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
 
             Expanded(
               child: Column(
@@ -1212,14 +1083,14 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Icon(
                         Icons.local_fire_department,
-                        size: 13,
+                        size: 11,
                         color: primaryColor,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Text(
                         "TOP DEAL",
                         style: GoogleFonts.poppins(
-                          fontSize: 9.5,
+                          fontSize: 8.5,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.4,
                           color: primaryColor,
@@ -1228,32 +1099,32 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
 
                   Text(
                     item["name"] ?? "",
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
-                      fontSize: 13,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                       height: 1.25,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   Wrap(
                     crossAxisAlignment: WrapCrossAlignment.end,
-                    spacing: 6,
+                    spacing: 5,
                     runSpacing: 2,
                     children: [
 
                       Text(
                         AppConstants.formatPrice(saleprice),
                         style: GoogleFonts.poppins(
-                          fontSize: 17,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w800,
                           color: primaryColor,
                         ),
@@ -1265,7 +1136,7 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             AppConstants.formatPrice(rate),
                             style: GoogleFonts.poppins(
-                              fontSize: 11.5,
+                              fontSize: 10,
                               decoration: TextDecoration.lineThrough,
                               decorationColor: Colors.grey.shade400,
                               color: Colors.grey.shade400,
@@ -1277,7 +1148,7 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             "$discountPercent% off",
                             style: GoogleFonts.poppins(
-                              fontSize: 11,
+                              fontSize: 9,
                               fontWeight: FontWeight.w600,
                               color: primaryColor,
                             ),
@@ -1288,22 +1159,22 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   if (lowStock) ...[
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Container(
-                          width: 6,
-                          height: 6,
+                          width: 5,
+                          height: 5,
                           decoration: BoxDecoration(
                             color: Colors.orange.shade700,
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         Text(
                           "Only $stock left",
                           style: GoogleFonts.poppins(
-                            fontSize: 10.5,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: Colors.orange.shade800,
                           ),
@@ -1355,14 +1226,14 @@ class _HomePageState extends State<HomePage> {
       },
 
       child: Container(
-        width: 175,
-        margin: const EdgeInsets.only(right: 16),
+        width: 152,
+        margin: const EdgeInsets.only(right: 12),
 
         decoration: BoxDecoration(
           color: Colors.white,
 
           borderRadius:
-          BorderRadius.circular(22),
+          BorderRadius.circular(18),
 
           border: Border.all(color: const Color(0xFFF0F0F0)),
 
@@ -1389,11 +1260,11 @@ class _HomePageState extends State<HomePage> {
               children: [
 
                 Container(
-                  height: 150,
+                  height: 118,
                   width: double.infinity,
 
                   padding:
-                  const EdgeInsets.all(18),
+                  const EdgeInsets.all(12),
 
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -1404,7 +1275,7 @@ class _HomePageState extends State<HomePage> {
 
                     borderRadius:
                     const BorderRadius.vertical(
-                      top: Radius.circular(22),
+                      top: Radius.circular(18),
                     ),
                   ),
 
@@ -1418,17 +1289,17 @@ class _HomePageState extends State<HomePage> {
 
                 if (hasDiscount)
                   Positioned(
-                    top: 10,
-                    left: 10,
+                    top: 8,
+                    left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 6,
+                        vertical: 3,
                       ),
 
                       decoration: BoxDecoration(
                         color: primaryColor,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(7),
                         boxShadow: [
                           BoxShadow(
                             color: primaryColor.withOpacity(0.35),
@@ -1441,7 +1312,7 @@ class _HomePageState extends State<HomePage> {
                       child: Text(
                         "$discountPercent% OFF",
                         style: GoogleFonts.poppins(
-                          fontSize: 10,
+                          fontSize: 8.5,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -1450,8 +1321,8 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                 Positioned(
-                  top: 10,
-                  right: 10,
+                  top: 8,
+                  right: 8,
                   child: GestureDetector(
 
                     onTap: () async {
@@ -1477,7 +1348,7 @@ class _HomePageState extends State<HomePage> {
                     },
 
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(5),
 
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -1495,7 +1366,7 @@ class _HomePageState extends State<HomePage> {
                             ? Icons.favorite
                             : Icons.favorite_border,
 
-                        size: 15,
+                        size: 12,
 
                         color: isWishlisted
                             ? primaryColor
@@ -1506,8 +1377,8 @@ class _HomePageState extends State<HomePage> {
                 ),
 
                 Positioned(
-                  bottom: -14,
-                  right: 10,
+                  bottom: -12,
+                  right: 8,
                   child: GestureDetector(
 
                     onTap: () async {
@@ -1536,7 +1407,7 @@ class _HomePageState extends State<HomePage> {
                     },
 
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6.5),
 
                       decoration: BoxDecoration(
                         color: primaryColor,
@@ -1552,7 +1423,7 @@ class _HomePageState extends State<HomePage> {
 
                       child: const Icon(
                         Icons.add,
-                        size: 17,
+                        size: 14,
                         color: Colors.white,
                       ),
                     ),
@@ -1563,7 +1434,7 @@ class _HomePageState extends State<HomePage> {
 
             Padding(
               padding:
-              const EdgeInsets.fromLTRB(14, 18, 14, 14),
+              const EdgeInsets.fromLTRB(12, 14, 12, 12),
 
               child: Column(
                 crossAxisAlignment:
@@ -1581,21 +1452,21 @@ class _HomePageState extends State<HomePage> {
 
                     style:
                     GoogleFonts.poppins(
-                      fontSize: 13.5,
+                      fontSize: 11.5,
                       fontWeight:
                       FontWeight.w600,
                       color: Colors.black87,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   Wrap(
 
                     crossAxisAlignment:
                     WrapCrossAlignment.end,
 
-                    spacing: 6,
+                    spacing: 5,
                     runSpacing: 2,
 
                     children:[
@@ -1612,7 +1483,7 @@ class _HomePageState extends State<HomePage> {
                         style:
                         GoogleFonts.poppins(
 
-                          fontSize:16,
+                          fontSize:13.5,
 
                           fontWeight:
                           FontWeight.w800,
@@ -1640,7 +1511,7 @@ class _HomePageState extends State<HomePage> {
                             style:
                             GoogleFonts.poppins(
 
-                              fontSize:11.5,
+                              fontSize:10,
 
                               decoration:
                               TextDecoration.lineThrough,
@@ -1661,7 +1532,7 @@ class _HomePageState extends State<HomePage> {
                           maxLines: 1,
 
                           style: GoogleFonts.poppins(
-                            fontSize: 10.5,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: primaryColor,
                           ),
@@ -1673,22 +1544,22 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   if (lowStock) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Row(
                       children: [
                         Container(
-                          width: 6,
-                          height: 6,
+                          width: 5,
+                          height: 5,
                           decoration: BoxDecoration(
                             color: Colors.orange.shade700,
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         t(
                           "Only $stock left",
                           style: GoogleFonts.poppins(
-                            fontSize: 10.5,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: Colors.orange.shade800,
                           ),
@@ -2286,162 +2157,6 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 26),
 
-              // 🔥 OFFERS FOR YOU
-              if (offers.isNotEmpty) ...[
-
-                sectionHeader(
-                  "Offers For You",
-                  onViewAll: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const OffersPage(),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                SizedBox(
-                  height: 128,
-
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-
-                    itemCount: offers.length,
-
-                    itemBuilder: (_, index) {
-                      return offerCouponCard(offers[index]);
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-              ],
-
-              Padding(
-                padding:
-                const EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
-
-                child: GestureDetector(
-
-                  onTap: () {
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const OffersPage(),
-                      ),
-                    );
-                  },
-
-                  child: Container(
-
-                    padding: const EdgeInsets.all(18),
-
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFF0F0F0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-
-                    child: Row(
-                      children: [
-
-                        Container(
-                          height: 48,
-                          width: 48,
-
-                          decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-
-                          child: Icon(
-                            Icons.local_offer_rounded,
-                            size: 22,
-                            color: primaryColor,
-                          ),
-                        ),
-
-                        const SizedBox(width: 14),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-
-                              t(
-                                "Exclusive Offers",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black87,
-                                ),
-                              ),
-
-                              const SizedBox(height: 3),
-
-                              t(
-                                "Save more on every order",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(width: 10),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-
-                          decoration: BoxDecoration(
-                            color: primaryColor,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-
-                          child: t(
-                            "View",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-
-
               sectionHeader(
                 "Top Deals",
                 onViewAll: () {
@@ -2457,7 +2172,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
 
               SizedBox(
-                height: 150,
+                height: 122,
 
                 child: ListView.builder(
                   scrollDirection:
@@ -2501,7 +2216,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 16),
 
                 SizedBox(
-                  height: 265,
+                  height: 225,
 
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
@@ -2585,7 +2300,7 @@ class _HomePageState extends State<HomePage> {
                       )
 
                           : SizedBox(
-                        height: 288,
+                        height: 240,
 
                         child:
                         ListView.builder(

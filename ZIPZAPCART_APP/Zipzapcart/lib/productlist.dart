@@ -349,18 +349,18 @@ class _ProductListPageState
         const EdgeInsets.only(
           left: 14,
           right: 14,
-          bottom: 14,
+          bottom: 10,
         ),
 
         padding:
-        const EdgeInsets.all(12),
+        const EdgeInsets.all(10),
 
         decoration:
         BoxDecoration(
           color: Colors.white,
 
           borderRadius:
-          BorderRadius.circular(18),
+          BorderRadius.circular(16),
 
           boxShadow: [
 
@@ -386,11 +386,11 @@ class _ProductListPageState
 
             // 🔥 IMAGE
             Container(
-              height: 120,
-              width: 120,
+              height: 88,
+              width: 88,
 
               padding:
-              const EdgeInsets.all(12),
+              const EdgeInsets.all(8),
 
               decoration:
               BoxDecoration(
@@ -401,7 +401,7 @@ class _ProductListPageState
 
                 borderRadius:
                 BorderRadius.circular(
-                  18,
+                  14,
                 ),
               ),
 
@@ -413,7 +413,7 @@ class _ProductListPageState
               ),
             ),
 
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
 
             // 🔥 DETAILS
             Expanded(
@@ -435,7 +435,7 @@ class _ProductListPageState
 
                     style:
                     GoogleFonts.poppins(
-                      fontSize: 15,
+                      fontSize: 12.5,
 
                       fontWeight:
                       FontWeight
@@ -446,7 +446,7 @@ class _ProductListPageState
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   Row(
                     children: [
@@ -455,9 +455,9 @@ class _ProductListPageState
                         padding:
                         const EdgeInsets.symmetric(
                           horizontal:
-                          8,
+                          6,
 
-                          vertical: 4,
+                          vertical: 3,
                         ),
 
                         decoration:
@@ -470,7 +470,7 @@ class _ProductListPageState
 
                           borderRadius:
                           BorderRadius.circular(
-                            8,
+                            7,
                           ),
                         ),
 
@@ -479,7 +479,7 @@ class _ProductListPageState
 
                             const Icon(
                               Icons.star,
-                              size: 14,
+                              size: 11,
                               color:
                               Colors.green,
                             ),
@@ -494,7 +494,7 @@ class _ProductListPageState
                               style:
                               GoogleFonts.poppins(
                                 fontSize:
-                                11,
+                                9.5,
 
                                 fontWeight:
                                 FontWeight
@@ -508,7 +508,7 @@ class _ProductListPageState
                         ),
                       ),
 
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
 
                       Text(
                         item["stock"]
@@ -517,7 +517,7 @@ class _ProductListPageState
 
                         style:
                         GoogleFonts.poppins(
-                          fontSize: 11,
+                          fontSize: 9.5,
 
                           color:
                           Colors.grey,
@@ -526,7 +526,7 @@ class _ProductListPageState
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
 
                     children:[
@@ -550,7 +550,7 @@ class _ProductListPageState
 
                           GoogleFonts.poppins(
 
-                            fontSize:20,
+                            fontSize:15.5,
 
                             fontWeight:
                             FontWeight.w700,
@@ -565,7 +565,7 @@ class _ProductListPageState
                       ),
 
                       const SizedBox(
-                        width:8,
+                        width:6,
                       ),
 
                       Expanded(
@@ -592,7 +592,7 @@ class _ProductListPageState
 
                             GoogleFonts.poppins(
 
-                              fontSize:13,
+                              fontSize:11,
 
                               decoration:
                               TextDecoration.lineThrough,
@@ -612,14 +612,14 @@ class _ProductListPageState
 
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
                   Row(
                     children: [
 
                       Expanded(
                         child: Container(
-                          height: 42,
+                          height: 34,
 
                           decoration:
                           BoxDecoration(
@@ -628,7 +628,7 @@ class _ProductListPageState
 
                             borderRadius:
                             BorderRadius.circular(
-                              12,
+                              10,
                             ),
                           ),
 
@@ -645,7 +645,7 @@ class _ProductListPageState
                                 FontWeight
                                     .w600,
 
-                                fontSize: 13,
+                                fontSize: 11.5,
                               ),
                             ),
                           ),

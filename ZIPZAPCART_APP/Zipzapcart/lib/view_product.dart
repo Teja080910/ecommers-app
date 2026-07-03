@@ -7,6 +7,7 @@ import 'api_service.dart';
 import 'cart.dart';
 import 'checkout.dart';
 import 'constants.dart';
+import 'offers.dart';
 
 class ViewProductPage extends StatefulWidget {
 
@@ -548,7 +549,7 @@ class _ViewProductPageState
                 children: [
 
                   SizedBox(
-                    height: 340,
+                    height: 260,
 
                     child: PageView.builder(
                       itemCount:
@@ -568,19 +569,33 @@ class _ViewProductPageState
 
                         return Padding(
                           padding:
-                          const EdgeInsets.all(
-                            24,
+                          const EdgeInsets.symmetric(
+                            horizontal: 48,
+                            vertical: 12,
                           ),
 
-                          child:
-                          Image.network(
-                            AppConstants
-                                .imageUrl +
-                                images[
-                                index],
+                          child: Container(
+                            padding:
+                            const EdgeInsets.all(
+                              18,
+                            ),
 
-                            fit:
-                            BoxFit.contain,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F7F7),
+                              borderRadius:
+                              BorderRadius.circular(24),
+                            ),
+
+                            child:
+                            Image.network(
+                              AppConstants
+                                  .imageUrl +
+                                  images[
+                                  index],
+
+                              fit:
+                              BoxFit.contain,
+                            ),
                           ),
                         );
                       },
@@ -1097,6 +1112,118 @@ class _ViewProductPageState
                   ),
 
                   const SizedBox(height: 30),
+
+                  // 🔥 EXCLUSIVE OFFERS
+                  GestureDetector(
+
+                    onTap: () {
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const OffersPage(),
+                        ),
+                      );
+                    },
+
+                    child: Container(
+
+                      padding: const EdgeInsets.all(18),
+
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFF0F0F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+
+                      child: Row(
+                        children: [
+
+                          Container(
+                            height: 48,
+                            width: 48,
+
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+
+                            child: Icon(
+                              Icons.local_offer_rounded,
+                              size: 22,
+                              color: primaryColor,
+                            ),
+                          ),
+
+                          const SizedBox(width: 14),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+
+                                Text(
+                                  "Exclusive Offers",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 3),
+
+                                Text(
+                                  "Save more on every order",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+
+                            child: Text(
+                              "View",
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 26),
 
                   // 🔥 WRITE REVIEW
                   Text(
