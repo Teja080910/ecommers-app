@@ -29,7 +29,18 @@ class ApiService {
     }
   }
 
+  // 🔥 AUTH PARAMS — every authenticated request is signed with the
+  // per-login token issued by login_register, so the server can verify
+  // the caller actually owns the account it's acting on.
+  static Future<Map<String, String>> _authParams() async {
 
+    final prefs = await SharedPreferences.getInstance();
+
+    return {
+      "user_id": (prefs.getInt("user_id") ?? 0).toString(),
+      "token": prefs.getString("auth_token") ?? "",
+    };
+  }
 
   static Future<void> clearCart(int userId) async {
     await http.post(
@@ -44,11 +55,13 @@ class ApiService {
   // 🔥 GET USER
   static Future<Map<String, dynamic>> getUser(int userId) async {
     try {
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
         body: {
           "action": "get_user",
-          "user_id": userId.toString(),
+          ...auth,
         },
       );
 
@@ -64,6 +77,8 @@ class ApiService {
 
       ) async {
 
+    final auth = await _authParams();
+
     final response =
 
     await http.post(
@@ -77,8 +92,7 @@ class ApiService {
         "action":
         "get_notifications",
 
-        "user_id":
-        userId,
+        ...auth,
 
       },
 
@@ -123,6 +137,8 @@ class ApiService {
 
     try{
 
+      final auth = await _authParams();
+
       final res=
 
       await http.post(
@@ -136,8 +152,7 @@ class ApiService {
           "action":
           "save_fcm_token",
 
-          "user_id":
-          userId.toString(),
+          ...auth,
 
           "fcm_token":
           token,
@@ -215,11 +230,13 @@ class ApiService {
 
   static Future<bool> updateProfile(int userId, String name) async {
     try {
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
         body: {
           "action": "update_profile",
-          "user_id": userId.toString(),
+          ...auth,
           "name": name,
         },
       );
@@ -467,12 +484,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "toggle_wishlist",
-          "user_id": userId.toString(),
+          ...auth,
           "product_id": productId.toString(),
         },
       );
@@ -498,12 +517,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "add_review",
-          "user_id": userId.toString(),
+          ...auth,
           "product_id": productId.toString(),
           "rating": rating.toString(),
           "review": review,
@@ -531,12 +552,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "add_to_cart",
-          "user_id": userId.toString(),
+          ...auth,
           "product_id": productId.toString(),
           "variant_id": variantId.toString(),
         },
@@ -560,12 +583,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "get_cart",
-          "user_id": userId.toString(),
+          ...auth,
         },
       );
 
@@ -605,6 +630,8 @@ class ApiService {
 
     try{
 
+      final auth = await _authParams();
+
       final res=
       await http.post(
 
@@ -617,8 +644,7 @@ class ApiService {
           "action":
           "save_address",
 
-          "user_id":
-          "$userId",
+          ...auth,
 
           "full_name":
           fullName,
@@ -699,12 +725,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "get_default_address",
-          "user_id": userId.toString(),
+          ...auth,
         },
       );
 
@@ -732,12 +760,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final response = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "place_order",
-          "user_id": userId.toString(),
+          ...auth,
           "address_id": addressId.toString(),
           "coupon_code": couponCode,
           "discount_amount":
@@ -779,11 +809,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "update_cart_quantity",
+          ...auth,
           "cart_id": cartId.toString(),
           "type": type,
         },
@@ -804,12 +837,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "get_my_orders",
-          "user_id": userId.toString(),
+          ...auth,
         },
       );
 
@@ -828,11 +863,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "view_order",
+          ...auth,
           "order_id": orderId.toString(),
         },
       );
@@ -852,11 +890,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "cancel_order",
+          ...auth,
           "order_id": orderId.toString(),
         },
       );
@@ -876,12 +917,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "get_wishlist",
-          "user_id": userId.toString(),
+          ...auth,
         },
       );
 
@@ -901,11 +944,14 @@ class ApiService {
 
     try {
 
+      final auth = await _authParams();
+
       final res = await http.post(
         Uri.parse(AppConstants.baseUrl),
 
         body: {
           "action": "remove_cart_item",
+          ...auth,
           "cart_id": cartId.toString(),
         },
       );
@@ -978,20 +1024,7 @@ class ApiService {
 
     try{
 
-      final prefs=
-
-      await SharedPreferences
-          .getInstance();
-
-      final userId=
-
-          prefs.getInt(
-            "user_id",
-          )
-
-              ??
-
-              0;
+      final auth = await _authParams();
 
       final res=
 
@@ -1006,8 +1039,7 @@ class ApiService {
           "action":
           "get_wallet",
 
-          "user_id":
-          userId.toString(),
+          ...auth,
 
         },
 
@@ -1036,20 +1068,7 @@ class ApiService {
 
     try{
 
-      final prefs=
-
-      await SharedPreferences
-          .getInstance();
-
-      final userId=
-
-          prefs.getInt(
-            "user_id",
-          )
-
-              ??
-
-              0;
+      final auth = await _authParams();
 
       final res=
 
@@ -1064,8 +1083,7 @@ class ApiService {
           "action":
           "get_cashback",
 
-          "user_id":
-          userId.toString(),
+          ...auth,
 
         },
 
@@ -1098,20 +1116,7 @@ class ApiService {
 
     try{
 
-      final prefs=
-
-      await SharedPreferences
-          .getInstance();
-
-      final userId=
-
-          prefs.getInt(
-            "user_id",
-          )
-
-              ??
-
-              0;
+      final auth = await _authParams();
 
       final res=
 
@@ -1126,8 +1131,7 @@ class ApiService {
           "action":
           "move_cashback",
 
-          "user_id":
-          userId.toString(),
+          ...auth,
 
         },
 

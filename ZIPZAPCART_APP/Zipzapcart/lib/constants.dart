@@ -1,6 +1,6 @@
 class AppConstants {
-  static const String baseUrl = "http://192.168.10.25/Backend/app/api.php";
-  static const String imageUrl = "http://192.168.10.25/Backend/app/";
+  static const String baseUrl = "http://31.97.222.250/Backend/app/api.php";
+  static const String imageUrl = "http://31.97.222.250/Backend/app/";
 
   /// Formats any numeric/price value into a consistent
   /// "₹12,499" style string (Indian digit grouping, no decimals).

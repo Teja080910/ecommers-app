@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "980075462615",
-    "project_id": "ftnews-7d78d",
-    "storage_bucket": "ftnews-7d78d.firebasestorage.app"
+    "project_number": "929539552916",
+    "project_id": "zipzapcart-app",
+    "storage_bucket": "zipzapcart-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:980075462615:android:031fe6da177653fe64d592",
-        "android_client_info": {
-          "package_name": "com.astroforall.astro"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAlvZHI3zKVZGC0Jia1gyHAv6xTUZKDsdo"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:980075462615:android:15009eabb5e5ad9964d592",
+        "mobilesdk_app_id": "1:929539552916:android:99ff78d3de2c92bbcce681",
         "android_client_info": {
           "package_name": "com.user.zipzapcart"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAlvZHI3zKVZGC0Jia1gyHAv6xTUZKDsdo"
+          "current_key": "AIzaSyACut5oo0xIApTW9CEZzIIPgd2hhvQbyBY"
         }
       ],
       "services": {

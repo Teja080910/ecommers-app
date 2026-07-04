@@ -8,6 +8,7 @@ import 'cart.dart';
 import 'checkout.dart';
 import 'constants.dart';
 import 'offers.dart';
+import 'login.dart';
 
 class ViewProductPage extends StatefulWidget {
 
@@ -236,9 +237,45 @@ class _ViewProductPageState
     }
   }
 
+  bool requireLogin() {
+
+    if (userId != 0) {
+      return true;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F1F1F),
+        content: const Text(
+          "Please login to continue",
+        ),
+        action: SnackBarAction(
+          label: "LOGIN",
+          textColor: Colors.orangeAccent,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const LoginPage(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    return false;
+  }
+
   Future<void> addToCart({
     bool buyNow = false,
   }) async {
+
+    if (!requireLogin()) {
+      return;
+    }
+
     var data = await ApiService.addToCart(
       userId,
       widget.productId,
@@ -318,6 +355,10 @@ class _ViewProductPageState
           IconButton(
 
             onPressed:() async {
+
+              if (!requireLogin()) {
+                return;
+              }
 
               final res=
 

@@ -769,6 +769,37 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  bool requireLogin() {
+
+    if (userId != 0) {
+      return true;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F1F1F),
+        content: const Text(
+          "Please login to continue",
+        ),
+        action: SnackBarAction(
+          label: "LOGIN",
+          textColor: Colors.orangeAccent,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const LoginPage(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    return false;
+  }
+
   Future<void> loadWishlist() async {
 
     if (userId == 0) {
@@ -1327,6 +1358,10 @@ class _HomePageState extends State<HomePage> {
 
                     onTap: () async {
 
+                      if (!requireLogin()) {
+                        return;
+                      }
+
                       setState(() {
                         if (isWishlisted) {
                           wishlistedIds.remove(id);
@@ -1339,12 +1374,10 @@ class _HomePageState extends State<HomePage> {
                         }
                       });
 
-                      if (userId != 0) {
-                        await ApiService.toggleWishlist(
-                          userId,
-                          int.parse(id),
-                        );
-                      }
+                      await ApiService.toggleWishlist(
+                        userId,
+                        int.parse(id),
+                      );
                     },
 
                     child: Container(
@@ -1397,11 +1430,23 @@ class _HomePageState extends State<HomePage> {
                         return;
                       }
 
-                      if (userId != 0) {
-                        await ApiService.addToCart(
-                          userId,
-                          int.parse(id),
-                          0,
+                      if (!requireLogin()) {
+                        return;
+                      }
+
+                      await ApiService.addToCart(
+                        userId,
+                        int.parse(id),
+                        0,
+                      );
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Color(0xFF1F1F1F),
+                            content: Text("Added to cart"),
+                          ),
                         );
                       }
                     },
