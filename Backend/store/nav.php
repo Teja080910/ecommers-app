@@ -338,6 +338,21 @@ $settings_pages = ['app-settings.php','change-password.php'];
         </ul>
 
     </li>
+
+    <!-- Subscription -->
+
+    <li class="<?= ($current_page == 'subscription-plans.php') ? 'active' : '' ?>">
+
+        <a href="subscription-plans.php">
+
+            <div class="menu-left">
+                <i class="fa-solid fa-crown"></i>
+                Subscription
+            </div>
+
+        </a>
+
+    </li>
 <?php
 $food_product_pages = [
     'add-food-product.php',

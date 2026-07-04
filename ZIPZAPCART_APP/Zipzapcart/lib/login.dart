@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
-import 'referral.dart';
 import 'api_service.dart';
 import 'home.dart';
 class LoginPage extends StatefulWidget {
@@ -30,12 +29,12 @@ class _LoginPageState extends State<LoginPage> {
         final userCred =
         await FirebaseAuth.instance.signInWithCredential(credential);
 
-        await ApiService.loginOrRegister({
+        final res = await ApiService.loginOrRegister({
           "phone": phoneController.text,
           "firebase_uid": userCred.user!.uid,
         });
 
-        await _saveLogin();
+        await _saveLogin(res);
       },
 
       verificationFailed: (FirebaseAuthException e) {
@@ -62,7 +61,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // 🔥 VERIFY OTP
-  Future<void> verifyOtp(String otp) async {
+  Future<void> verifyOtp(
+      String otp, {
+        required VoidCallback onInvalidOtp,
+      }) async {
 
     setState(() => isLoading = true);
 
@@ -87,6 +89,31 @@ class _LoginPageState extends State<LoginPage> {
 
       });
 
+      if (res["status"] != true) {
+
+        setState(() => isLoading = false);
+
+        onInvalidOtp();
+
+        return;
+      }
+
+      // 🔥 SAVE SESSION *BEFORE* ANY AUTHENTICATED CALL,
+      // so ApiService's auth params pick up the fresh id/token.
+      final prefs = await SharedPreferences.getInstance();
+
+      prefs.setInt(
+        "user_id",
+        int.parse(res["user"]["id"].toString()),
+      );
+
+      prefs.setString(
+        "auth_token",
+        res["token"]?.toString() ?? "",
+      );
+
+      prefs.setBool("isLoggedIn", true);
+
       final token=
 
       await NotificationService
@@ -106,58 +133,73 @@ class _LoginPageState extends State<LoginPage> {
 
       );
 
-      final prefs = await SharedPreferences.getInstance();
+      setState(() => isLoading = false);
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HomePage(),
+        ),
+      );
+
+    } on FirebaseAuthException catch (e) {
+
+      setState(() => isLoading = false);
+
+      debugPrint(
+        "🔥 OTP VERIFY FAILED — code: ${e.code}, message: ${e.message}",
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+            content: Text(
+              "Firebase error [${e.code}]: ${e.message ?? 'unknown'}",
+            ),
+          ),
+        );
+      }
+
+      onInvalidOtp();
+
+    } catch (e) {
+
+      setState(() => isLoading = false);
+
+      debugPrint("🔥 OTP VERIFY FAILED — non-Firebase error: $e");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+            content: Text("Login error: $e"),
+          ),
+        );
+      }
+
+      onInvalidOtp();
+    }
+  }
+
+  // 🔥 SAVE LOGIN
+  Future<void> _saveLogin(Map<String, dynamic> res) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (res["status"] == true && res["user"] != null) {
 
       prefs.setInt(
         "user_id",
         int.parse(res["user"]["id"].toString()),
       );
 
-      prefs.setBool("isLoggedIn", true);
-
-      setState(() => isLoading = false);
-
-      // 🔥 CHECK SPONSOR CODE
-      if (res["user"]["sponsor_code"] == null ||
-          res["user"]["sponsor_code"].toString().isEmpty) {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReferralPage(
-              userId: int.parse(
-                res["user"]["id"].toString(),
-              ),
-            ),
-          ),
-        );
-
-      } else {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HomePage(),
-          ),
-        );
-      }
-
-    } catch (e) {
-
-      setState(() => isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.red,
-          content: Text("Invalid OTP"),
-        ),
+      prefs.setString(
+        "auth_token",
+        res["token"]?.toString() ?? "",
       );
     }
-  }
-
-  // 🔥 SAVE LOGIN
-  Future<void> _saveLogin() async {
-    final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool("isLoggedIn", true);
 
@@ -186,6 +228,9 @@ class _LoginPageState extends State<LoginPage> {
           (_) => FocusNode(),
     );
 
+    String? otpError;
+    bool sheetMounted = true;
+
     showModalBottomSheet(
 
       context: context,
@@ -211,6 +256,9 @@ class _LoginPageState extends State<LoginPage> {
       ),
 
       builder: (context) {
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
 
         return SafeArea(
 
@@ -408,7 +456,9 @@ class _LoginPageState extends State<LoginPage> {
                                 BorderSide(
 
                                   color:
-                                  Colors
+                                  otpError != null
+                                      ? Colors.red
+                                      : Colors
                                       .grey
                                       .shade300,
 
@@ -441,6 +491,16 @@ class _LoginPageState extends State<LoginPage> {
 
                             onChanged:
                                 (value) {
+
+                              if(
+                              otpError != null &&
+                              sheetMounted
+                              ){
+
+                                setModalState(() {
+                                  otpError = null;
+                                });
+                              }
 
                               if(
                               value
@@ -490,6 +550,28 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
+                  if(otpError != null) ...[
+
+                    const SizedBox(
+                      height: 12,
+                    ),
+
+                    Text(
+                      otpError!,
+
+                      textAlign:
+                      TextAlign.center,
+
+                      style:
+                      const TextStyle(
+                        color: Colors.red,
+                        fontSize: 13,
+                        fontWeight:
+                        FontWeight.w600,
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(
                     height: 30,
                   ),
@@ -528,25 +610,39 @@ class _LoginPageState extends State<LoginPage> {
 
                           verifyOtp(
                             otp,
+                            onInvalidOtp: () {
+
+                              if (!sheetMounted) {
+                                return;
+                              }
+
+                              setModalState(() {
+
+                                otpError =
+                                "Incorrect OTP. Please try again.";
+
+                                for(
+                                final c
+                                in otpControllers
+                                ){
+                                  c.clear();
+                                }
+                              });
+
+                              FocusScope.of(
+                                context,
+                              ).requestFocus(
+                                focusNodes[0],
+                              );
+                            },
                           );
 
                         }else{
 
-                          ScaffoldMessenger.of(
-                            context,
-                          )
-                              .showSnackBar(
-
-                            const SnackBar(
-
-                              content:
-                              Text(
-
-                                "Enter complete OTP",
-
-                              ),
-                            ),
-                          );
+                          setModalState(() {
+                            otpError =
+                            "Please enter the complete 6-digit OTP";
+                          });
                         }
                       },
 
@@ -602,8 +698,12 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         );
+          },
+        );
       },
-    );
+    ).then((_) {
+      sheetMounted = false;
+    });
   }
   // 🔥 PHONE FIELD
   Widget _phoneInputField() {
@@ -694,7 +794,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
 
       body: Stack(
         children: [
@@ -723,8 +823,15 @@ class _LoginPageState extends State<LoginPage> {
           ),
 
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(22),
+            child: AnimatedPadding(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.fromLTRB(
+                22,
+                22,
+                22,
+                22 + MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -763,7 +870,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 10),
 
                         Text(
-                          "India’s Smart Shopping Experience",
+                          "India's Smart Shopping Experience",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.78),
                             fontSize: 12,

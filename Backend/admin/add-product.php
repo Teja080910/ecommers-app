@@ -130,9 +130,23 @@ if(isset($_POST['add_product'])){
         }
     }
 
-    /* OTHER IMAGES */
+    /* OTHER IMAGES (max 3 - 4 total with main image) */
 
     if(isset($_FILES['other_images'])){
+
+        $uploaded_count = count(array_filter(
+            $_FILES['other_images']['tmp_name'],
+            function($tmp){ return $tmp !== ""; }
+        ));
+
+        if($uploaded_count > 3){
+
+            $error =
+            "You can upload a maximum of 3 additional images (4 total including the main image).";
+        }
+    }
+
+    if(empty($error) && isset($_FILES['other_images'])){
 
         foreach(
 
@@ -807,12 +821,14 @@ body{
                 <div class="input-box full">
 
                     <label>
-                        Other Images
+                        Other Images (max 3 - 4 total with main image)
                     </label>
 
                     <input
                     type="file"
                     name="other_images[]"
+                    id="otherImagesInput"
+                    onchange="validateOtherImages(this)"
                     multiple>
 
                 </div>
@@ -884,6 +900,16 @@ body{
 </div>
 
 <script>
+
+function validateOtherImages(input){
+
+    if(input.files.length > 3){
+
+        alert("You can upload a maximum of 3 additional images (4 total including the main image).");
+
+        input.value = "";
+    }
+}
 
 document
 .getElementById(

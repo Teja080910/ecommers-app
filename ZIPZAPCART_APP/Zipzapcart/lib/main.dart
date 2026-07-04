@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'notification_service.dart';
 
@@ -69,6 +70,11 @@ class MyApp
 
       debugShowCheckedModeBanner:
       false,
+
+      theme: ThemeData(
+        textTheme: GoogleFonts.poppinsTextTheme(),
+        primaryTextTheme: GoogleFonts.poppinsTextTheme(),
+      ),
 
       routes:{
 

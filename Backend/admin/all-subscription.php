@@ -237,6 +237,12 @@ input{
 
 </div>
 
+<div class="days" style="margin-left:8px;">
+
+<?php echo ucfirst($p['audience']); ?>
+
+</div>
+
 <div class="actions">
 
 <button

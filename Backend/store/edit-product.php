@@ -188,7 +188,34 @@ $product['image'];
 
 /* MAIN IMAGE */
 
-if(
+if(!empty($_POST['cropped_image_data'])){
+
+    /* CROPPED (SQUARE) IMAGE FROM BROWSER */
+
+    $data = $_POST['cropped_image_data'];
+
+    if(preg_match('/^data:image\/(jpeg|png|webp);base64,/', $data)){
+
+        $data = substr($data, strpos($data, ',') + 1);
+
+        $decoded = base64_decode($data);
+
+        if($decoded !== false){
+
+            $file =
+            time().'_cropped.jpg';
+
+            file_put_contents(
+                "../app/uploads/products/".$file,
+                $decoded
+            );
+
+            $image =
+            "uploads/products/".$file;
+        }
+    }
+
+}else if(
 isset($_FILES['image'])
 &&
 $_FILES['image']['error']==0
@@ -212,12 +239,34 @@ $image =
 
 }
 
-/* OTHER IMAGES */
+/* OTHER IMAGES (max 3 - 4 total with main image) */
 
 $other_images =
 $product['other_images'];
 
 if(
+isset(
+$_FILES['other_images']
+)
+){
+
+$uploaded_count = count(array_filter(
+$_FILES['other_images']['tmp_name'],
+function($tmp){ return $tmp !== ""; }
+));
+
+if($uploaded_count > 3){
+
+$error =
+"You can upload a maximum of 3 additional images (4 total including the main image).";
+
+}
+
+}
+
+if(
+empty($error)
+&&
 isset(
 $_FILES['other_images']
 )
@@ -273,6 +322,8 @@ $imgs
 }
 
 /* UPDATE */
+
+if(empty($error)){
 
 $update =
 $pdo->prepare(
@@ -443,6 +494,8 @@ $variantsStmt->fetchAll();
 }
 
 }
+
+}
 ?>
 
 
@@ -462,6 +515,12 @@ Edit Product
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
 <style>
 
@@ -512,6 +571,11 @@ body{
 .success{
     background:#16a34a20;
     color:#4ade80;
+}
+
+.error{
+    background:#ff000020;
+    color:#ffb4b4;
 }
 
 .grid{
@@ -647,6 +711,67 @@ body{
     }
 }
 
+.crop-modal{
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.75);
+    z-index:999;
+    align-items:center;
+    justify-content:center;
+}
+
+.crop-modal.active{
+    display:flex;
+}
+
+.crop-box{
+    background:#0c0e1c;
+    border-radius:20px;
+    padding:24px;
+    width:90%;
+    max-width:500px;
+}
+
+.crop-image-wrap{
+    max-height:400px;
+    margin-bottom:18px;
+}
+
+.crop-image-wrap img{
+    max-width:100%;
+    display:block;
+}
+
+.crop-actions{
+    display:flex;
+    gap:12px;
+    margin-top:16px;
+}
+
+.crop-actions button{
+    flex:1;
+    height:46px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+}
+
+.crop-use-btn{
+    background:linear-gradient(135deg,#06b6d4,#7c3aed);
+    color:#fff;
+}
+
+.crop-skip-btn{
+    background:#1e293b;
+    color:#cbd5e1;
+}
+
 </style>
 
 </head>
@@ -670,6 +795,14 @@ body{
 
 <div class="alert success">
     <?php echo $success; ?>
+</div>
+
+<?php } ?>
+
+<?php if($error != ""){ ?>
+
+<div class="alert error">
+    <?php echo $error; ?>
 </div>
 
 <?php } ?>
@@ -932,12 +1065,17 @@ Yes
 <div class="input-box">
 
 <label>
-Main Image
+Main Image (square crop recommended)
 </label>
 
 <input
 type="file"
-name="image">
+name="image"
+id="mainImageInput"
+accept="image/*"
+onchange="openCropModal(this)">
+
+<input type="hidden" name="cropped_image_data" id="croppedImageData">
 
 <img
 
@@ -952,12 +1090,14 @@ class="preview">
 <div class="input-box full">
 
 <label>
-Other Images
+Other Images (max 3 - 4 total with main image)
 </label>
 
 <input
 type="file"
 name="other_images[]"
+id="otherImagesInput"
+onchange="validateOtherImages(this)"
 multiple>
 
 </div>
@@ -1145,7 +1285,98 @@ Update Product
 
 </div>
 
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="skipCrop()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="applyCrop()">Crop &amp; Use</button>
+        </div>
+
+    </div>
+
+</div>
+
 <script>
+
+let cropperInstance = null;
+
+function openCropModal(input){
+
+    if(!input.files || !input.files[0]){
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+
+        const img = document.getElementById('cropperImage');
+        img.src = e.target.result;
+
+        document.getElementById('cropModal').classList.add('active');
+
+        if(cropperInstance){
+            cropperInstance.destroy();
+        }
+
+        cropperInstance = new Cropper(img, {
+            aspectRatio: 1,
+            viewMode: 1,
+            autoCropArea: 1
+        });
+    };
+
+    reader.readAsDataURL(input.files[0]);
+}
+
+function applyCrop(){
+
+    if(!cropperInstance){
+        return;
+    }
+
+    const canvas = cropperInstance.getCroppedCanvas({
+        width: 800,
+        height: 800
+    });
+
+    document.getElementById('croppedImageData').value =
+        canvas.toDataURL('image/jpeg', 0.9);
+
+    closeCropModal();
+}
+
+function skipCrop(){
+    document.getElementById('croppedImageData').value = '';
+    closeCropModal();
+}
+
+function closeCropModal(){
+
+    document.getElementById('cropModal').classList.remove('active');
+
+    if(cropperInstance){
+        cropperInstance.destroy();
+        cropperInstance = null;
+    }
+}
+
+function validateOtherImages(input){
+
+    if(input.files.length > 3){
+
+        alert("You can upload a maximum of 3 additional images (4 total including the main image).");
+
+        input.value = "";
+    }
+}
 
 document
 .getElementById(

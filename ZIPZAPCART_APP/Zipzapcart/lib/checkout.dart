@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,6 +6,7 @@ import 'api_service.dart';
 import 'constants.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'orderplaced.dart';
+import 'offers.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'package:geocoding/geocoding.dart';
@@ -64,7 +65,7 @@ class _CheckoutPageState
   TextEditingController();
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -204,7 +205,11 @@ class _CheckoutPageState
         context,
         MaterialPageRoute(
           builder: (_) =>
-          const OrderPlacedPage(),
+          OrderPlacedPage(
+            orderId: int.parse(
+              order["order_id"].toString(),
+            ),
+          ),
         ),
       );
     }
@@ -460,62 +465,6 @@ class _CheckoutPageState
     setState((){});
 
   }
-  Future<void> saveAddress() async {
-
-    var data =
-    await ApiService
-        .saveAddress(
-
-      userId,
-
-      nameController.text,
-
-      mobileController.text,
-
-      addressController.text,
-
-      cityController.text,
-
-      stateController.text,
-
-      pincodeController.text,
-
-      latitude,
-
-      longitude,
-
-    );
-
-    if (data["status"] == true) {
-
-      Navigator.pop(context);
-
-      selectedAddress=null;
-
-      deliveryCharge=0;
-
-      await loadData();
-
-    }else {
-
-      Navigator.pop(context);
-
-      nameController.clear();
-      mobileController.clear();
-      addressController.clear();
-      cityController.clear();
-      stateController.clear();
-      pincodeController.clear();
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content:
-          Text(data["message"]),
-        ),
-      );
-    }
-  }
 
   void couponBottomSheet() {
 
@@ -547,16 +496,54 @@ class _CheckoutPageState
 
             children: [
 
-              Text(
-                "Apply Coupon",
+              Row(
+                mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
 
-                style:
-                GoogleFonts.poppins(
-                  fontSize: 18,
+                children: [
 
-                  fontWeight:
-                  FontWeight.w700,
-                ),
+                  Text(
+                    "Apply Coupon",
+
+                    style:
+                    GoogleFonts.poppins(
+                      fontSize: 18,
+
+                      fontWeight:
+                      FontWeight.w700,
+                    ),
+                  ),
+
+                  GestureDetector(
+
+                    onTap: () async {
+
+                      final code = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const OffersPage(),
+                        ),
+                      );
+
+                      if (code != null) {
+
+                        setState(() {
+                          couponController.text = code.toString();
+                        });
+                      }
+                    },
+
+                    child: Text(
+                      "View Offers",
+
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 18),
@@ -643,6 +630,8 @@ class _CheckoutPageState
 
   void addressBottomSheet() {
 
+    String addressError = '';
+
     showModalBottomSheet(
       context: context,
 
@@ -724,8 +713,30 @@ class _CheckoutPageState
                     ),
 
                     const SizedBox(
-                      height: 22,
+                      height: 16,
                     ),
+
+                    if (addressError.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 16),
+
+                        decoration: BoxDecoration(
+                          color: const Color(0x20DC2626),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+
+                        child: Text(
+                          addressError,
+
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFFB91C1C),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
 
                     customField(
                       controller:
@@ -863,9 +874,39 @@ class _CheckoutPageState
                       child:
                       ElevatedButton(
 
-                        onPressed: () {
+                        onPressed: () async {
 
-                          saveAddress();
+                          var data =
+                          await ApiService.saveAddress(
+
+                            userId,
+                            nameController.text,
+                            mobileController.text,
+                            addressController.text,
+                            cityController.text,
+                            stateController.text,
+                            pincodeController.text,
+                            latitude,
+                            longitude,
+                          );
+
+                          if (data["status"] == true) {
+
+                            Navigator.pop(context);
+
+                            selectedAddress = null;
+                            deliveryCharge = 0;
+
+                            await loadData();
+
+                          } else {
+
+                            setSheet(() {
+                              addressError =
+                                  data["message"] ??
+                                  "Failed to save address";
+                            });
+                          }
                         },
 
                         style:
@@ -1038,7 +1079,11 @@ class _CheckoutPageState
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                      const OrderPlacedPage(),
+                      OrderPlacedPage(
+                        orderId: int.parse(
+                          order["order_id"].toString(),
+                        ),
+                      ),
                     ),
                   );
 
@@ -1071,7 +1116,7 @@ class _CheckoutPageState
             ),
 
             child: Text(
-              "Place Order ₹$finalTotal",
+              "Place Order ${AppConstants.formatPrice(finalTotal)}",
 
               style:
               GoogleFonts.poppins(
@@ -1432,7 +1477,7 @@ class _CheckoutPageState
                             ),
 
                             Text(
-                              "₹${item["saleprice"]}",
+                              AppConstants.formatPrice(item["saleprice"]),
 
                               style:
                               GoogleFonts.poppins(
@@ -1566,6 +1611,7 @@ class _CheckoutPageState
 
                       style:
                       GoogleFonts.poppins(
+                        fontSize: 13,
                         fontWeight:
                         FontWeight
                             .w600,
@@ -1603,11 +1649,13 @@ class _CheckoutPageState
 
                       Text(
 
-                        "Wallet (₹${walletBalance.toStringAsFixed(0)})",
+                        "Wallet (${AppConstants.formatPrice(walletBalance)})",
 
                         style:
 
                         GoogleFonts.poppins(
+
+                          fontSize: 13,
 
                           fontWeight:
                           FontWeight.w600,
@@ -1634,10 +1682,11 @@ class _CheckoutPageState
                     primaryColor,
 
                     title: Text(
-                      "Online UPI/CARD/NETBANKING",
+                      "Online UPI / Card / NetBanking",
 
                       style:
                       GoogleFonts.poppins(
+                        fontSize: 13,
                         fontWeight:
                         FontWeight
                             .w600,
@@ -1714,7 +1763,7 @@ class _CheckoutPageState
                       ),
 
                       Text(
-                        "₹$finalTotal",
+                        AppConstants.formatPrice(finalTotal),
 
                         style:
                         GoogleFonts.poppins(
@@ -1762,7 +1811,7 @@ class _CheckoutPageState
         ),
 
         Text(
-          "₹$value",
+          AppConstants.formatPrice(value),
 
           style:
           GoogleFonts.poppins(

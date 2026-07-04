@@ -1,11 +1,13 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import 'api_service.dart';
 import 'constants.dart';
 import 'view_product.dart';
+import 'widgets/shimmer_card.dart';
 
 class SearchPage
     extends StatefulWidget{
@@ -38,6 +40,60 @@ class _SearchPageState
   const Color(
     0xFFEF4138,
   );
+
+  final stt.SpeechToText _speech = stt.SpeechToText();
+
+  bool _isListening = false;
+
+  Future<void> toggleListening() async {
+
+    if (_isListening) {
+
+      await _speech.stop();
+
+      setState(() {
+        _isListening = false;
+      });
+
+      return;
+    }
+
+    final available = await _speech.initialize();
+
+    if (!available) {
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+
+    _speech.listen(
+      onResult: (result) {
+
+        controller.text = result.recognizedWords;
+
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
+
+        if (result.finalResult) {
+
+          setState(() {
+            _isListening = false;
+          });
+
+          search();
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _speech.stop();
+    super.dispose();
+  }
 
   Future search()
   async{
@@ -127,12 +183,12 @@ class _SearchPageState
 
         margin:
         const EdgeInsets.only(
-          bottom:14,
+          bottom:10,
         ),
 
         padding:
         const EdgeInsets.all(
-          12,
+          10,
         ),
 
         decoration:
@@ -144,7 +200,7 @@ class _SearchPageState
 
           borderRadius:
           BorderRadius.circular(
-            22,
+            16,
           ),
 
         ),
@@ -157,13 +213,13 @@ class _SearchPageState
 
             Container(
 
-              height:110,
+              height:88,
 
-              width:110,
+              width:88,
 
               padding:
               const EdgeInsets.all(
-                10,
+                8,
               ),
 
               decoration:
@@ -177,7 +233,7 @@ class _SearchPageState
 
                 borderRadius:
                 BorderRadius.circular(
-                  18,
+                  14,
                 ),
 
               ),
@@ -199,7 +255,7 @@ class _SearchPageState
             ),
 
             const SizedBox(
-              width:14,
+              width:12,
             ),
 
             Expanded(
@@ -226,6 +282,8 @@ class _SearchPageState
 
                     GoogleFonts.poppins(
 
+                      fontSize:12.5,
+
                       fontWeight:
                       FontWeight.w600,
 
@@ -234,7 +292,7 @@ class _SearchPageState
                   ),
 
                   const SizedBox(
-                    height:8,
+                    height:6,
                   ),
 
                   Text(
@@ -256,7 +314,7 @@ class _SearchPageState
 
                     GoogleFonts.poppins(
 
-                      fontSize:12,
+                      fontSize:10.5,
 
                       color:
                       Colors.grey,
@@ -266,7 +324,7 @@ class _SearchPageState
                   ),
 
                   const SizedBox(
-                    height:12,
+                    height:8,
                   ),
 
                   Row(
@@ -281,7 +339,7 @@ class _SearchPageState
 
                         Text(
 
-                          "₹${item["saleprice"]}",
+                          AppConstants.formatPrice(item["saleprice"]),
 
                           maxLines:1,
 
@@ -292,7 +350,7 @@ class _SearchPageState
 
                           GoogleFonts.poppins(
 
-                            fontSize:20,
+                            fontSize:15.5,
 
                             fontWeight:
                             FontWeight.w800,
@@ -307,7 +365,7 @@ class _SearchPageState
                       ),
 
                       const SizedBox(
-                        width:8,
+                        width:6,
                       ),
 
                       Expanded(
@@ -323,7 +381,7 @@ class _SearchPageState
 
                           Text(
 
-                            "₹${item["rate"]}",
+                            AppConstants.formatPrice(item["rate"]),
 
                             maxLines:1,
 
@@ -334,7 +392,7 @@ class _SearchPageState
 
                             GoogleFonts.poppins(
 
-                              fontSize:13,
+                              fontSize:11,
 
                               decoration:
                               TextDecoration.lineThrough,
@@ -355,12 +413,12 @@ class _SearchPageState
                   ),
 
                   const SizedBox(
-                    height:12,
+                    height:8,
                   ),
 
                   Container(
 
-                    height:40,
+                    height:34,
 
                     alignment:
                     Alignment.center,
@@ -374,7 +432,7 @@ class _SearchPageState
 
                       borderRadius:
                       BorderRadius.circular(
-                        12,
+                        10,
                       ),
 
                     ),
@@ -394,6 +452,8 @@ class _SearchPageState
 
                         fontWeight:
                         FontWeight.w700,
+
+                        fontSize: 11.5,
 
                       ),
 
@@ -508,7 +568,7 @@ class _SearchPageState
 
                 decoration:
 
-                const InputDecoration(
+                InputDecoration(
 
                   border:
                   InputBorder.none,
@@ -517,8 +577,24 @@ class _SearchPageState
                   "Search products...",
 
                   icon:
-                  Icon(
+                  const Icon(
                     Icons.search,
+                  ),
+
+                  suffixIcon:
+                  IconButton(
+
+                    onPressed: toggleListening,
+
+                    icon: Icon(
+                      _isListening
+                          ? Icons.mic
+                          : Icons.mic_none,
+
+                      color: _isListening
+                          ? primaryColor
+                          : Colors.grey,
+                    ),
                   ),
 
                 ),
@@ -537,15 +613,15 @@ class _SearchPageState
 
                 ?
 
-            Center(
+            ListView.builder(
 
-              child:
+              padding: const EdgeInsets.symmetric(horizontal: 18),
 
-              CircularProgressIndicator(
+              itemCount: 6,
 
-                color:
-                primaryColor,
-
+              itemBuilder: (_, __) => const ShimmerBlock(
+                width: double.infinity,
+                height: 110,
               ),
 
             )

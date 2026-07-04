@@ -296,6 +296,18 @@ body{
     color:#fff;
 }
 
+#pincodeFilter{
+    width:100%;
+    border:none;
+    outline:none;
+    background:#1e293b;
+    border-radius:14px;
+    padding:14px 16px;
+    color:#fff;
+    font-size:13px;
+    margin-bottom:10px;
+}
+
 .submit-btn{
     width:100%;
     height:54px;
@@ -443,13 +455,20 @@ body{
                         Service Pincodes
                     </label>
 
-                    <div class="multi-select-box">
+                    <input
+                        type="text"
+                        id="pincodeFilter"
+                        placeholder="Search pincode..."
+                        onkeyup="filterPincodes()"
+                    >
+
+                    <div class="multi-select-box" id="pincodeBox">
 
                         <?php foreach($allPincodes as $pin){ ?>
 
                             <label class="pin-item">
 
-                                <input 
+                                <input
                                     type="checkbox"
                                     name="service_pincodes[]"
                                     value="<?php echo $pin['pincode']; ?>"
@@ -483,6 +502,17 @@ body{
             </button>
 
         </form>
+
+        <script>
+        function filterPincodes(){
+            var query = document.getElementById('pincodeFilter').value.trim().toLowerCase();
+            var items = document.getElementById('pincodeBox').getElementsByClassName('pin-item');
+            for(var i=0;i<items.length;i++){
+                var text = items[i].querySelector('span').textContent.toLowerCase();
+                items[i].style.display = text.indexOf(query) !== -1 ? '' : 'none';
+            }
+        }
+        </script>
 
     </div>
 

@@ -158,12 +158,26 @@ if(isset($_POST['update_product'])){
         "uploads/products/".$file;
     }
 
-    /* OTHER IMAGES */
+    /* OTHER IMAGES (max 3 - 4 total with main image) */
 
     $other_images =
     $product['other_images'];
 
     if(isset($_FILES['other_images'])){
+
+        $uploaded_count = count(array_filter(
+            $_FILES['other_images']['tmp_name'],
+            function($tmp){ return $tmp !== ""; }
+        ));
+
+        if($uploaded_count > 3){
+
+            $error =
+            "You can upload a maximum of 3 additional images (4 total including the main image).";
+        }
+    }
+
+    if(empty($error) && isset($_FILES['other_images'])){
 
         $imgs = [];
 
@@ -203,6 +217,8 @@ if(isset($_POST['update_product'])){
     }
 
     /* UPDATE */
+
+    if(empty($error)){
 
     $update =
     $pdo->prepare(
@@ -343,6 +359,8 @@ if(isset($_POST['update_product'])){
         $variants =
         $variantsStmt->fetchAll();
     }
+
+    }
 }
 ?>
 
@@ -412,6 +430,11 @@ body{
 .success{
     background:#16a34a20;
     color:#4ade80;
+}
+
+.error{
+    background:#ff000020;
+    color:#ffb4b4;
 }
 
 .grid{
@@ -570,6 +593,14 @@ body{
 
 <div class="alert success">
     <?php echo $success; ?>
+</div>
+
+<?php } ?>
+
+<?php if($error != ""){ ?>
+
+<div class="alert error">
+    <?php echo $error; ?>
 </div>
 
 <?php } ?>
@@ -886,12 +917,14 @@ class="preview">
 <div class="input-box full">
 
 <label>
-Other Images
+Other Images (max 3 - 4 total with main image)
 </label>
 
 <input
 type="file"
 name="other_images[]"
+id="otherImagesInput"
+onchange="validateOtherImages(this)"
 multiple>
 
 </div>
@@ -1080,6 +1113,16 @@ Update Product
 </div>
 
 <script>
+
+function validateOtherImages(input){
+
+    if(input.files.length > 3){
+
+        alert("You can upload a maximum of 3 additional images (4 total including the main image).");
+
+        input.value = "";
+    }
+}
 
 document
 .getElementById(

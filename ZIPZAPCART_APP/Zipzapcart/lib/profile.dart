@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'login.dart';
 import 'api_service.dart';
@@ -30,7 +29,6 @@ class _ProfilePageState
 
   String name = "Loading...";
   String phone = "";
-  String referralCode = "";
   String appTheme = "light";
 
   bool get isDark =>
@@ -96,11 +94,6 @@ class _ProfilePageState
 
         phone =
             res["user"]["phone"] ??
-                "";
-
-        referralCode =
-            res["user"]
-            ["referral_code"] ??
                 "";
 
         await prefs.setString(
@@ -255,7 +248,7 @@ class _ProfilePageState
                         color:
 
                         const Color(
-                          0xFFDF6907,
+                          0xFFEF4138,
                         )
 
                             .withOpacity(
@@ -273,9 +266,11 @@ class _ProfilePageState
 
                         Icons.edit,
 
+                        size: 20,
+
                         color:
                         Color(
-                          0xFFDF6907,
+                          0xFFEF4138,
                         ),
 
                       ),
@@ -385,7 +380,7 @@ class _ProfilePageState
 
                       color:
                       Color(
-                        0xFFDF6907,
+                        0xFFEF4138,
                       ),
 
                     ),
@@ -492,7 +487,7 @@ class _ProfilePageState
                       backgroundColor:
 
                       const Color(
-                        0xFFDF6907,
+                        0xFFEF4138,
                       ),
 
                       shape:
@@ -605,7 +600,7 @@ class _ProfilePageState
         child: RefreshIndicator(
 
           color:
-          const Color(0xFFDF6907),
+          const Color(0xFFEF4138),
 
           onRefresh: loadUser,
 
@@ -827,306 +822,6 @@ class _ProfilePageState
                   height: 14,
                 ),
 
-                // 🔥 REFERRAL SECTION
-                Container(
-
-                  padding:
-                  const EdgeInsets.all(
-                    18,
-                  ),
-
-                  decoration:
-                  BoxDecoration(
-
-                    color:
-
-                    isDark
-
-                        ? const Color(
-                      0xFF1E1E1E,
-                    )
-
-                        : Colors.white,
-                    borderRadius:
-                    BorderRadius.circular(
-                      18,
-                    ),
-
-                    border: Border.all(
-                      color:
-                      const Color(
-                        0xFFDF6907,
-                      ),
-
-                      width: 1.4,
-                    ),
-
-                    boxShadow: [
-
-                      BoxShadow(
-                        color: Colors.black
-                            .withOpacity(
-                          0.04,
-                        ),
-
-                        blurRadius: 10,
-
-                        offset:
-                        const Offset(
-                          0,
-                          4,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
-
-                    children: [
-
-                      Row(
-                        children: [
-
-                          Container(
-
-                            width: 42,
-                            height: 42,
-
-                            decoration:
-                            BoxDecoration(
-
-                              color:
-                              const Color(
-                                0xFFDF6907,
-                              ).withOpacity(
-                                0.12,
-                              ),
-
-                              borderRadius:
-                              BorderRadius.circular(
-                                12,
-                              ),
-                            ),
-
-                            child: const Icon(
-                              Icons.card_giftcard,
-
-                              color:
-                              Color(
-                                0xFFDF6907,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(
-                            width: 12,
-                          ),
-
-                           Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment
-                                  .start,
-
-                              children: [
-
-                                Text(
-                                  "Referral Code",
-
-                                  style:
-                                  TextStyle(
-
-                                    fontSize:
-                                    15,
-
-                                    fontWeight:
-                                    FontWeight.w700,
-
-                                    color:
-
-                                    isDark
-
-                                        ? Colors.white
-
-                                        : Colors.black,
-                                  ),
-                                ),
-
-                                SizedBox(
-                                  height: 2,
-                                ),
-
-                                Text(
-                                  "Invite friends and earn rewards",
-
-                                  style:
-                                  TextStyle(
-                                    fontSize:
-                                    11,
-
-                                    color:
-
-                                    isDark
-
-                                        ? Colors.white70
-
-                                        : Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(
-                        height: 18,
-                      ),
-
-                      // 🔥 CODE BOX
-                      Container(
-
-                        width:
-                        double.infinity,
-
-                        padding:
-                        const EdgeInsets.symmetric(
-                          vertical: 18,
-                        ),
-
-                        decoration:
-                        BoxDecoration(
-
-                          color:
-
-                          isDark
-
-                              ? const Color(
-                            0xFF2A2A2A,
-                          )
-
-                              : const Color(
-                            0xFFFFF8ED,
-                          ),
-
-                          borderRadius:
-                          BorderRadius.circular(
-                            16,
-                          ),
-
-                          border: Border.all(
-                            color:
-                            const Color(
-                              0xFFDF6907,
-                            ),
-
-                            width: 1.2,
-                          ),
-                        ),
-
-                        child: Center(
-                          child: Text(
-
-                            referralCode
-                                .isEmpty
-
-                                ? "N/A"
-
-                                : referralCode,
-
-                            style:
-                            const TextStyle(
-
-                              fontSize: 24,
-
-                              letterSpacing:
-                              3,
-
-                              fontWeight:
-                              FontWeight.w800,
-
-                              color:
-                              Color(
-                                0xFFDF6907,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(
-                        height: 16,
-                      ),
-
-                      SizedBox(
-
-                        width:
-                        double.infinity,
-
-                        height: 50,
-
-                        child:
-                        ElevatedButton.icon(
-
-                          onPressed: () {
-
-                            final message =
-
-                                "🔥 Join ZapZapcart Shops and get amazing deals!\n\n"
-
-                                "Use my referral code: $referralCode\n\n"
-
-                                "Download App:\n"
-
-                                "https://play.google.com/store/apps/details?id=com.user.zipzapcart";
-
-                            Share.share(
-                              message,
-                            );
-                          },
-
-                          icon: const Icon(
-                            Icons.share,
-                          ),
-
-                          label: const Text(
-                            "Share Referral Code",
-                          ),
-
-                          style:
-                          ElevatedButton.styleFrom(
-
-                            backgroundColor:
-                            const Color(
-                              0xFFDF6907,
-                            ),
-
-                            foregroundColor:
-                            Colors.white,
-
-                            elevation: 0,
-
-                            shape:
-                            RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(
-                                14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 18,
-                ),
-
                 // 🔥 APP SETTINGS
                 _sectionTitle(
                   "App Settings",
@@ -1277,7 +972,7 @@ class _ProfilePageState
 
                       backgroundColor:
                       const Color(
-                        0xFFDF6907,
+                        0xFFEF4138,
                       ),
 
                       foregroundColor:
@@ -1425,7 +1120,7 @@ class _ProfilePageState
 
                 color:
                 const Color(
-                  0xFFDF6907,
+                  0xFFEF4138,
                 ).withOpacity(
                   0.08,
                 ),
@@ -1441,7 +1136,7 @@ class _ProfilePageState
 
                 color:
                 const Color(
-                  0xFFDF6907,
+                  0xFFEF4138,
                 ),
 
                 size: 20,
@@ -1507,6 +1202,7 @@ class _ProfilePageState
 
              Icon(
               Icons.chevron_right_rounded,
+              size: 20,
               color:
 
               isDark

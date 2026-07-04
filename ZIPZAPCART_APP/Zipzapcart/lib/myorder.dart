@@ -4,7 +4,9 @@ import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_service.dart';
+import 'constants.dart';
 import 'vieworder.dart';
+import 'widgets/shimmer_card.dart';
 
 class MyOrderPage extends StatefulWidget {
   const MyOrderPage({super.key});
@@ -23,8 +25,8 @@ class _MyOrderPageState
 
   List orders = [];
 
-  final Color primaryColor =
-  const Color(0xFFDF6907);
+  static const Color primaryColor =
+  Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -51,32 +53,60 @@ class _MyOrderPageState
       userId,
     );
 
-    setState(() {
-      loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   Color statusColor(String status) {
 
-    switch (status.toLowerCase()) {
+    switch (status.toLowerCase().trim()) {
 
       case "placed":
-        return Colors.orange;
+        return const Color(0xFFE8A317);
 
       case "accepted":
-        return Colors.blue;
+      case "shipped":
+        return const Color(0xFF2F80ED);
 
       case "on the way":
-        return Colors.purple;
+        return const Color(0xFF8E44AD);
 
       case "delivered":
-        return Colors.green;
+        return const Color(0xFF1E9E5A);
 
       case "cancelled":
-        return Colors.red;
+        return const Color(0xFFE53935);
 
       default:
-        return Colors.black;
+        return Colors.black87;
+    }
+  }
+
+  IconData statusIcon(String status) {
+
+    switch (status.toLowerCase().trim()) {
+
+      case "placed":
+        return Icons.receipt_long_rounded;
+
+      case "accepted":
+      case "shipped":
+        return Icons.local_shipping_outlined;
+
+      case "on the way":
+        return Icons.delivery_dining_rounded;
+
+      case "delivered":
+        return Icons.check_circle_rounded;
+
+      case "cancelled":
+        return Icons.cancel_rounded;
+
+      default:
+        return Icons.receipt_long_rounded;
     }
   }
 
@@ -86,19 +116,20 @@ class _MyOrderPageState
     return Scaffold(
 
       backgroundColor:
-      const Color(0xFFF6F7F9),
+      const Color(0xFFF8F8FA),
 
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.black87,
 
-        title: const Text(
+        title: Text(
           "My Orders",
 
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            fontSize: 18,
+            fontSize: 17,
+            color: Colors.black87,
           ),
         ),
 
@@ -107,120 +138,19 @@ class _MyOrderPageState
 
       body: loading
 
-          ? Center(
-        child:
-        CircularProgressIndicator(
-          color: primaryColor,
-        ),
-      )
+          ? _loadingSkeleton()
+
           : orders.isEmpty
 
-          ? Center(
-        child: Padding(
-          padding:
-          const EdgeInsets.symmetric(
-            horizontal: 28,
-          ),
-
-          child: Column(
-            mainAxisAlignment:
-            MainAxisAlignment.center,
-
-            children: [
-
-              Lottie.asset(
-                "assets/images/nodata.json",
-                height: 230,
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                "No Orders Yet",
-
-                textAlign:
-                TextAlign.center,
-
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight:
-                  FontWeight.w800,
-                  color:
-                  Color(0xFF111111),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              const Text(
-                "Looks like you haven't placed any orders yet.\nStart shopping to see your orders here.",
-
-                textAlign:
-                TextAlign.center,
-
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                  height: 1.4,
-                ),
-              ),
-
-              const SizedBox(height: 26),
-
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-
-                child: ElevatedButton(
-
-                  onPressed: () {
-
-                    Navigator.pop(
-                      context,
-                    );
-                  },
-
-                  style:
-                  ElevatedButton.styleFrom(
-                    backgroundColor:
-                    primaryColor,
-
-                    foregroundColor:
-                    Colors.white,
-
-                    shape:
-                    RoundedRectangleBorder(
-                      borderRadius:
-                      BorderRadius.circular(
-                        14,
-                      ),
-                    ),
-
-                    elevation: 0,
-                  ),
-
-                  child: const Text(
-                    "Start Shopping",
-
-                    style: TextStyle(
-                      fontWeight:
-                      FontWeight.w700,
-
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      )
+          ? _emptyState()
 
           : RefreshIndicator(
 
+        color: primaryColor,
+
         onRefresh: () async {
 
-          loadOrders();
+          await loadOrders();
         },
 
         child: ListView.builder(
@@ -232,310 +162,402 @@ class _MyOrderPageState
 
           itemBuilder: (_, index) {
 
-            final order =
-            orders[index];
-
-            return GestureDetector(
-
-              onTap: () {
-
-                Navigator.push(
-                  context,
-
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ViewOrderPage(
-                          orderId:
-                          int.parse(
-                            order["id"]
-                                .toString(),
-                          ),
-                        ),
-                  ),
-                );
-              },
-
-              child: Container(
-
-                margin:
-                const EdgeInsets.only(
-                  bottom: 16,
-                ),
-
-                padding:
-                const EdgeInsets.all(
-                  18,
-                ),
-
-                decoration:
-                BoxDecoration(
-                  color: Colors.white,
-
-                  borderRadius:
-                  BorderRadius.circular(
-                    22,
-                  ),
-
-                  boxShadow: [
-
-                    BoxShadow(
-                      color:
-                      Colors.black
-                          .withOpacity(
-                        0.03,
-                      ),
-
-                      blurRadius: 12,
-
-                      offset:
-                      const Offset(
-                        0,
-                        4,
-                      ),
-                    ),
-                  ],
-                ),
-
-                child: Column(
-                  children: [
-
-                    Row(
-                      children: [
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment
-                                .start,
-
-                            children: [
-
-                              Text(
-                                order[
-                                "order_no"],
-
-                                style:
-                                GoogleFonts.poppins(
-                                  fontSize:
-                                  16,
-
-                                  fontWeight:
-                                  FontWeight
-                                      .w700,
-                                ),
-                              ),
-
-                              const SizedBox(
-                                height: 6,
-                              ),
-
-                              Text(
-                                order[
-                                "created_at"],
-
-                                style:
-                                GoogleFonts.poppins(
-                                  fontSize:
-                                  12,
-
-                                  color:
-                                  Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        Container(
-                          padding:
-                          const EdgeInsets.symmetric(
-                            horizontal:
-                            14,
-
-                            vertical:
-                            7,
-                          ),
-
-                          decoration:
-                          BoxDecoration(
-                            color:
-                            statusColor(
-                              order[
-                              "order_status"],
-                            ).withOpacity(
-                              0.12,
-                            ),
-
-                            borderRadius:
-                            BorderRadius.circular(
-                              30,
-                            ),
-                          ),
-
-                          child: Text(
-                            order[
-                            "order_status"],
-
-                            style:
-                            GoogleFonts.poppins(
-                              color:
-                              statusColor(
-                                order[
-                                "order_status"],
-                              ),
-
-                              fontWeight:
-                              FontWeight
-                                  .w700,
-
-                              fontSize:
-                              12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    Row(
-                      children: [
-
-                        Expanded(
-                          child: infoBox(
-                            "Items",
-                            order[
-                            "items_count"]
-                                .toString(),
-                          ),
-                        ),
-
-                        const SizedBox(
-                          width: 12,
-                        ),
-
-                        Expanded(
-                          child: infoBox(
-                            "Payment",
-                            order[
-                            "payment_method"]
-                                .toUpperCase(),
-                          ),
-                        ),
-
-                        const SizedBox(
-                          width: 12,
-                        ),
-
-                        Expanded(
-                          child: infoBox(
-                            "Total",
-                            "₹${order["total_amount"]}",
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-
-                        Expanded(
-                          child: Container(
-                            height: 48,
-
-                            decoration:
-                            BoxDecoration(
-                              color:
-                              primaryColor,
-
-                              borderRadius:
-                              BorderRadius.circular(
-                                16,
-                              ),
-                            ),
-
-                            child: Center(
-                              child: Text(
-                                "View Details",
-
-                                style:
-                                GoogleFonts.poppins(
-                                  color:
-                                  Colors.white,
-
-                                  fontWeight:
-                                  FontWeight
-                                      .w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return orderCard(orders[index]);
           },
         ),
       ),
     );
   }
 
-  Widget infoBox(
-      String title,
-      String value,
-      ) {
+  Widget _loadingSkeleton() {
 
-    return Container(
-
-      padding:
-      const EdgeInsets.symmetric(
-        vertical: 14,
-      ),
-
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
-
-        borderRadius:
-        BorderRadius.circular(
-          18,
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (_, i) => const Padding(
+        padding: EdgeInsets.only(bottom: 16),
+        child: ShimmerBlock(
+          width: double.infinity,
+          height: 168,
+          radius: 22,
         ),
       ),
+    );
+  }
 
-      child: Column(
-        children: [
+  Widget _emptyState() {
 
-          Text(
-            title,
+    return Center(
+      child: Padding(
+        padding:
+        const EdgeInsets.symmetric(
+          horizontal: 28,
+        ),
 
-            style:
-            GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.grey,
+        child: Column(
+          mainAxisAlignment:
+          MainAxisAlignment.center,
+
+          children: [
+
+            Lottie.asset(
+              "assets/images/nodata.json",
+              height: 230,
             ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              "No Orders Yet",
+
+              textAlign:
+              TextAlign.center,
+
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight:
+                FontWeight.w800,
+                color:
+                const Color(0xFF111111),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              "Looks like you haven't placed any orders yet.\nStart shopping to see your orders here.",
+
+              textAlign:
+              TextAlign.center,
+
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.black54,
+                height: 1.4,
+              ),
+            ),
+
+            const SizedBox(height: 26),
+
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+
+              child: ElevatedButton(
+
+                onPressed: () {
+
+                  Navigator.pop(
+                    context,
+                  );
+                },
+
+                style:
+                ElevatedButton.styleFrom(
+                  backgroundColor:
+                  primaryColor,
+
+                  foregroundColor:
+                  Colors.white,
+
+                  shape:
+                  RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.circular(
+                      14,
+                    ),
+                  ),
+
+                  elevation: 0,
+                ),
+
+                child: Text(
+                  "Start Shopping",
+
+                  style: GoogleFonts.poppins(
+                    fontWeight:
+                    FontWeight.w700,
+
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget orderCard(Map order) {
+
+    final String status =
+    (order["order_status"] ?? "").toString();
+
+    final List previewItems =
+    order["preview_items"] ?? [];
+
+    final int itemsCount =
+    int.tryParse(
+      order["items_count"].toString(),
+    ) ?? previewItems.length;
+
+    final int extraCount =
+    itemsCount - previewItems.length;
+
+    final String firstName =
+    previewItems.isNotEmpty
+        ? (previewItems.first["name"] ?? "").toString()
+        : "";
+
+    return GestureDetector(
+
+      onTap: () {
+
+        Navigator.push(
+          context,
+
+          MaterialPageRoute(
+            builder: (_) =>
+                ViewOrderPage(
+                  orderId:
+                  int.parse(
+                    order["id"]
+                        .toString(),
+                  ),
+                ),
+          ),
+        );
+      },
+
+      child: Container(
+
+        margin:
+        const EdgeInsets.only(
+          bottom: 16,
+        ),
+
+        padding:
+        const EdgeInsets.all(
+          16,
+        ),
+
+        decoration:
+        BoxDecoration(
+          color: Colors.white,
+
+          borderRadius:
+          BorderRadius.circular(
+            22,
           ),
 
-          const SizedBox(height: 6),
-
-          Text(
-            value,
-
-            textAlign:
-            TextAlign.center,
-
-            style:
-            GoogleFonts.poppins(
-              fontWeight:
-              FontWeight.w700,
-
-              fontSize: 13,
-            ),
+          border: Border.all(
+            color: const Color(0xFFF0F0F0),
           ),
-        ],
+
+          boxShadow: [
+
+            BoxShadow(
+              color:
+              Colors.black
+                  .withOpacity(
+                0.04,
+              ),
+
+              blurRadius: 16,
+
+              offset:
+              const Offset(
+                0,
+                6,
+              ),
+            ),
+          ],
+        ),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // 🔥 PRODUCT PREVIEW ROW
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                SizedBox(
+                  height: 64,
+                  width: previewItems.isEmpty
+                      ? 64
+                      : (previewItems.length * 48.0) + 16,
+
+                  child: Stack(
+                    children: List.generate(
+                      previewItems.isEmpty ? 1 : previewItems.length,
+                          (i) {
+
+                        final img = previewItems.isEmpty
+                            ? ""
+                            : (previewItems[i]["image"] ?? "").toString();
+
+                        return Positioned(
+                          left: i * 48.0,
+
+                          child: Container(
+                            height: 64,
+                            width: 64,
+
+                            padding: const EdgeInsets.all(8),
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F7F7),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 3,
+                              ),
+                            ),
+
+                            child: img.isEmpty
+                                ? Icon(
+                              Icons.shopping_bag_outlined,
+                              color: Colors.grey.shade400,
+                              size: 22,
+                            )
+                                : Image.network(
+                              AppConstants.imageUrl + img,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, e, s) => Icon(
+                                Icons.shopping_bag_outlined,
+                                color: Colors.grey.shade400,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 14),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                      Text(
+                        firstName.isEmpty
+                            ? "Order ${order["order_no"] ?? ""}"
+                            : firstName,
+
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          height: 1.3,
+                        ),
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      if (extraCount > 0)
+                        Text(
+                          "+$extraCount more item${extraCount > 1 ? 's' : ''}",
+
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+
+                  decoration: BoxDecoration(
+                    color: statusColor(status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        statusIcon(status),
+                        size: 12,
+                        color: statusColor(status),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        status,
+
+                        style: GoogleFonts.poppins(
+                          color: statusColor(status),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            Container(
+              height: 1,
+              color: const Color(0xFFF2F2F2),
+            ),
+
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+
+                Expanded(
+                  child: Text(
+                    order["order_no"] ?? "",
+
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ),
+
+                Text(
+                  AppConstants.formatPrice(order["total_amount"]),
+
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: primaryColor,
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
