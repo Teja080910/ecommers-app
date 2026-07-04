@@ -2,9 +2,9 @@
 // db.php
 
 $host = "localhost";
-$dbname = "u272105386_zipzapcart";
-$username = "root";
-$password = "";
+$dbname = "zipzapcart";
+$username = "zipzapcart_user";
+$password = "YourStrongPassword";
 
 try{
 
