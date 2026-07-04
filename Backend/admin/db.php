@@ -1,10 +1,10 @@
 <?php
 // db.php
 
-$host = "localhost";
-$dbname = "zipzapcart";
-$username = "zipzapcart_user";
-$password = "YourStrongPassword";
+$host = getenv("DB_HOST") ?: "localhost";
+$dbname = getenv("DB_NAME") ?: "zipzapcart";
+$username = getenv("DB_USER") ?: "zipzapcart_user";
+$password = getenv("DB_PASS") ?: "YourStrongPassword";
 
 try{
 

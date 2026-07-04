@@ -1,9 +1,9 @@
 <?php
 
-$host = "localhost";        // your server (usually localhost)
-$user = "zipzapcart_user";     // DB username
-$pass = "YourStrongPassword"; // DB password
-$db   = "zipzapcart";     // DB name
+$host = getenv("DB_HOST") ?: "localhost";
+$user = getenv("DB_USER") ?: "zipzapcart_user";
+$pass = getenv("DB_PASS") ?: "YourStrongPassword";
+$db   = getenv("DB_NAME") ?: "zipzapcart";
 
 $conn = mysqli_connect($host, $user, $pass, $db);
 
