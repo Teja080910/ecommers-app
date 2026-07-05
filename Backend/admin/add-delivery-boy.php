@@ -1,5 +1,3 @@
-<!-- add-delivery-boy.php -->
-
 <?php
 session_start();
 

@@ -1,5 +1,3 @@
-<!-- add-franchise.php -->
-
 <?php
 session_start();
 
