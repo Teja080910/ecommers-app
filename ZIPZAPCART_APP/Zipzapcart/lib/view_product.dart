@@ -290,7 +290,9 @@ class _ViewProductPageState
 
     if (data["status"] == true) {
 
-
+      if (!mounted) {
+        return;
+      }
 
       if (buyNow) {
 
@@ -304,6 +306,14 @@ class _ViewProductPageState
 
       } else {
 
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Color(0xFF1F1F1F),
+            content: Text("Added to cart"),
+          ),
+        );
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -312,6 +322,20 @@ class _ViewProductPageState
           ),
         );
       }
+
+    } else if (mounted) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+          content: Text(
+            data["auth_error"] == true
+                ? "Session expired. Please log in again."
+                : "Couldn't add to cart. Please try again.",
+          ),
+        ),
+      );
     }
   }
 
@@ -377,20 +401,40 @@ class _ViewProductPageState
                   true
               ){
 
+                final added =
+                res["wishlist"] == true;
+
                 setState(() {
-
-                  isWishlist=
-
-                      res[
-                      "wishlist"
-                      ]
-
-                          ==
-
-                          true;
-
+                  isWishlist = added;
                 });
 
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: const Color(0xFF1F1F1F),
+                      content: Text(
+                        added
+                            ? "Added to wishlist"
+                            : "Removed from wishlist",
+                      ),
+                    ),
+                  );
+                }
+
+              } else if (mounted) {
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.red,
+                    content: Text(
+                      res["auth_error"] == true
+                          ? "Session expired. Please log in again."
+                          : "Couldn't update wishlist. Please try again.",
+                    ),
+                  ),
+                );
               }
 
             },
