@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN */
 
@@ -92,47 +93,28 @@ if(isset($_POST['add_product'])){
 
     /* MAIN IMAGE */
 
-    if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $ext = strtolower(
+    $mainImageFile = handleCroppedOrRawUpload(
+        'cropped_image_data',
+        'image',
+        "../app/uploads/products",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-            pathinfo(
+    if($uploadError != ""){
 
-                $_FILES['image']['name'],
-                PATHINFO_EXTENSION
-            )
-        );
+        $error = $uploadError;
 
-        $allowed =
-        ['jpg','jpeg','png','webp'];
+    }else if($mainImageFile){
 
-        if(in_array($ext,$allowed)){
-
-            $file =
-            time().'_'.
-            $_FILES['image']['name'];
-
-            move_uploaded_file(
-
-                $_FILES['image']['tmp_name'],
-
-                "../app/uploads/products/".$file
-            );
-
-            $image =
-            "uploads/products/".$file;
-
-        }else{
-
-            $error =
-            "Invalid Main Image";
-        }
+        $image = "uploads/products/".$mainImageFile;
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
 
-    if(isset($_FILES['other_images'])){
+    if(empty($error) && isset($_FILES['other_images'])){
 
         $uploaded_count = count(array_filter(
             $_FILES['other_images']['tmp_name'],
@@ -146,50 +128,17 @@ if(isset($_POST['add_product'])){
         }
     }
 
-    if(empty($error) && isset($_FILES['other_images'])){
+    if(empty($error)){
 
-        foreach(
+        $otherImageFiles = handleCroppedOrRawMultiUpload(
+            'cropped_other_images',
+            'other_images',
+            "../app/uploads/products",
+            ['jpg','jpeg','png','webp']
+        );
 
-            $_FILES['other_images']['tmp_name']
-            as $key => $tmp
-
-        ){
-
-            if($tmp == ""){
-                continue;
-            }
-
-            $ext = strtolower(
-
-                pathinfo(
-
-                    $_FILES['other_images']['name'][$key],
-
-                    PATHINFO_EXTENSION
-                )
-            );
-
-            $allowed =
-            ['jpg','jpeg','png','webp'];
-
-            if(in_array($ext,$allowed)){
-
-                $file =
-                time().
-                rand(1000,9999).
-                "_".
-                $_FILES['other_images']['name'][$key];
-
-                move_uploaded_file(
-
-                    $tmp,
-
-                    "../app/uploads/products/".$file
-                );
-
-                $other_images[] =
-                "uploads/products/".$file;
-            }
+        foreach($otherImageFiles as $f){
+            $other_images[] = "uploads/products/".$f;
         }
     }
 
@@ -359,6 +308,16 @@ Add Product
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -806,13 +765,18 @@ body{
                 <div class="input-box">
 
                     <label>
-                        Main Image
+                        Main Image (square crop recommended)
                     </label>
 
                     <input
                     type="file"
                     name="image"
+                    id="mainImageInput"
+                    accept="image/*"
+                    onchange="ImageCrop.open(this,'croppedImageData')"
                     required>
+
+                    <input type="hidden" name="cropped_image_data" id="croppedImageData">
 
                 </div>
 
@@ -830,6 +794,8 @@ body{
                     id="otherImagesInput"
                     onchange="validateOtherImages(this)"
                     multiple>
+
+                    <input type="hidden" name="cropped_other_images" id="croppedOtherImagesData">
 
                 </div>
 
@@ -899,6 +865,24 @@ body{
 
 </div>
 
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
+    </div>
+
+</div>
+
 <script>
 
 function validateOtherImages(input){
@@ -908,7 +892,10 @@ function validateOtherImages(input){
         alert("You can upload a maximum of 3 additional images (4 total including the main image).");
 
         input.value = "";
+        return;
     }
+
+    ImageCrop.openMulti(input, 'croppedOtherImagesData');
 }
 
 document

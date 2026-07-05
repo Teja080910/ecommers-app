@@ -3,6 +3,7 @@
 session_start();
 
 require_once "db.php";
+require_once "../includes/image_upload.php";
 
 if(!isset($_SESSION["seller_id"])){
 
@@ -42,39 +43,18 @@ if(isset($_POST["save"])){
     $vehicle_number = trim($_POST["vehicle_number"]);
     $is_active = intval($_POST["is_active"]);
 
-    $profile = $boy["profile_photo"];
-    $aadhaar = $boy["aadhaar_photo"];
-    $pan = $boy["pan_photo"];
+    $dir = "../app/uploads/delivery";
+    $allowedExts = ['jpg','jpeg','png','webp'];
+    $uploadError = "";
 
-    $dir = "../app/uploads/delivery/";
+    $profileFile = handleCroppedOrRawUpload('cropped_profile', 'profile', $dir, $allowedExts, $uploadError);
+    $profile = $profileFile ? "uploads/delivery/".$profileFile : $boy["profile_photo"];
 
-    if(!is_dir($dir)){
-        mkdir($dir, 0777, true);
-    }
+    $aadhaarFile = handleCroppedOrRawUpload('cropped_aadhaar', 'aadhaar', $dir, $allowedExts, $uploadError);
+    $aadhaar = $aadhaarFile ? "uploads/delivery/".$aadhaarFile : $boy["aadhaar_photo"];
 
-    function uploadFile($key, $old, $dir){
-
-        if(isset($_FILES[$key]) && $_FILES[$key]["name"] != ""){
-
-            if(!empty($old) && file_exists($dir.$old)){
-                unlink($dir.$old);
-            }
-
-            $ext = pathinfo($_FILES[$key]["name"], PATHINFO_EXTENSION);
-
-            $file = time().rand(1000,9999).".".$ext;
-
-            move_uploaded_file($_FILES[$key]["tmp_name"], $dir.$file);
-
-            return "uploads/delivery/".$file;
-        }
-
-        return $old;
-    }
-
-    $profile = uploadFile("profile", $profile, $dir);
-    $aadhaar = uploadFile("aadhaar", $aadhaar, $dir);
-    $pan = uploadFile("pan", $pan, $dir);
+    $panFile = handleCroppedOrRawUpload('cropped_pan', 'pan', $dir, $allowedExts, $uploadError);
+    $pan = $panFile ? "uploads/delivery/".$panFile : $boy["pan_photo"];
 
     $update = $pdo->prepare("
         UPDATE delivery_boys
@@ -120,6 +100,11 @@ if(isset($_POST["save"])){
 <head>
 
 <title>Edit Delivery Boy</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -237,17 +222,20 @@ button{
 <div class="group">
 <label>Profile Photo</label>
 <img src="../app/<?= $boy["profile_photo"] ?>">
-<input type="file" name="profile">
+<input type="file" name="profile" id="profileInput" accept="image/*" onchange="ImageCrop.open(this,'croppedProfileData')">
+<input type="hidden" name="cropped_profile" id="croppedProfileData">
 </div>
 
 <div class="group">
 <label>Aadhaar</label>
-<input type="file" name="aadhaar">
+<input type="file" name="aadhaar" id="aadhaarInput" accept="image/*" onchange="ImageCrop.open(this,'croppedAadhaarData')">
+<input type="hidden" name="cropped_aadhaar" id="croppedAadhaarData">
 </div>
 
 <div class="group">
 <label>PAN</label>
-<input type="file" name="pan">
+<input type="file" name="pan" id="panInput" accept="image/*" onchange="ImageCrop.open(this,'croppedPanData')">
+<input type="hidden" name="cropped_pan" id="croppedPanData">
 </div>
 
 <div class="group">

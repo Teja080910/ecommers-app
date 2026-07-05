@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN */
 
@@ -87,84 +88,28 @@ $_SESSION['seller_id'];
 
     /* MAIN IMAGE */
 
-    if(!empty($_POST['cropped_image_data'])){
+    $uploadError = "";
 
-        /* CROPPED (SQUARE) IMAGE FROM BROWSER */
+    $mainImageFile = handleCroppedOrRawUpload(
+        'cropped_image_data',
+        'image',
+        "../app/uploads/products",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        $data = $_POST['cropped_image_data'];
+    if($uploadError != ""){
 
-        if(preg_match('/^data:image\/(jpeg|png|webp);base64,/', $data, $matches)){
+        $error = $uploadError;
 
-            $data = substr($data, strpos($data, ',') + 1);
+    }else if($mainImageFile){
 
-            $decoded = base64_decode($data);
-
-            if($decoded !== false){
-
-                $file =
-                time().'_cropped.jpg';
-
-                file_put_contents(
-                    "../app/uploads/products/".$file,
-                    $decoded
-                );
-
-                $image =
-                "uploads/products/".$file;
-
-            }else{
-
-                $error =
-                "Invalid Cropped Image";
-            }
-
-        }else{
-
-            $error =
-            "Invalid Cropped Image";
-        }
-
-    }else if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
-
-        $ext = strtolower(
-
-            pathinfo(
-
-                $_FILES['image']['name'],
-                PATHINFO_EXTENSION
-            )
-        );
-
-        $allowed =
-        ['jpg','jpeg','png','webp'];
-
-        if(in_array($ext,$allowed)){
-
-            $file =
-            time().'_'.
-            $_FILES['image']['name'];
-
-            move_uploaded_file(
-
-                $_FILES['image']['tmp_name'],
-
-                "../app/uploads/products/".$file
-            );
-
-            $image =
-            "uploads/products/".$file;
-
-        }else{
-
-            $error =
-            "Invalid Main Image";
-        }
+        $image = "uploads/products/".$mainImageFile;
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
 
-    if(isset($_FILES['other_images'])){
+    if(empty($error) && isset($_FILES['other_images'])){
 
         $uploaded_count = count(array_filter(
             $_FILES['other_images']['tmp_name'],
@@ -178,50 +123,17 @@ $_SESSION['seller_id'];
         }
     }
 
-    if(empty($error) && isset($_FILES['other_images'])){
+    if(empty($error)){
 
-        foreach(
+        $otherImageFiles = handleCroppedOrRawMultiUpload(
+            'cropped_other_images',
+            'other_images',
+            "../app/uploads/products",
+            ['jpg','jpeg','png','webp']
+        );
 
-            $_FILES['other_images']['tmp_name']
-            as $key => $tmp
-
-        ){
-
-            if($tmp == ""){
-                continue;
-            }
-
-            $ext = strtolower(
-
-                pathinfo(
-
-                    $_FILES['other_images']['name'][$key],
-
-                    PATHINFO_EXTENSION
-                )
-            );
-
-            $allowed =
-            ['jpg','jpeg','png','webp'];
-
-            if(in_array($ext,$allowed)){
-
-                $file =
-                time().
-                rand(1000,9999).
-                "_".
-                $_FILES['other_images']['name'][$key];
-
-                move_uploaded_file(
-
-                    $tmp,
-
-                    "../app/uploads/products/".$file
-                );
-
-                $other_images[] =
-                "uploads/products/".$file;
-            }
+        foreach($otherImageFiles as $f){
+            $other_images[] = "uploads/products/".$f;
         }
     }
 
@@ -395,8 +307,12 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
 
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
 <script
 src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -591,66 +507,7 @@ body{
     }
 }
 
-.crop-modal{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.75);
-    z-index:999;
-    align-items:center;
-    justify-content:center;
-}
-
-.crop-modal.active{
-    display:flex;
-}
-
-.crop-box{
-    background:#0c0e1c;
-    border-radius:20px;
-    padding:24px;
-    width:90%;
-    max-width:500px;
-}
-
-.crop-image-wrap{
-    max-height:400px;
-    margin-bottom:18px;
-}
-
-.crop-image-wrap img{
-    max-width:100%;
-    display:block;
-}
-
-.crop-actions{
-    display:flex;
-    gap:12px;
-    margin-top:16px;
-}
-
-.crop-actions button{
-    flex:1;
-    height:46px;
-    border:none;
-    border-radius:12px;
-    cursor:pointer;
-    font-size:14px;
-    font-weight:600;
-}
-
-.crop-use-btn{
-    background:linear-gradient(135deg,#06b6d4,#7c3aed);
-    color:#fff;
-}
-
-.crop-skip-btn{
-    background:#1e293b;
-    color:#cbd5e1;
-}
+/* Crop modal styles now in ../assets/css/image-crop.css */
 
 </style>
 </head>
@@ -885,7 +742,7 @@ body{
                     name="image"
                     id="mainImageInput"
                     accept="image/*"
-                    onchange="openCropModal(this)"
+                    onchange="ImageCrop.open(this,'croppedImageData')"
                     required>
 
                     <input type="hidden" name="cropped_image_data" id="croppedImageData">
@@ -906,6 +763,8 @@ body{
                     id="otherImagesInput"
                     onchange="validateOtherImages(this)"
                     multiple>
+
+                    <input type="hidden" name="cropped_other_images" id="croppedOtherImagesData">
 
                 </div>
 
@@ -985,8 +844,8 @@ body{
         </div>
 
         <div class="crop-actions">
-            <button type="button" class="crop-skip-btn" onclick="skipCrop()">Skip Crop</button>
-            <button type="button" class="crop-use-btn" onclick="applyCrop()">Crop &amp; Use</button>
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
         </div>
 
     </div>
@@ -995,69 +854,6 @@ body{
 
 <script>
 
-let cropperInstance = null;
-
-function openCropModal(input){
-
-    if(!input.files || !input.files[0]){
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function(e){
-
-        const img = document.getElementById('cropperImage');
-        img.src = e.target.result;
-
-        document.getElementById('cropModal').classList.add('active');
-
-        if(cropperInstance){
-            cropperInstance.destroy();
-        }
-
-        cropperInstance = new Cropper(img, {
-            aspectRatio: 1,
-            viewMode: 1,
-            autoCropArea: 1
-        });
-    };
-
-    reader.readAsDataURL(input.files[0]);
-}
-
-function applyCrop(){
-
-    if(!cropperInstance){
-        return;
-    }
-
-    const canvas = cropperInstance.getCroppedCanvas({
-        width: 800,
-        height: 800
-    });
-
-    document.getElementById('croppedImageData').value =
-        canvas.toDataURL('image/jpeg', 0.9);
-
-    closeCropModal();
-}
-
-function skipCrop(){
-    document.getElementById('croppedImageData').value = '';
-    closeCropModal();
-}
-
-function closeCropModal(){
-
-    document.getElementById('cropModal').classList.remove('active');
-
-    if(cropperInstance){
-        cropperInstance.destroy();
-        cropperInstance = null;
-    }
-}
-
 function validateOtherImages(input){
 
     if(input.files.length > 3){
@@ -1065,7 +861,10 @@ function validateOtherImages(input){
         alert("You can upload a maximum of 3 additional images (4 total including the main image).");
 
         input.value = "";
+        return;
     }
+
+    ImageCrop.openMulti(input, 'croppedOtherImagesData');
 }
 
 document

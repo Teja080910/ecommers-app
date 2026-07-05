@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN CHECK */
 
@@ -79,45 +80,52 @@ if(isset($_POST['add_movie'])){
 
     /* MAIN POSTER */
 
-    if(isset($_FILES['mainposter']) &&
-       $_FILES['mainposter']['error'] == 0){
+    $uploadError = "";
 
-        $file_name =
-        time().'_main_'.
-        $_FILES['mainposter']['name'];
+    $mainposterFile = handleCroppedOrRawUpload(
+        'cropped_mainposter',
+        'mainposter',
+        "../app/uploads/movies",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($uploadError != ""){
 
-            $_FILES['mainposter']['tmp_name'],
+        $error = $uploadError;
 
-            "../app/uploads/movies/".$file_name
-        );
+    }else if($mainposterFile){
 
         $mainposter =
-        "uploads/movies/".$file_name;
+        "uploads/movies/".$mainposterFile;
     }
 
     /* VERTICAL POSTER */
 
-    if(isset($_FILES['verticalposter']) &&
-       $_FILES['verticalposter']['error'] == 0){
+    if(empty($error)){
 
-        $file_name =
-        time().'_vertical_'.
-        $_FILES['verticalposter']['name'];
-
-        move_uploaded_file(
-
-            $_FILES['verticalposter']['tmp_name'],
-
-            "../app/uploads/movies/".$file_name
+        $verticalposterFile = handleCroppedOrRawUpload(
+            'cropped_verticalposter',
+            'verticalposter',
+            "../app/uploads/movies",
+            ['jpg','jpeg','png','webp'],
+            $uploadError
         );
 
-        $verticalposter =
-        "uploads/movies/".$file_name;
+        if($uploadError != ""){
+
+            $error = $uploadError;
+
+        }else if($verticalposterFile){
+
+            $verticalposter =
+            "uploads/movies/".$verticalposterFile;
+        }
     }
 
     /* INSERT */
+
+    if(empty($error)){
 
     $stmt =
     $pdo->prepare(
@@ -176,6 +184,8 @@ if(isset($_POST['add_movie'])){
         $error =
         "Failed to add movie";
     }
+
+    }
 }
 
 ?>
@@ -196,6 +206,14 @@ Add Movie
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 rel="stylesheet">
@@ -520,7 +538,12 @@ body{
                 <input
                 type="file"
                 name="mainposter"
+                id="mainposterInput"
+                accept="image/*"
+                onchange="ImageCrop.open(this,'croppedMainposterData')"
                 required>
+
+                <input type="hidden" name="cropped_mainposter" id="croppedMainposterData">
 
             </div>
 
@@ -535,7 +558,12 @@ body{
                 <input
                 type="file"
                 name="verticalposter"
+                id="verticalposterInput"
+                accept="image/*"
+                onchange="ImageCrop.open(this,'croppedVerticalposterData')"
                 required>
+
+                <input type="hidden" name="cropped_verticalposter" id="croppedVerticalposterData">
 
             </div>
 
@@ -610,6 +638,24 @@ body{
     </form>
 
 </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
+    </div>
 
 </div>
 

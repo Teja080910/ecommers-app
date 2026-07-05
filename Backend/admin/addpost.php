@@ -3,6 +3,7 @@
 session_start();
 
 require_once "db.php";
+require_once "../includes/image_upload.php";
 
 if(!isset($_SESSION["admin_id"])){
 
@@ -35,7 +36,28 @@ if(isset($_POST["add_post"])){
 
         /* MEDIA */
 
-        if(($type == "image" || $type == "video")
+        if($type == "image"){
+
+            $uploadError = "";
+
+            $mediaFile = handleCroppedOrRawUpload(
+                'cropped_media',
+                'media',
+                "../app/uploads/posts",
+                ['jpg','jpeg','png','webp'],
+                $uploadError
+            );
+
+            if($uploadError != ""){
+
+                $error = $uploadError;
+
+            }else if($mediaFile){
+
+                $media = "uploads/posts/".$mediaFile;
+            }
+
+        }else if($type == "video"
             && isset($_FILES["media"])
             && $_FILES["media"]["name"] != ""){
 
@@ -47,11 +69,7 @@ if(isset($_POST["add_post"])){
 
             $ext = strtolower(pathinfo($_FILES["media"]["name"], PATHINFO_EXTENSION));
 
-            if($type == "image"){
-                $allowed = ["jpg","jpeg","png","webp"];
-            }else{
-                $allowed = ["mp4","mov","avi","mkv"];
-            }
+            $allowed = ["mp4","mov","avi","mkv"];
 
             if(!in_array($ext, $allowed)){
 
@@ -122,6 +140,11 @@ if(isset($_POST["add_post"])){
 <title>Add Post</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -290,6 +313,7 @@ button{
 <div class="group">
 <label>Media</label>
 <input type="file" name="media" id="media" accept="image/*,video/*">
+<input type="hidden" name="cropped_media" id="croppedMediaData">
 <div class="preview" id="preview"></div>
 </div>
 
@@ -304,6 +328,16 @@ Publish Post
 
 </div>
 
+<div class="crop-modal" id="cropModal">
+    <div class="crop-box">
+        <div class="crop-image-wrap"><img id="cropperImage"></div>
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+    </div>
+</div>
+
 <script>
 
 media.onchange = (e) => {
@@ -316,6 +350,7 @@ media.onchange = (e) => {
 
     if(f.type.includes("image")){
         preview.innerHTML = `<img src="${url}">`;
+        ImageCrop.open(media, 'croppedMediaData');
     }else{
         preview.innerHTML = `<video controls src="${url}"></video>`;
     }
