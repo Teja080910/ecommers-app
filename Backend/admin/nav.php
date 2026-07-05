@@ -282,6 +282,8 @@ $franchise_pages = ['add-franchise.php','all-franchises.php','franchise-payouts.
 
 $delivery_pages = ['add-delivery-boy.php','all-delivery-boys.php','delivery-boy-payouts.php'];
 
+$post_pages = ['addpost.php','allpost.php'];
+
 $order_pages = ['veg-orders.php','food-orders.php','order-history.php','cancelled-orders.php'];
 
 $offline_pages = ['offline-veg-orders.php','offline-food-orders.php','offline-history.php'];
@@ -362,6 +364,31 @@ $settings_pages = ['app-settings.php','change-password.php'];
             <li><a class="<?= isActive('all-franchises.php') ?>" href="all-franchises.php">All Sellers</a></li>
 
             <li><a class="<?= isActive('franchise-payouts.php') ?>" href="franchise-payouts.php">Sellers Payouts</a></li>
+
+        </ul>
+
+    </li>
+
+    <!-- Posts -->
+
+    <li class="<?= in_array($current_page,$post_pages) ? 'active' : '' ?>">
+
+        <a href="javascript:void(0)" onclick="toggleSubmenu('postMenu')">
+
+            <div class="menu-left">
+                <i class="fa-solid fa-image"></i>
+                Posts
+            </div>
+
+            <i class="fa-solid fa-angle-down"></i>
+
+        </a>
+
+        <ul class="submenu <?= in_array($current_page,$post_pages) ? 'show' : '' ?>" id="postMenu">
+
+            <li><a class="<?= isActive('addpost.php') ?>" href="addpost.php">Add Post</a></li>
+
+            <li><a class="<?= isActive('allpost.php') ?>" href="allpost.php">All Posts</a></li>
 
         </ul>
 

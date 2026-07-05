@@ -666,7 +666,7 @@ body{
 
                     "<?php echo $cat['id']; ?>",
 
-                    "<?php echo htmlspecialchars($cat['name']); ?>",
+                    "<?php echo htmlspecialchars($cat['name'], ENT_QUOTES); ?>",
 
                     "<?php echo $cat['image']; ?>",
 
@@ -747,7 +747,7 @@ onclick='openEditSub(
 
 "<?php echo $sub["category_id"]; ?>",
 
-"<?php echo htmlspecialchars($sub["name"]); ?>",
+"<?php echo htmlspecialchars($sub["name"], ENT_QUOTES); ?>",
 
 "<?php echo $sub["image"]; ?>"
 

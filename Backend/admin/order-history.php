@@ -229,6 +229,26 @@ body{
     color:#22d3ee;
 }
 
+.shipped{
+    background:#7c3aed20;
+    color:#c084fc;
+}
+
+.on-the-way{
+    background:#eab30820;
+    color:#facc15;
+}
+
+.delivered{
+    background:#16a34a20;
+    color:#4ade80;
+}
+
+.cancelled{
+    background:#dc262620;
+    color:#f87171;
+}
+
 /* ITEMS */
 
 .order-items{
@@ -494,7 +514,7 @@ body{
 
             <div>
 
-                <span class="badge placed">
+                <span class="badge <?php echo strtolower(str_replace(' ', '-', $order['order_status'])); ?>">
 
                     <?php echo $order['order_status']; ?>
 

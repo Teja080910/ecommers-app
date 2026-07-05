@@ -5,7 +5,7 @@ require_once 'db.php';
 
 /* Login Check */
 
-if(!isset($_SESSION['franchise_id'])){
+if(!isset($_SESSION['seller_id'])){
 
     header("Location:index.php");
     exit;
@@ -14,7 +14,7 @@ if(!isset($_SESSION['franchise_id'])){
 
 /* Logged Franchise */
 
-$franchise_id = $_SESSION['franchise_id'];
+$franchise_id = $_SESSION['seller_id'];
 
 /* Fetch Food Categories */
 

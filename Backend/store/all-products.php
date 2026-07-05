@@ -6,8 +6,6 @@ require_once 'db.php';
 /* LOGIN CHECK */
 
 if(!isset($_SESSION['seller_id'])){
-    $seller_id =
-$_SESSION['seller_id'];
 ?>
 <!DOCTYPE html>
 <html>

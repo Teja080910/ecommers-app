@@ -1,12 +1,4 @@
 <?php
-// Report all PHP errors
-error_reporting(E_ALL);
-
-// Display errors on the screen
-ini_set('display_errors', '1');
-
-// (Optional) Display startup errors
-ini_set('display_startup_errors', '1');
 session_start();
 
 require_once 'db.php';

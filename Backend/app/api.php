@@ -2323,8 +2323,7 @@ if ($action == "get_razorpay_settings") {
 
         echo json_encode([
             "status" => true,
-            "key_id" => $row['razorpay_key'],
-            "key_secret" => $row['razorpay_secret']
+            "key_id" => $row['razorpay_key']
         ]);
 
     } else {

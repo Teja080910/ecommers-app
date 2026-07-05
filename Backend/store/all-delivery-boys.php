@@ -462,7 +462,20 @@ body{
 
             <!-- Actions -->
 
-          
+            <div class="action-buttons">
+
+                <a href="edit-delivery-boy.php?id=<?php echo $boy['id']; ?>" class="edit-btn">
+                    <i class="fa fa-pen"></i>
+                </a>
+
+                <a href="all-delivery-boys.php?delete=<?php echo $boy['id']; ?>"
+                   class="delete-btn"
+                   onclick="return confirm('Delete this delivery boy?');">
+                    <i class="fa fa-trash"></i>
+                </a>
+
+            </div>
+
         </div>
 
         <?php } ?>
