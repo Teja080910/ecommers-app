@@ -195,16 +195,10 @@ if(isset($_POST['action']) && $_POST['action'] == 'verify_payment'){
 }
 
 /* ============================================================
-   Page render
+   Page render (single page, both categories shown together)
 ============================================================ */
 
-$viewCategory = $_GET['category'] ?? null;
-
-if($viewCategory && !in_array($viewCategory, ['city','national'])){
-    $viewCategory = null;
-}
-
-/* Category summary (for the picker) */
+/* Category summary */
 
 $categoryPlans = $pdo->query("
     SELECT * FROM subscription
@@ -268,8 +262,8 @@ foreach($myEnrollments as $e){
 }
 
 body{
-    background:#0f172a;
-    color:#fff;
+    background:#f1f5f9;
+    color:#0f172a;
 }
 
 .main-content{
@@ -281,26 +275,32 @@ body{
     margin-bottom:25px;
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    flex-wrap:wrap;
+    gap:14px;
+}
+
+.icon-btn-back{
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    background:#fff;
+    border:1px solid #e2e8f0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#334155;
+    text-decoration:none;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
 }
 
 .page-header h1{
     font-size:24px;
-    margin-bottom:5px;
+    font-weight:800;
+    margin-bottom:4px;
 }
 
 .page-header p{
-    font-size:13px;
-    color:#94a3b8;
-}
-
-.back-link{
-    color:#22d3ee;
-    text-decoration:none;
-    font-size:13px;
-    font-weight:600;
+    font-size:13.5px;
+    color:#64748b;
 }
 
 .alert{
@@ -312,156 +312,231 @@ body{
 }
 
 .success{
-    background:#16a34a20;
-    color:#4ade80;
+    background:#dcfce7;
+    color:#15803d;
 }
 
 .error{
-    background:#dc262620;
-    color:#f87171;
+    background:#fee2e2;
+    color:#b91c1c;
 }
 
 .warn{
-    background:#eab30820;
-    color:#facc15;
+    background:#fef9c3;
+    color:#92610a;
 }
 
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-    gap:20px;
+.cat-grid{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+    max-width:760px;
     margin-bottom:36px;
 }
 
-.card{
-    background:#111827;
-    border-radius:24px;
-    padding:26px;
+.cat-card{
+    background:#fff;
+    border-radius:22px;
+    padding:24px 26px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
     position:relative;
-    overflow:hidden;
 }
 
-.card.featured{
-    border:1px solid #7c3aed60;
+.cat-card.blocked{
+    opacity:0.55;
 }
 
-.category-icon{
-    width:52px;
-    height:52px;
+.cat-card-head{
+    display:flex;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:18px;
+}
+
+.cat-icon{
+    width:56px;
+    height:56px;
     border-radius:16px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:22px;
-    margin-bottom:16px;
-    background:linear-gradient(135deg,#06b6d4,#7c3aed);
+    font-size:24px;
+    flex-shrink:0;
 }
 
-.card h2{
+.cat-icon.city{
+    background:#dcfce7;
+    color:#16a34a;
+}
+
+.cat-icon.national{
+    background:#dbeafe;
+    color:#2563eb;
+}
+
+.cat-info{
+    flex:1;
+}
+
+.cat-info h2{
     font-size:19px;
-    margin-bottom:6px;
+    font-weight:800;
+    margin-bottom:3px;
 }
 
-.card .desc{
+.cat-info p{
     font-size:13px;
-    color:#94a3b8;
+    color:#64748b;
+}
+
+.reach-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 14px;
+    border-radius:30px;
+    font-size:12.5px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.reach-badge.city{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+.reach-badge.national{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+.divider{
+    height:1px;
+    background:#eef2f6;
     margin-bottom:18px;
 }
 
-.price-breakdown{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    margin-bottom:20px;
+.option-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
 }
 
-.price-line{
-    display:flex;
-    justify-content:space-between;
-    font-size:13px;
-    color:#cbd5e1;
+@media(max-width:640px){
+    .option-grid{
+        grid-template-columns:1fr;
+    }
 }
 
-.price-line b{
+.option-box{
+    position:relative;
+    border:1.5px solid #e2e8f0;
+    border-radius:16px;
+    padding:16px 16px 16px 46px;
+    cursor:pointer;
+    transition:.15s;
+}
+
+.option-box.disabled{
+    cursor:not-allowed;
+    opacity:0.6;
+}
+
+.option-box.done{
+    cursor:default;
+}
+
+.pop-badge{
+    position:absolute;
+    top:-11px;
+    left:16px;
+    background:#16a34a;
     color:#fff;
-    font-size:15px;
-}
-
-.price{
-    font-size:30px;
+    font-size:10px;
     font-weight:800;
-    margin-bottom:6px;
+    letter-spacing:.4px;
+    padding:4px 10px;
+    border-radius:20px;
 }
 
-.price small{
-    font-size:13px;
+.pop-badge.national{
+    background:#2563eb;
+}
+
+.option-radio{
+    position:absolute;
+    top:16px;
+    left:16px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    border:2px solid #cbd5e1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#fff;
+}
+
+.option-radio.checked{
+    border-color:#16a34a;
+    background:#16a34a;
+    color:#fff;
+    font-size:11px;
+}
+
+.option-radio.checked.national{
+    border-color:#2563eb;
+    background:#2563eb;
+}
+
+.option-box.selected.city{
+    border-color:#16a34a;
+    background:#f0fdf4;
+}
+
+.option-box.selected.national{
+    border-color:#2563eb;
+    background:#eff6ff;
+}
+
+.option-label{
+    font-size:12px;
+    font-weight:700;
+    color:#475569;
+    margin-bottom:8px;
+}
+
+.option-price{
+    font-size:21px;
+    font-weight:800;
+    color:#0f172a;
+}
+
+.option-price span{
+    font-size:12.5px;
     font-weight:500;
     color:#94a3b8;
 }
 
-.days{
-    display:inline-block;
-    padding:8px 14px;
-    border-radius:30px;
-    background:#1e293b;
-    font-size:12px;
-    color:#cbd5e1;
-    margin-bottom:18px;
-}
-
-.enroll-btn{
-    width:100%;
-    height:50px;
-    border:none;
-    border-radius:14px;
-    background:linear-gradient(135deg,#06b6d4,#7c3aed);
-    color:#fff;
-    font-size:14px;
-    font-weight:600;
-    cursor:pointer;
-}
-
-.enroll-btn:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-}
-
-.enroll-btn.active-plan{
-    background:#16a34a20;
-    color:#4ade80;
-    cursor:default;
-}
-
-.plan-block{
-    background:#0b1120;
-    border-radius:18px;
-    padding:18px;
-    margin-bottom:16px;
-}
-
-.plan-block:last-child{
-    margin-bottom:0;
-}
-
-.plan-block .plan-name{
-    font-size:13px;
+.option-hint{
+    font-size:11.5px;
     color:#94a3b8;
-    margin-bottom:6px;
-    text-transform:uppercase;
-    letter-spacing:.5px;
+    margin-top:6px;
 }
 
 .section-title{
     font-size:16px;
+    font-weight:700;
     margin-bottom:16px;
-    color:#cbd5e1;
+    color:#334155;
 }
 
 .table-wrap{
-    background:#111827;
+    background:#fff;
     border-radius:20px;
     padding:10px 22px;
     overflow-x:auto;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
 }
 
 table{
@@ -473,12 +548,12 @@ table{
 th, td{
     text-align:left;
     padding:14px 10px;
-    border-bottom:1px solid rgba(255,255,255,0.05);
+    border-bottom:1px solid #f1f5f9;
 }
 
 th{
-    color:#64748b;
-    font-weight:500;
+    color:#94a3b8;
+    font-weight:600;
     font-size:12px;
     text-transform:uppercase;
 }
@@ -487,28 +562,28 @@ th{
     padding:6px 12px;
     border-radius:30px;
     font-size:11px;
-    font-weight:600;
+    font-weight:700;
 }
 
 .status-active{
-    background:#16a34a20;
-    color:#4ade80;
+    background:#dcfce7;
+    color:#15803d;
 }
 
 .status-expired{
-    background:#dc262620;
-    color:#f87171;
+    background:#fee2e2;
+    color:#b91c1c;
 }
 
 .status-pending{
-    background:#eab30820;
-    color:#facc15;
+    background:#fef9c3;
+    color:#92610a;
 }
 
 .empty-state{
     padding:30px;
     text-align:center;
-    color:#64748b;
+    color:#94a3b8;
     font-size:13px;
 }
 
@@ -532,18 +607,12 @@ th{
 
     <div class="page-header">
 
+        <a href="home.php" class="icon-btn-back"><i class="fa-solid fa-arrow-left"></i></a>
+
         <div>
             <h1>Subscription Plans</h1>
-            <p>
-                <?php echo $viewCategory ? "Complete your ".ucfirst($viewCategory)." Seller subscription" : "Choose a seller plan to unlock benefits"; ?>
-            </p>
+            <p>Choose a plan that fits your business and unlock premium features.</p>
         </div>
-
-        <?php if($viewCategory){ ?>
-            <a href="subscription-plans.php" class="back-link">
-                <i class="fa-solid fa-arrow-left"></i> Change Category
-            </a>
-        <?php } ?>
 
     </div>
 
@@ -555,127 +624,107 @@ th{
 
     <div id="alertBox"></div>
 
-    <?php if(!$viewCategory){ ?>
+    <div class="cat-grid">
 
-        <!-- ===================== CATEGORY PICKER ===================== -->
+        <?php foreach(['city'=>['label'=>'City Seller','icon'=>'fa-store','desc'=>'Sell within your city or local service area.','reach'=>'Local Reach','reachIcon'=>'fa-location-dot'],
+                        'national'=>['label'=>'National Seller','icon'=>'fa-earth-asia','desc'=>'Sell across multiple states in India.','reach'=>'Nationwide Reach','reachIcon'=>'fa-building']] as $catKey => $meta){
 
-        <div class="grid">
+            $enrollment = $categorySummary[$catKey]['enrollment'];
+            $monthly = $categorySummary[$catKey]['monthly'];
 
-            <?php foreach(['city'=>['label'=>'City Seller','icon'=>'fa-city','desc'=>'Sell within your local city / service area.'],
-                            'national'=>['label'=>'National Seller','icon'=>'fa-earth-asia','desc'=>'Sell across India (PAN India).']] as $catKey => $meta){
+            if(!$enrollment || !$monthly){
+                continue;
+            }
 
-                $enrollment = $categorySummary[$catKey]['enrollment'];
-                $monthly = $categorySummary[$catKey]['monthly'];
+            $isBlocked = ($myActiveCategory && $myActiveCategory != $catKey);
 
-                $isMyCategory = ($myActiveCategory == $catKey);
-                $isBlocked = ($myActiveCategory && $myActiveCategory != $catKey);
-            ?>
+            $enrollmentActive = in_array($enrollment['id'], $activeSubIds);
+            $monthlyActive = in_array($monthly['id'], $activeSubIds);
 
-            <div class="card <?php echo $isMyCategory ? 'featured' : ''; ?>">
+            $monthlyEndDate = '';
+            foreach($myEnrollments as $e){
+                if($e['sub_id']==$monthly['id'] && $e['status']=='active'){
+                    $monthlyEndDate = date('d M Y', strtotime($e['end_date']));
+                    break;
+                }
+            }
+        ?>
 
-                <div class="category-icon"><i class="fa-solid <?php echo $meta['icon']; ?>"></i></div>
+        <div class="cat-card <?php echo $isBlocked ? 'blocked' : ''; ?>">
 
-                <h2><?php echo $meta['label']; ?></h2>
-                <div class="desc"><?php echo $meta['desc']; ?></div>
+            <div class="cat-card-head">
 
-                <?php if($enrollment && $monthly){ ?>
+                <div class="cat-icon <?php echo $catKey; ?>"><i class="fa-solid <?php echo $meta['icon']; ?>"></i></div>
 
-                <div class="price-breakdown">
-                    <div class="price-line">
-                        <span>One-time Enrollment</span>
-                        <b>&#8377;<?php echo number_format($enrollment['amount'],0); ?></b>
-                    </div>
-                    <div class="price-line">
-                        <span>Monthly</span>
-                        <b>&#8377;<?php echo number_format($monthly['amount'],0); ?>/mo</b>
-                    </div>
+                <div class="cat-info">
+                    <h2><?php echo $meta['label']; ?></h2>
+                    <p><?php echo $meta['desc']; ?></p>
                 </div>
 
-                <?php if($isMyCategory){ ?>
-
-                    <button class="enroll-btn active-plan" disabled>
-                        <i class="fa-solid fa-check"></i> Currently Active
-                    </button>
-
-                <?php }else{ ?>
-
-                    <a href="subscription-plans.php?category=<?php echo $catKey; ?>" style="text-decoration:none;">
-                        <button class="enroll-btn" <?php echo $isBlocked ? 'disabled' : ''; ?>>
-                            <?php echo $isBlocked ? 'Unavailable while another plan is active' : 'Choose This Plan'; ?>
-                        </button>
-                    </a>
-
-                <?php } ?>
-
-                <?php }else{ ?>
-
-                    <div class="empty-state">Plans coming soon.</div>
-
-                <?php } ?>
+                <div class="reach-badge <?php echo $catKey; ?>">
+                    <i class="fa-solid <?php echo $meta['reachIcon']; ?>"></i>
+                    <?php echo $meta['reach']; ?>
+                </div>
 
             </div>
 
-            <?php } ?>
+            <div class="divider"></div>
 
-        </div>
+            <?php if($isBlocked){ ?>
 
-    <?php }else{
+                <div class="alert error" style="margin-bottom:0;">
+                    You're currently on the <?php echo ucfirst($myActiveCategory); ?> Seller plan. Wait for it to expire before switching categories.
+                </div>
 
-        $enrollment = $categorySummary[$viewCategory]['enrollment'];
-        $monthly = $categorySummary[$viewCategory]['monthly'];
+            <?php }else{ ?>
 
-        $isBlocked = ($myActiveCategory && $myActiveCategory != $viewCategory);
+            <div class="option-grid">
 
-        $enrollmentActive = $enrollment && in_array($enrollment['id'], $activeSubIds);
-        $monthlyActive = $monthly && in_array($monthly['id'], $activeSubIds);
-    ?>
+                <!-- ENROLLMENT -->
+                <div class="option-box <?php echo $enrollmentActive ? 'selected done '.$catKey : ($paymentConfigured ? '' : 'disabled'); ?>"
+                     <?php if(!$enrollmentActive && $paymentConfigured){ ?>onclick="payFor(<?php echo $enrollment['id']; ?>, this)"<?php } ?>>
 
-        <!-- ===================== CATEGORY DETAIL + PAYMENT ===================== -->
+                    <div class="option-radio <?php echo $enrollmentActive ? 'checked '.$catKey : ''; ?>">
+                        <?php if($enrollmentActive){ ?><i class="fa-solid fa-check"></i><?php } ?>
+                    </div>
 
-        <?php if($isBlocked){ ?>
+                    <div class="option-label">One-time Enrollment</div>
+                    <div class="option-price">&#8377;<?php echo number_format($enrollment['amount'],0); ?> <span>one-time</span></div>
 
-            <div class="alert error">
-                You already have an active <?php echo ucfirst($myActiveCategory); ?> Seller plan. Wait for it to expire before switching categories.
-            </div>
+                    <?php if($enrollmentActive){ ?>
+                        <div class="option-hint">Enrolled</div>
+                    <?php }elseif(!$paymentConfigured){ ?>
+                        <div class="option-hint">Payment not configured</div>
+                    <?php } ?>
 
-        <?php }else{ ?>
+                </div>
 
-        <div class="grid" style="max-width:640px;">
+                <!-- MONTHLY -->
+                <?php
+                    $monthlyClickable = !$monthlyActive && $enrollmentActive && $paymentConfigured;
+                ?>
+                <div class="option-box <?php echo $monthlyActive ? 'selected done '.$catKey : (!$monthlyClickable ? 'disabled' : ''); ?>"
+                     <?php if($monthlyClickable){ ?>onclick="payFor(<?php echo $monthly['id']; ?>, this)"<?php } ?>>
 
-            <?php if($enrollment){ ?>
+                    <?php if(!$monthlyActive){ ?>
+                        <div class="pop-badge <?php echo $catKey == 'national' ? 'national' : ''; ?>">MOST POPULAR</div>
+                    <?php } ?>
 
-            <div class="plan-block">
-                <div class="plan-name">One-time Enrollment</div>
-                <div class="price">&#8377;<?php echo number_format($enrollment['amount'],0); ?> <small>one-time</small></div>
+                    <div class="option-radio <?php echo $monthlyActive ? 'checked '.$catKey : ''; ?>">
+                        <?php if($monthlyActive){ ?><i class="fa-solid fa-check"></i><?php } ?>
+                    </div>
 
-                <?php if($enrollmentActive){ ?>
-                    <button class="enroll-btn active-plan" disabled><i class="fa-solid fa-check"></i> Already Enrolled</button>
-                <?php }else{ ?>
-                    <button class="enroll-btn" onclick="payFor(<?php echo $enrollment['id']; ?>, this)" <?php echo $paymentConfigured ? '' : 'disabled'; ?>>
-                        <i class="fa-solid fa-crown"></i> Pay &amp; Enroll
-                    </button>
-                <?php } ?>
-            </div>
+                    <div class="option-label">Monthly Subscription</div>
+                    <div class="option-price">&#8377;<?php echo number_format($monthly['amount'],0); ?> <span>/month</span></div>
 
-            <?php } ?>
+                    <?php if($monthlyActive){ ?>
+                        <div class="option-hint">Active until <?php echo $monthlyEndDate; ?></div>
+                    <?php }elseif(!$enrollmentActive){ ?>
+                        <div class="option-hint">Complete enrollment first</div>
+                    <?php } ?>
 
-            <?php if($monthly){ ?>
+                </div>
 
-            <div class="plan-block">
-                <div class="plan-name">Monthly Subscription</div>
-                <div class="price">&#8377;<?php echo number_format($monthly['amount'],0); ?> <small>/month</small></div>
-
-                <?php if($monthlyActive){ ?>
-                    <button class="enroll-btn active-plan" disabled><i class="fa-solid fa-check"></i> Active until <?php
-                        foreach($myEnrollments as $e){ if($e['sub_id']==$monthly['id'] && $e['status']=='active'){ echo date('d M Y', strtotime($e['end_date'])); break; } }
-                    ?></button>
-                <?php }elseif(!$enrollmentActive){ ?>
-                    <button class="enroll-btn" disabled>Complete Enrollment First</button>
-                <?php }else{ ?>
-                    <button class="enroll-btn" onclick="payFor(<?php echo $monthly['id']; ?>, this)" <?php echo $paymentConfigured ? '' : 'disabled'; ?>>
-                        <i class="fa-solid fa-calendar-check"></i> Pay Monthly
-                    </button>
-                <?php } ?>
             </div>
 
             <?php } ?>
@@ -684,7 +733,7 @@ th{
 
         <?php } ?>
 
-    <?php } ?>
+    </div>
 
     <div class="section-title">My Enrollments</div>
 
@@ -745,11 +794,17 @@ th{
 function showAlert(type, message){
     const box = document.getElementById('alertBox');
     box.innerHTML = '<div class="alert '+type+'">'+message+'</div>';
+    window.scrollTo({top:0, behavior:'smooth'});
 }
 
-function payFor(subId, btnEl){
+function payFor(subId, boxEl){
 
-    btnEl.disabled = true;
+    if(boxEl.classList.contains('disabled') || boxEl.classList.contains('done')){
+        return;
+    }
+
+    boxEl.style.pointerEvents = 'none';
+    boxEl.style.opacity = '0.6';
 
     fetch('', {
         method: 'POST',
@@ -761,7 +816,8 @@ function payFor(subId, btnEl){
 
         if(!data.status){
             showAlert('error', data.message || 'Could not start payment');
-            btnEl.disabled = false;
+            boxEl.style.pointerEvents = '';
+            boxEl.style.opacity = '';
             return;
         }
 
@@ -791,16 +847,18 @@ function payFor(subId, btnEl){
                         setTimeout(() => location.reload(), 1200);
                     }else{
                         showAlert('error', result.message || 'Payment verification failed');
-                        btnEl.disabled = false;
+                        boxEl.style.pointerEvents = '';
+                        boxEl.style.opacity = '';
                     }
                 });
             },
             modal: {
                 ondismiss: function(){
-                    btnEl.disabled = false;
+                    boxEl.style.pointerEvents = '';
+                    boxEl.style.opacity = '';
                 }
             },
-            theme: { color: '#7c3aed' }
+            theme: { color: '#16a34a' }
         };
 
         const rzp = new Razorpay(options);
@@ -808,7 +866,8 @@ function payFor(subId, btnEl){
     })
     .catch(() => {
         showAlert('error', 'Something went wrong. Please try again.');
-        btnEl.disabled = false;
+        boxEl.style.pointerEvents = '';
+        boxEl.style.opacity = '';
     });
 }
 
