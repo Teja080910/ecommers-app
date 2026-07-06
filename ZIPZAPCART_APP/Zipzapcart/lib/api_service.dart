@@ -252,7 +252,8 @@ class ApiService {
 
   }
 
-  static Future<bool> updateProfile(int userId, String name) async {
+  static Future<Map<String, dynamic>> updateProfile(
+      int userId, String name, {String? phone}) async {
     try {
       final auth = await _authParams();
 
@@ -262,13 +263,13 @@ class ApiService {
           "action": "update_profile",
           ...auth,
           "name": name,
+          if (phone != null) "phone": phone,
         },
       );
 
-      final data = json.decode(res.body);
-      return data["status"] == true;
+      return json.decode(res.body);
     } catch (e) {
-      return false;
+      return {"status": false, "message": "API FAILED"};
     }
   }
   // 🔥 ADD IN api_service.dart

@@ -411,6 +411,11 @@ trim(
 $_POST["name"] ?? ""
 );
 
+$phone =
+trim(
+$_POST["phone"] ?? ""
+);
+
 if(
 empty($name)
 ){
@@ -428,10 +433,40 @@ exit;
 
 }
 
-$stmt = mysqli_prepare($conn,
-    "UPDATE users SET name=? WHERE id=?");
+if(!empty($phone)){
 
-mysqli_stmt_bind_param($stmt, "si", $name, $user_id);
+    // phone has a UNIQUE constraint -- check it isn't already taken
+    // by a different account before updating, so a duplicate doesn't
+    // throw an uncaught DB error and corrupt the response
+    $checkStmt = mysqli_prepare($conn,
+        "SELECT id FROM users WHERE phone=? AND id!=?");
+
+    mysqli_stmt_bind_param($checkStmt, "si", $phone, $user_id);
+    mysqli_stmt_execute($checkStmt);
+
+    if(mysqli_num_rows(mysqli_stmt_get_result($checkStmt)) > 0){
+
+        echo json_encode([
+            "status"=>false,
+            "message"=>"This phone number is already in use"
+        ]);
+
+        exit;
+    }
+
+    $stmt = mysqli_prepare($conn,
+        "UPDATE users SET name=?, phone=? WHERE id=?");
+
+    mysqli_stmt_bind_param($stmt, "ssi", $name, $phone, $user_id);
+
+}else{
+
+    $stmt = mysqli_prepare($conn,
+        "UPDATE users SET name=? WHERE id=?");
+
+    mysqli_stmt_bind_param($stmt, "si", $name, $user_id);
+}
+
 $update = mysqli_stmt_execute($stmt);
 
 if($update){

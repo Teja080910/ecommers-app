@@ -431,7 +431,7 @@ class _ProfilePageState
 
                       }
 
-                      bool ok =
+                      final res =
 
                       await ApiService
                           .updateProfile(
@@ -443,7 +443,7 @@ class _ProfilePageState
 
                       );
 
-                      if(ok){
+                      if(res["status"] == true){
 
                         final prefs =
 
@@ -541,6 +541,194 @@ class _ProfilePageState
 
   }
 
+
+  void editPhone() {
+
+    final controller =
+    TextEditingController(
+      text: phone,
+    );
+
+    showModalBottomSheet(
+
+      context: context,
+
+      isScrollControlled: true,
+
+      backgroundColor:
+      Colors.transparent,
+
+      builder: (_) {
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+
+        String? error;
+
+        return Padding(
+
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+
+          child: Container(
+
+            padding: const EdgeInsets.all(20),
+
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                Container(
+                  width: 60,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4138).withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.phone,
+                        size: 20,
+                        color: Color(0xFFEF4138),
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    Expanded(
+                      child: Text(
+                        "Update Phone Number",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 18),
+
+                TextField(
+
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  maxLength: 10,
+
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+
+                  decoration: InputDecoration(
+                    hintText: "Enter mobile number",
+                    counterText: "",
+                    errorText: error,
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
+                    prefixIcon: const Icon(Icons.phone, color: Color(0xFFEF4138)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                SizedBox(
+
+                  width: double.infinity,
+                  height: 54,
+
+                  child: ElevatedButton(
+
+                    onPressed: () async {
+
+                      final value = controller.text.trim();
+
+                      if(value.length != 10){
+
+                        setModalState(() {
+                          error = "Enter a valid 10-digit number";
+                        });
+
+                        return;
+                      }
+
+                      final res = await ApiService.updateProfile(
+                        userId,
+                        name,
+                        phone: value,
+                      );
+
+                      if(res["status"] == true){
+
+                        final prefs = await SharedPreferences.getInstance();
+
+                        await prefs.setString("phone", value);
+
+                        setState(() {
+                          phone = value;
+                        });
+
+                        if(context.mounted){
+                          Navigator.pop(context);
+                        }
+
+                      }else{
+
+                        setModalState(() {
+                          error = res["message"]?.toString() ?? "Could not update phone number";
+                        });
+                      }
+                    },
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4138),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+
+                    child: const Text(
+                      "Update",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+          },
+        );
+      },
+    );
+  }
 
   Future<void> _logout(
       BuildContext context,
@@ -791,23 +979,44 @@ class _ProfilePageState
                                 height: 12,
                               )
 
-                                  : Text(
+                                  : GestureDetector(
 
-                                "+91 $phone",
+                                onTap: editPhone,
 
-                                style:
-                                 TextStyle(
-                                  color:
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
 
-                                  isDark
+                                    Text(
 
-                                      ? Colors.white70
+                                      phone.isEmpty
+                                          ? "Add phone number"
+                                          : "+91 $phone",
 
-                                      : Colors.black54,
+                                      style:
+                                       TextStyle(
+                                        color:
 
-                                  fontSize:
-                                  11.8,
+                                        isDark
 
+                                            ? Colors.white70
+
+                                            : Colors.black54,
+
+                                        fontSize:
+                                        11.8,
+
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 5),
+
+                                    Icon(
+                                      Icons.edit,
+                                      size: 11,
+                                      color: isDark ? Colors.white70 : Colors.black54,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
