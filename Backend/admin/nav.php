@@ -292,7 +292,7 @@ $user_pages = ['all-users.php','offline-customers.php','saved-address.php'];
 
 $area_pages = ['add-pincode.php','all-pincodes.php','requested_pincodes.php'];
 
-$payment_pages = ['razorpay-settings.php'];
+$payment_pages = ['razorpay-settings.php','smtp-settings.php'];
 
 $settings_pages = ['app-settings.php','change-password.php'];
 
@@ -522,6 +522,8 @@ $settings_pages = ['app-settings.php','change-password.php'];
         <ul class="submenu <?= in_array($current_page,$payment_pages) ? 'show' : '' ?>" id="paymentMenu">
 
             <li><a class="<?= isActive('razorpay-settings.php') ?>" href="razorpay-settings.php">Razorpay Keys</a></li>
+
+            <li><a class="<?= isActive('smtp-settings.php') ?>" href="smtp-settings.php">SMTP (Email) Settings</a></li>
 
         </ul>
 

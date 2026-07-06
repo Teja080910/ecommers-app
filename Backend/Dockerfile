@@ -15,6 +15,12 @@ RUN { \
         echo "memory_limit=256M"; \
     } > /usr/local/etc/php/conf.d/uploads.ini
 
+# Composer (for PHPMailer) — copy composer.json first so this layer only
+# rebuilds when dependencies actually change, not on every code change
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json /var/www/html/Backend/composer.json
+RUN cd /var/www/html/Backend && composer install --no-dev --optimize-autoloader --no-interaction
+
 # Serve this folder at /Backend, matching the existing app's baseUrl paths
 COPY . /var/www/html/Backend
 

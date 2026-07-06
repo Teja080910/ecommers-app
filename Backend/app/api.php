@@ -142,6 +142,184 @@ if ($action == "login_register") {
 
     exit;
 }
+/* ==============================
+   SEND EMAIL OTP
+================================ */
+if ($action == "send_email_otp") {
+
+    require_once __DIR__ . '/../includes/mailer.php';
+
+    $email = trim($_POST['email'] ?? '');
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Valid email required"
+        ]);
+        exit;
+    }
+
+    // Basic resend cooldown — block a new code within 60s of the last one
+    $cooldownStmt = mysqli_prepare($conn,
+        "SELECT created_at FROM email_otp_verifications WHERE email=? ORDER BY id DESC LIMIT 1");
+    mysqli_stmt_bind_param($cooldownStmt, "s", $email);
+    mysqli_stmt_execute($cooldownStmt);
+    $cooldownResult = mysqli_stmt_get_result($cooldownStmt);
+
+    if ($lastRow = mysqli_fetch_assoc($cooldownResult)) {
+
+        if (strtotime($lastRow['created_at']) > time() - 60) {
+
+            echo json_encode([
+                "status" => false,
+                "message" => "Please wait before requesting another code"
+            ]);
+            exit;
+        }
+    }
+
+    $otp_code = str_pad(strval(random_int(0, 999999)), 6, "0", STR_PAD_LEFT);
+    $expires_at = date("Y-m-d H:i:s", time() + 600); // 10 minutes
+
+    $insert = mysqli_prepare($conn,
+        "INSERT INTO email_otp_verifications (email, otp_code, expires_at) VALUES (?, ?, ?)");
+    mysqli_stmt_bind_param($insert, "sss", $email, $otp_code, $expires_at);
+    mysqli_stmt_execute($insert);
+
+    $sendResult = sendOtpEmail($conn, $email, $otp_code);
+
+    if ($sendResult !== true) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => $sendResult
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        "status" => true,
+        "message" => "Verification code sent"
+    ]);
+    exit;
+}
+/* ==============================
+   VERIFY EMAIL OTP + LOGIN/REGISTER
+================================ */
+if ($action == "verify_email_otp") {
+
+    $email = trim($_POST['email'] ?? '');
+    $otp = trim($_POST['otp'] ?? '');
+
+    if (empty($email) || empty($otp)) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Email and code required"
+        ]);
+        exit;
+    }
+
+    $otpStmt = mysqli_prepare($conn,
+        "SELECT * FROM email_otp_verifications
+         WHERE email=? AND otp_code=? AND verified=0 AND expires_at >= NOW()
+         ORDER BY id DESC LIMIT 1");
+    mysqli_stmt_bind_param($otpStmt, "ss", $email, $otp);
+    mysqli_stmt_execute($otpStmt);
+    $otpResult = mysqli_stmt_get_result($otpStmt);
+
+    if (mysqli_num_rows($otpResult) === 0) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Invalid or expired code"
+        ]);
+        exit;
+    }
+
+    $otpRow = mysqli_fetch_assoc($otpResult);
+
+    $markVerified = mysqli_prepare($conn, "UPDATE email_otp_verifications SET verified=1 WHERE id=?");
+    mysqli_stmt_bind_param($markVerified, "i", $otpRow['id']);
+    mysqli_stmt_execute($markVerified);
+
+    // Same lookup-or-create logic as login_register, keyed by email instead of phone
+
+    $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE email=?");
+    mysqli_stmt_bind_param($stmt, "s", $email);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    $auth_token = bin2hex(random_bytes(32));
+
+    if (mysqli_num_rows($result) > 0) {
+
+        $user = mysqli_fetch_assoc($result);
+
+        $update = mysqli_prepare($conn, "UPDATE users SET auth_token=? WHERE id=?");
+        mysqli_stmt_bind_param($update, "si", $auth_token, $user['id']);
+        mysqli_stmt_execute($update);
+
+        $user['auth_token'] = $auth_token;
+
+        echo json_encode([
+            "status" => true,
+            "message" => "Login success",
+            "token" => $auth_token,
+            "user" => $user
+        ]);
+
+    } else {
+
+        do {
+
+            $random_number = rand(10000, 99999);
+            $name = "zenvora_user_" . $random_number;
+
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE name=?");
+            mysqli_stmt_bind_param($check_stmt, "s", $name);
+            mysqli_stmt_execute($check_stmt);
+            $check_name = mysqli_stmt_get_result($check_stmt);
+
+        } while (mysqli_num_rows($check_name) > 0);
+
+        do {
+
+            $referral_code =
+                strtoupper(substr(md5(uniqid()), 0, 8));
+
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE referral_code=?");
+            mysqli_stmt_bind_param($check_stmt, "s", $referral_code);
+            mysqli_stmt_execute($check_stmt);
+            $check_code = mysqli_stmt_get_result($check_stmt);
+
+        } while (mysqli_num_rows($check_code) > 0);
+
+        $insert = mysqli_prepare($conn,
+            "INSERT INTO users (name, email, referral_code, auth_token)
+             VALUES (?, ?, ?, ?)");
+
+        mysqli_stmt_bind_param($insert, "ssss", $name, $email, $referral_code, $auth_token);
+        mysqli_stmt_execute($insert);
+
+        $user_id = mysqli_insert_id($conn);
+
+        echo json_encode([
+            "status" => true,
+            "message" => "User registered",
+            "token" => $auth_token,
+            "user" => [
+                "id" => $user_id,
+                "name" => $name,
+                "email" => $email,
+                "referral_code" => $referral_code
+            ]
+        ]);
+    }
+
+    exit;
+}
 if ($action == "save_profile_referral") {
 
     $user_id = requireAuth($conn);
