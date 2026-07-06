@@ -262,8 +262,8 @@ foreach($myEnrollments as $e){
 }
 
 body{
-    background:#f1f5f9;
-    color:#0f172a;
+    background:#0f172a;
+    color:#fff;
 }
 
 .main-content{
@@ -282,14 +282,13 @@ body{
     width:40px;
     height:40px;
     border-radius:12px;
-    background:#fff;
-    border:1px solid #e2e8f0;
+    background:#111827;
+    border:1px solid #1e293b;
     display:flex;
     align-items:center;
     justify-content:center;
-    color:#334155;
+    color:#cbd5e1;
     text-decoration:none;
-    box-shadow:0 1px 2px rgba(0,0,0,0.04);
 }
 
 .page-header h1{
@@ -300,7 +299,7 @@ body{
 
 .page-header p{
     font-size:13.5px;
-    color:#64748b;
+    color:#94a3b8;
 }
 
 .alert{
@@ -312,18 +311,18 @@ body{
 }
 
 .success{
-    background:#dcfce7;
-    color:#15803d;
+    background:#16a34a20;
+    color:#4ade80;
 }
 
 .error{
-    background:#fee2e2;
-    color:#b91c1c;
+    background:#dc262620;
+    color:#f87171;
 }
 
 .warn{
-    background:#fef9c3;
-    color:#92610a;
+    background:#eab30820;
+    color:#facc15;
 }
 
 .cat-grid{
@@ -335,10 +334,9 @@ body{
 }
 
 .cat-card{
-    background:#fff;
+    background:#111827;
     border-radius:22px;
     padding:24px 26px;
-    box-shadow:0 1px 3px rgba(0,0,0,0.06);
     position:relative;
 }
 
@@ -365,13 +363,13 @@ body{
 }
 
 .cat-icon.city{
-    background:#dcfce7;
-    color:#16a34a;
+    background:#16a34a20;
+    color:#4ade80;
 }
 
 .cat-icon.national{
-    background:#dbeafe;
-    color:#2563eb;
+    background:#06b6d420;
+    color:#22d3ee;
 }
 
 .cat-info{
@@ -382,11 +380,12 @@ body{
     font-size:19px;
     font-weight:800;
     margin-bottom:3px;
+    color:#fff;
 }
 
 .cat-info p{
     font-size:13px;
-    color:#64748b;
+    color:#94a3b8;
 }
 
 .reach-badge{
@@ -401,18 +400,18 @@ body{
 }
 
 .reach-badge.city{
-    background:#dcfce7;
-    color:#15803d;
+    background:#16a34a20;
+    color:#4ade80;
 }
 
 .reach-badge.national{
-    background:#dbeafe;
-    color:#1d4ed8;
+    background:#06b6d420;
+    color:#22d3ee;
 }
 
 .divider{
     height:1px;
-    background:#eef2f6;
+    background:rgba(255,255,255,0.06);
     margin-bottom:18px;
 }
 
@@ -430,7 +429,8 @@ body{
 
 .option-box{
     position:relative;
-    border:1.5px solid #e2e8f0;
+    background:#0b1120;
+    border:1.5px solid #1e293b;
     border-radius:16px;
     padding:16px 16px 16px 46px;
     cursor:pointer;
@@ -460,7 +460,7 @@ body{
 }
 
 .pop-badge.national{
-    background:#2563eb;
+    background:#0891b2;
 }
 
 .option-radio{
@@ -470,11 +470,11 @@ body{
     width:20px;
     height:20px;
     border-radius:50%;
-    border:2px solid #cbd5e1;
+    border:2px solid #334155;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:#fff;
+    background:#0b1120;
 }
 
 .option-radio.checked{
@@ -485,31 +485,31 @@ body{
 }
 
 .option-radio.checked.national{
-    border-color:#2563eb;
-    background:#2563eb;
+    border-color:#06b6d4;
+    background:#06b6d4;
 }
 
 .option-box.selected.city{
     border-color:#16a34a;
-    background:#f0fdf4;
+    background:#16a34a14;
 }
 
 .option-box.selected.national{
-    border-color:#2563eb;
-    background:#eff6ff;
+    border-color:#06b6d4;
+    background:#06b6d414;
 }
 
 .option-label{
     font-size:12px;
     font-weight:700;
-    color:#475569;
+    color:#94a3b8;
     margin-bottom:8px;
 }
 
 .option-price{
     font-size:21px;
     font-weight:800;
-    color:#0f172a;
+    color:#fff;
 }
 
 .option-price span{
@@ -528,15 +528,14 @@ body{
     font-size:16px;
     font-weight:700;
     margin-bottom:16px;
-    color:#334155;
+    color:#cbd5e1;
 }
 
 .table-wrap{
-    background:#fff;
+    background:#111827;
     border-radius:20px;
     padding:10px 22px;
     overflow-x:auto;
-    box-shadow:0 1px 3px rgba(0,0,0,0.06);
 }
 
 table{
@@ -548,12 +547,12 @@ table{
 th, td{
     text-align:left;
     padding:14px 10px;
-    border-bottom:1px solid #f1f5f9;
+    border-bottom:1px solid rgba(255,255,255,0.05);
 }
 
 th{
-    color:#94a3b8;
-    font-weight:600;
+    color:#64748b;
+    font-weight:500;
     font-size:12px;
     text-transform:uppercase;
 }
@@ -562,22 +561,22 @@ th{
     padding:6px 12px;
     border-radius:30px;
     font-size:11px;
-    font-weight:700;
+    font-weight:600;
 }
 
 .status-active{
-    background:#dcfce7;
-    color:#15803d;
+    background:#16a34a20;
+    color:#4ade80;
 }
 
 .status-expired{
-    background:#fee2e2;
-    color:#b91c1c;
+    background:#dc262620;
+    color:#f87171;
 }
 
 .status-pending{
-    background:#fef9c3;
-    color:#92610a;
+    background:#eab30820;
+    color:#facc15;
 }
 
 .empty-state{
