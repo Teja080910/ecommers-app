@@ -24,3 +24,11 @@ foreach($rows as $r){
 if(count($rows) === 0){
     echo "No rows found for email: [$email]\n";
 }
+
+echo "\n--- users table structure ---\n";
+
+$cols = $pdo->query("DESCRIBE users")->fetchAll();
+
+foreach($cols as $c){
+    echo json_encode($c)."\n";
+}
