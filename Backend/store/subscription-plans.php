@@ -20,20 +20,22 @@ $rzpSettings = $rzpStmt->fetch();
 
 $paymentConfigured = !empty($rzpSettings['razorpay_key']) && !empty($rzpSettings['razorpay_secret']);
 
-/* Seller's current active category (if any) — drives mutual exclusivity */
+/* Seller may hold exactly ONE plan at a time — Monthly and Yearly are
+   alternatives, not sequential requirements, and City/National don't mix */
 
-$activeCategoryStmt = $pdo->prepare("
-    SELECT DISTINCT subscription.category
+$activePlanStmt = $pdo->prepare("
+    SELECT subscription.*
     FROM seller_subscription
     INNER JOIN subscription ON subscription.id = seller_subscription.sub_id
     WHERE seller_subscription.seller_id = ?
     AND seller_subscription.status = 'active'
     AND seller_subscription.end_date >= CURDATE()
     AND subscription.category IS NOT NULL
+    LIMIT 1
 ");
-$activeCategoryStmt->execute([$seller_id]);
-$activeCategories = $activeCategoryStmt->fetchAll(PDO::FETCH_COLUMN);
-$myActiveCategory = $activeCategories[0] ?? null;
+$activePlanStmt->execute([$seller_id]);
+$myActivePlan = $activePlanStmt->fetch();
+$myActiveCategory = $myActivePlan['category'] ?? null;
 
 /* ============================================================
    AJAX: create a Razorpay order for a given plan
@@ -62,44 +64,17 @@ if(isset($_POST['action']) && $_POST['action'] == 'create_order'){
         exit;
     }
 
-    /* Mutual exclusivity: block a different category while one is active */
+    /* A seller may hold exactly one plan at a time — block any purchase
+       while a different plan is already active (same or other category) */
 
-    if($myActiveCategory && $myActiveCategory !== $plan['category']){
-        echo json_encode(['status'=>false,'message'=>'You already have an active '.ucfirst($myActiveCategory).' Seller plan. Wait for it to expire before switching categories.']);
+    if($myActivePlan && $myActivePlan['id'] != $sub_id){
+        echo json_encode(['status'=>false,'message'=>'You already have an active plan ("'.$myActivePlan['title'].'"). Wait for it to expire before switching plans.']);
         exit;
     }
 
-    /* Monthly requires an active enrollment in the same category first */
+    /* Don't allow re-buying the exact same plan while it's already active */
 
-    if($plan['plan_type'] == 'monthly'){
-
-        $enrollCheck = $pdo->prepare("
-            SELECT seller_subscription.id
-            FROM seller_subscription
-            INNER JOIN subscription ON subscription.id = seller_subscription.sub_id
-            WHERE seller_subscription.seller_id=?
-            AND subscription.category=?
-            AND subscription.plan_type='enrollment'
-            AND seller_subscription.status='active'
-            AND seller_subscription.end_date >= CURDATE()
-        ");
-        $enrollCheck->execute([$seller_id, $plan['category']]);
-
-        if($enrollCheck->rowCount() == 0){
-            echo json_encode(['status'=>false,'message'=>'Complete the one-time Enrollment first.']);
-            exit;
-        }
-    }
-
-    /* Don't allow re-buying a plan that's already active */
-
-    $existingStmt = $pdo->prepare("
-        SELECT id FROM seller_subscription
-        WHERE seller_id=? AND sub_id=? AND status='active' AND end_date >= CURDATE()
-    ");
-    $existingStmt->execute([$seller_id, $sub_id]);
-
-    if($existingStmt->rowCount() > 0){
+    if($myActivePlan && $myActivePlan['id'] == $sub_id){
         echo json_encode(['status'=>false,'message'=>'You are already enrolled in this plan']);
         exit;
     }
@@ -207,7 +182,7 @@ $categoryPlans = $pdo->query("
     ORDER BY category, plan_type
 ")->fetchAll();
 
-$categorySummary = ['city'=>['enrollment'=>null,'monthly'=>null], 'national'=>['enrollment'=>null,'monthly'=>null]];
+$categorySummary = ['city'=>['monthly'=>null,'yearly'=>null], 'national'=>['monthly'=>null,'yearly'=>null]];
 
 foreach($categoryPlans as $p){
     if(isset($categorySummary[$p['category']])){
@@ -524,6 +499,19 @@ body{
     margin-top:6px;
 }
 
+.option-savings{
+    font-size:11.5px;
+    color:#4ade80;
+    font-weight:600;
+    margin-top:6px;
+}
+
+.option-savings s{
+    color:#64748b;
+    font-weight:400;
+    margin-right:4px;
+}
+
 .section-title{
     font-size:16px;
     font-weight:700;
@@ -617,7 +605,7 @@ th{
 
     <?php if(!$paymentConfigured){ ?>
         <div class="alert warn">
-            Payment is not configured yet. Enrollment will be available as soon as it is.
+            Payment is not configured yet. Subscribing will be available as soon as it is.
         </div>
     <?php } ?>
 
@@ -628,28 +616,33 @@ th{
         <?php foreach(['city'=>['label'=>'City Seller','icon'=>'fa-store','desc'=>'Sell within your city or local service area.','reach'=>'Local Reach','reachIcon'=>'fa-location-dot'],
                         'national'=>['label'=>'National Seller','icon'=>'fa-earth-asia','desc'=>'Sell across multiple states in India.','reach'=>'Nationwide Reach','reachIcon'=>'fa-building']] as $catKey => $meta){
 
-            $enrollment = $categorySummary[$catKey]['enrollment'];
             $monthly = $categorySummary[$catKey]['monthly'];
+            $yearly = $categorySummary[$catKey]['yearly'];
 
-            if(!$enrollment || !$monthly){
+            if(!$monthly || !$yearly){
                 continue;
             }
 
-            $isBlocked = ($myActiveCategory && $myActiveCategory != $catKey);
-
-            $enrollmentActive = in_array($enrollment['id'], $activeSubIds);
             $monthlyActive = in_array($monthly['id'], $activeSubIds);
+            $yearlyActive = in_array($yearly['id'], $activeSubIds);
 
-            $monthlyEndDate = '';
+            /* A plan in ANY category/cycle other than these two blocks both boxes here */
+            $categoryHasOtherActivePlan = $myActivePlan && !$monthlyActive && !$yearlyActive;
+
+            $activeEndDate = '';
             foreach($myEnrollments as $e){
-                if($e['sub_id']==$monthly['id'] && $e['status']=='active'){
-                    $monthlyEndDate = date('d M Y', strtotime($e['end_date']));
+                if(($e['sub_id']==$monthly['id'] || $e['sub_id']==$yearly['id']) && $e['status']=='active'){
+                    $activeEndDate = date('d M Y', strtotime($e['end_date']));
                     break;
                 }
             }
+
+            $yearlyFullPrice = $monthly['amount'] * 12;
+            $yearlySavings = $yearlyFullPrice - $yearly['amount'];
+            $yearlySavingsPct = $yearlyFullPrice > 0 ? round(($yearlySavings / $yearlyFullPrice) * 100) : 0;
         ?>
 
-        <div class="cat-card <?php echo $isBlocked ? 'blocked' : ''; ?>">
+        <div class="cat-card <?php echo $categoryHasOtherActivePlan ? 'blocked' : ''; ?>">
 
             <div class="cat-card-head">
 
@@ -669,43 +662,22 @@ th{
 
             <div class="divider"></div>
 
-            <?php if($isBlocked){ ?>
+            <?php if($categoryHasOtherActivePlan){ ?>
 
                 <div class="alert error" style="margin-bottom:0;">
-                    You're currently on the <?php echo ucfirst($myActiveCategory); ?> Seller plan. Wait for it to expire before switching categories.
+                    You already have an active plan ("<?php echo htmlspecialchars($myActivePlan['title']); ?>"). Wait for it to expire before switching plans.
                 </div>
 
             <?php }else{ ?>
 
             <div class="option-grid">
 
-                <!-- ENROLLMENT -->
-                <div class="option-box <?php echo $enrollmentActive ? 'selected done '.$catKey : ($paymentConfigured ? '' : 'disabled'); ?>"
-                     <?php if(!$enrollmentActive && $paymentConfigured){ ?>onclick="payFor(<?php echo $enrollment['id']; ?>, this)"<?php } ?>>
-
-                    <div class="option-radio <?php echo $enrollmentActive ? 'checked '.$catKey : ''; ?>">
-                        <?php if($enrollmentActive){ ?><i class="fa-solid fa-check"></i><?php } ?>
-                    </div>
-
-                    <div class="option-label">One-time Enrollment</div>
-                    <div class="option-price">&#8377;<?php echo number_format($enrollment['amount'],0); ?> <span>one-time</span></div>
-
-                    <?php if($enrollmentActive){ ?>
-                        <div class="option-hint">Enrolled</div>
-                    <?php }elseif(!$paymentConfigured){ ?>
-                        <div class="option-hint">Payment not configured</div>
-                    <?php } ?>
-
-                </div>
-
                 <!-- MONTHLY -->
-                <?php
-                    $monthlyClickable = !$monthlyActive && $enrollmentActive && $paymentConfigured;
-                ?>
+                <?php $monthlyClickable = !$monthlyActive && !$yearlyActive && $paymentConfigured; ?>
                 <div class="option-box <?php echo $monthlyActive ? 'selected done '.$catKey : (!$monthlyClickable ? 'disabled' : ''); ?>"
                      <?php if($monthlyClickable){ ?>onclick="payFor(<?php echo $monthly['id']; ?>, this)"<?php } ?>>
 
-                    <?php if(!$monthlyActive){ ?>
+                    <?php if(!$monthlyActive && !$yearlyActive){ ?>
                         <div class="pop-badge <?php echo $catKey == 'national' ? 'national' : ''; ?>">MOST POPULAR</div>
                     <?php } ?>
 
@@ -717,9 +689,38 @@ th{
                     <div class="option-price">&#8377;<?php echo number_format($monthly['amount'],0); ?> <span>/month</span></div>
 
                     <?php if($monthlyActive){ ?>
-                        <div class="option-hint">Active until <?php echo $monthlyEndDate; ?></div>
-                    <?php }elseif(!$enrollmentActive){ ?>
-                        <div class="option-hint">Complete enrollment first</div>
+                        <div class="option-hint">Active until <?php echo $activeEndDate; ?></div>
+                    <?php }elseif($yearlyActive){ ?>
+                        <div class="option-hint">Unavailable — Yearly plan active</div>
+                    <?php }elseif(!$paymentConfigured){ ?>
+                        <div class="option-hint">Payment not configured</div>
+                    <?php } ?>
+
+                </div>
+
+                <!-- YEARLY -->
+                <?php $yearlyClickable = !$monthlyActive && !$yearlyActive && $paymentConfigured; ?>
+                <div class="option-box <?php echo $yearlyActive ? 'selected done '.$catKey : (!$yearlyClickable ? 'disabled' : ''); ?>"
+                     <?php if($yearlyClickable){ ?>onclick="payFor(<?php echo $yearly['id']; ?>, this)"<?php } ?>>
+
+                    <div class="option-radio <?php echo $yearlyActive ? 'checked '.$catKey : ''; ?>">
+                        <?php if($yearlyActive){ ?><i class="fa-solid fa-check"></i><?php } ?>
+                    </div>
+
+                    <div class="option-label">Yearly Subscription</div>
+                    <div class="option-price">&#8377;<?php echo number_format($yearly['amount'],0); ?> <span>/year</span></div>
+
+                    <?php if($yearlySavings > 0){ ?>
+                        <div class="option-savings">
+                            <s>&#8377;<?php echo number_format($yearlyFullPrice,0); ?></s>
+                            Save &#8377;<?php echo number_format($yearlySavings,0); ?> (<?php echo $yearlySavingsPct; ?>%)
+                        </div>
+                    <?php } ?>
+
+                    <?php if($yearlyActive){ ?>
+                        <div class="option-hint">Active until <?php echo $activeEndDate; ?></div>
+                    <?php }elseif($monthlyActive){ ?>
+                        <div class="option-hint">Unavailable — Monthly plan active</div>
                     <?php } ?>
 
                 </div>
