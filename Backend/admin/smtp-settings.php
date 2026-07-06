@@ -24,22 +24,19 @@ $error = "";
 
 if(isset($_POST['save_settings'])){
 
-    $smtp_host = trim($_POST['smtp_host']);
-    $smtp_port = trim($_POST['smtp_port']);
-    $smtp_username = trim($_POST['smtp_username']);
-    $smtp_password = trim($_POST['smtp_password']);
+    $brevo_api_key = trim($_POST['brevo_api_key']);
     $from_email = trim($_POST['from_email']);
     $from_name = trim($_POST['from_name']);
 
-    /* Blank password means "keep the existing one" once a value is already saved */
+    /* Blank key means "keep the existing one" once a value is already saved */
 
-    if(empty($smtp_password) && $settings){
-        $smtp_password = $settings['smtp_password'];
+    if(empty($brevo_api_key) && $settings){
+        $brevo_api_key = $settings['brevo_api_key'];
     }
 
-    if(empty($smtp_host) || empty($smtp_port) || empty($smtp_username) || empty($smtp_password) || empty($from_email)){
+    if(empty($brevo_api_key) || empty($from_email)){
 
-        $error = "Host, Port, Username, Password and From Email are required";
+        $error = "API Key and From Email are required";
 
     }else{
 
@@ -49,20 +46,14 @@ if(isset($_POST['save_settings'])){
 
             $update = $pdo->prepare("UPDATE smtp_settings
             SET
-            smtp_host=?,
-            smtp_port=?,
-            smtp_username=?,
-            smtp_password=?,
+            brevo_api_key=?,
             from_email=?,
             from_name=?
             WHERE id=?");
 
             $run = $update->execute([
 
-                $smtp_host,
-                $smtp_port,
-                $smtp_username,
-                $smtp_password,
+                $brevo_api_key,
                 $from_email,
                 $from_name,
                 $settings['id']
@@ -75,24 +66,18 @@ if(isset($_POST['save_settings'])){
 
             $insert = $pdo->prepare("INSERT INTO smtp_settings
             (
-                smtp_host,
-                smtp_port,
-                smtp_username,
-                smtp_password,
+                brevo_api_key,
                 from_email,
                 from_name
             )
             VALUES
             (
-                ?, ?, ?, ?, ?, ?
+                ?, ?, ?
             )");
 
             $run = $insert->execute([
 
-                $smtp_host,
-                $smtp_port,
-                $smtp_username,
-                $smtp_password,
+                $brevo_api_key,
                 $from_email,
                 $from_name
 
@@ -102,7 +87,7 @@ if(isset($_POST['save_settings'])){
 
         if($run){
 
-            $success = "SMTP Settings Saved Successfully";
+            $success = "Email Settings Saved Successfully";
 
             $stmt = $pdo->query("SELECT * FROM smtp_settings LIMIT 1");
 
@@ -128,7 +113,7 @@ if(isset($_POST['save_settings'])){
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>SMTP Settings</title>
+<title>Email Settings</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
@@ -303,10 +288,10 @@ body{
 
     <div class="page-header">
 
-        <h1>SMTP Settings</h1>
+        <h1>Email Settings</h1>
 
         <p>
-            Configure the sender account used to email OTP verification codes
+            Configure the Brevo API key used to email OTP verification codes
         </p>
 
     </div>
@@ -337,70 +322,18 @@ body{
 
         <form method="POST">
 
-            <div class="grid-2">
-
-                <div class="input-box">
-
-                    <label>
-                        SMTP Host
-                    </label>
-
-                    <input
-                        type="text"
-                        name="smtp_host"
-                        placeholder="smtp.gmail.com"
-                        value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>"
-                        required
-                    >
-
-                </div>
-
-                <div class="input-box">
-
-                    <label>
-                        SMTP Port
-                    </label>
-
-                    <input
-                        type="number"
-                        name="smtp_port"
-                        placeholder="587"
-                        value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>"
-                        required
-                    >
-
-                </div>
-
-            </div>
-
             <div class="input-box">
 
                 <label>
-                    SMTP Username
-                </label>
-
-                <input
-                    type="text"
-                    name="smtp_username"
-                    placeholder="your@email.com"
-                    value="<?php echo htmlspecialchars($settings['smtp_username'] ?? ''); ?>"
-                    required
-                >
-
-            </div>
-
-            <div class="input-box">
-
-                <label>
-                    SMTP Password
+                    Brevo API Key
                 </label>
 
                 <input
                     type="password"
-                    name="smtp_password"
-                    placeholder="<?php echo !empty($settings['smtp_password']) ? 'Leave blank to keep existing password' : 'App password'; ?>"
+                    name="brevo_api_key"
+                    placeholder="<?php echo !empty($settings['brevo_api_key']) ? 'Leave blank to keep existing key' : 'xkeysib-xxxxxxxxxxxxxxxx'; ?>"
                     autocomplete="new-password"
-                    <?php echo empty($settings['smtp_password']) ? 'required' : ''; ?>
+                    <?php echo empty($settings['brevo_api_key']) ? 'required' : ''; ?>
                 >
 
             </div>
@@ -449,7 +382,7 @@ body{
             >
 
                 <i class="fa-solid fa-floppy-disk"></i>
-                Save SMTP Settings
+                Save Email Settings
 
             </button>
 
@@ -464,9 +397,9 @@ body{
             </h3>
 
             <p>
-                These credentials are used to send login verification codes to
-                users' email addresses. For Gmail, use an App Password
-                (not your regular password) with 2-Step Verification enabled.
+                Emails are sent via Brevo's HTTP API (not raw SMTP, which
+                Render blocks outbound). Get a free API key at
+                brevo.com &rarr; Settings &rarr; SMTP &amp; API &rarr; API Keys.
             </p>
 
         </div>
