@@ -11,6 +11,12 @@ if(!isset($_SESSION['admin_id'])){
 
 header('Content-Type: text/plain');
 
+/* plan_type is an ENUM('enrollment','monthly') — widen it to allow 'yearly' */
+
+$pdo->exec("ALTER TABLE subscription MODIFY plan_type ENUM('enrollment','monthly','yearly') NULL");
+
+echo "Widened plan_type enum to include 'yearly'.\n";
+
 /* Convert the one-time Enrollment plans into Yearly plans (10x monthly, 365 days) */
 
 $rows = $pdo->query("SELECT * FROM subscription WHERE plan_type='enrollment'")->fetchAll();
