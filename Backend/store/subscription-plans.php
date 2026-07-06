@@ -11,6 +11,11 @@ if(!isset($_SESSION['seller_id'])){
     exit;
 }
 
+/* Temporarily disabled until real Razorpay credentials are added.
+   Do not remove -- delete this block to re-enable the page. */
+header("Location:home.php");
+exit;
+
 $seller_id = intval($_SESSION['seller_id']);
 
 /* Razorpay settings */
