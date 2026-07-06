@@ -57,6 +57,8 @@ class _ViewProductPageState
 
   bool deliverable = false;
   String? deliveryEstimate;
+  bool isExpressDelivery = false;
+  String? deliveryEstimateText;
 
   final TextEditingController reviewController =
   TextEditingController();
@@ -233,6 +235,8 @@ class _ViewProductPageState
       setState(() {
         deliverable = result["deliverable"] == true;
         deliveryEstimate = result["delivery_estimate"]?.toString();
+        isExpressDelivery = result["is_express"] == true;
+        deliveryEstimateText = result["estimate_text"]?.toString();
       });
     }
   }
@@ -456,9 +460,8 @@ class _ViewProductPageState
               SharePlus.instance.share(
                 ShareParams(
                   text:
-                  "${product["name"] ?? "Check this product"} - "
-                  "${AppConstants.imageUrl}${product["image"] ?? ""}\n\n"
-                  "Get the app: ${AppConstants.imageUrl}",
+                  "${product["name"] ?? "Check this product"} on Zipzapcart!\n"
+                  "${AppConstants.imageUrl}product.php?id=${widget.productId}",
                 ),
               );
             },
@@ -948,7 +951,9 @@ class _ViewProductPageState
                         ),
 
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: isExpressDelivery
+                              ? Colors.green.shade50
+                              : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(30),
                         ),
 
@@ -956,20 +961,26 @@ class _ViewProductPageState
                           mainAxisSize: MainAxisSize.min,
                           children: [
 
-                            const Icon(
-                              Icons.local_shipping_outlined,
+                            Icon(
+                              isExpressDelivery
+                                  ? Icons.bolt
+                                  : Icons.local_shipping_outlined,
                               size: 16,
-                              color: Colors.black87,
+                              color: isExpressDelivery
+                                  ? Colors.green.shade700
+                                  : Colors.black87,
                             ),
 
                             const SizedBox(width: 8),
 
                             Text(
-                              "Delivery by $deliveryEstimate",
+                              deliveryEstimateText ?? "Delivery by $deliveryEstimate",
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color: isExpressDelivery
+                                    ? Colors.green.shade700
+                                    : Colors.black87,
                               ),
                             ),
                           ],

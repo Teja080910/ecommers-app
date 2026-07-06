@@ -1715,25 +1715,48 @@ if ($action == "check_delivery") {
     $pincode = $_POST['pincode'] ?? '';
 
     $deliverable = false;
+    $is_express = false;
+    $city = null;
+    $estimate = null;
+    $estimate_text = null;
 
     if (!empty($pincode)) {
 
-        $check = mysqli_query($conn,
-            "SELECT id FROM service_pincodes
-             WHERE pincode='$pincode'
+        $check = mysqli_prepare($conn,
+            "SELECT city, is_express FROM service_pincodes
+             WHERE pincode=?
              LIMIT 1");
 
-        $deliverable = mysqli_num_rows($check) > 0;
-    }
+        mysqli_stmt_bind_param($check, "s", $pincode);
+        mysqli_stmt_execute($check);
+        $result = mysqli_stmt_get_result($check);
 
-    $estimate = $deliverable
-        ? date('Y-m-d', strtotime('+1 day'))
-        : null;
+        if ($row = mysqli_fetch_assoc($result)) {
+
+            $deliverable = true;
+            $is_express = !empty($row['is_express']);
+            $city = $row['city'];
+
+            if ($is_express) {
+
+                $estimate = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                $estimate_text = "Get it within 24 hours";
+
+            } else {
+
+                $estimate = date('Y-m-d', strtotime('+1 day'));
+                $estimate_text = "Get it by " . date('D, d M', strtotime('+1 day'));
+            }
+        }
+    }
 
     echo json_encode([
         "status" => true,
         "deliverable" => $deliverable,
-        "delivery_estimate" => $estimate
+        "is_express" => $is_express,
+        "city" => $city,
+        "delivery_estimate" => $estimate,
+        "estimate_text" => $estimate_text
     ]);
 
     exit;

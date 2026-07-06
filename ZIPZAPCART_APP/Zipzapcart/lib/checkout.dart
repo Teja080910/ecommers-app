@@ -33,6 +33,9 @@ class _CheckoutPageState
 
   double deliveryCharge=0;
 
+  String? deliveryEstimateText;
+  bool isExpressDelivery=false;
+
   double walletBalance=0;
   double discount = 0;
 
@@ -318,20 +321,25 @@ class _CheckoutPageState
     ){
 
       deliveryCharge=0;
+      deliveryEstimateText=null;
+      isExpressDelivery=false;
 
       return;
 
     }
+
+    final pincode =
+    selectedAddress![
+    "pincode"
+    ]
+        .toString();
 
     final data=
 
     await ApiService
         .getDeliveryCharge(
 
-      selectedAddress![
-      "pincode"
-      ]
-          .toString(),
+      pincode,
 
     );
 
@@ -355,6 +363,15 @@ class _CheckoutPageState
           );
 
     }
+
+    final estimateData =
+    await ApiService.checkDelivery(pincode);
+
+    deliveryEstimateText =
+    estimateData["estimate_text"]?.toString();
+
+    isExpressDelivery =
+    estimateData["is_express"] == true;
 
     setState((){});
 
@@ -1731,6 +1748,39 @@ class _CheckoutPageState
                     "Delivery Charges",
                     deliveryCharge,
                   ),
+
+                  if (deliveryEstimateText != null) ...[
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+
+                        Icon(
+                          isExpressDelivery
+                              ? Icons.bolt
+                              : Icons.local_shipping_outlined,
+                          size: 15,
+                          color: isExpressDelivery
+                              ? Colors.green.shade700
+                              : Colors.black54,
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Text(
+                          deliveryEstimateText!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isExpressDelivery
+                                ? Colors.green.shade700
+                                : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
 
                   const SizedBox(height: 14),
 
