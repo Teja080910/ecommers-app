@@ -1,8 +1,10 @@
 FROM php:8.2-apache
 
 # System deps + PHP extensions used by this codebase (mysqli/PDO MySQL, curl)
+# unzip/git are needed by Composer to fetch package archives — the base
+# image has neither, and Composer fails outright without at least one.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcurl4-openssl-dev \
+    && apt-get install -y --no-install-recommends libcurl4-openssl-dev unzip git \
     && docker-php-ext-install mysqli pdo pdo_mysql curl \
     && rm -rf /var/lib/apt/lists/*
 
