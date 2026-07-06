@@ -5,16 +5,40 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static Future<Map<String, dynamic>> loginOrRegister(
-      Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> sendEmailOtp(String email) async {
 
     try {
 
       final response = await http.post(
         Uri.parse(AppConstants.baseUrl),
         body: {
-          "action": "login_register",
-          "phone": data["phone"] ?? "",
+          "action": "send_email_otp",
+          "email": email,
+        },
+      );
+
+      return json.decode(response.body);
+
+    } catch (e) {
+
+      return {
+        "status": false,
+        "message": "API FAILED"
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyEmailOtp(
+      String email, String otp) async {
+
+    try {
+
+      final response = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "verify_email_otp",
+          "email": email,
+          "otp": otp,
         },
       );
 

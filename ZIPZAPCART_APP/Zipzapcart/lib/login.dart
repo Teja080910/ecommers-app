@@ -1,6 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
 import 'api_service.dart';
 import 'home.dart';
@@ -12,55 +11,34 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   static const Color themeRed =
   Color(0xFFEF4138);
-  String verificationId = "";
   bool isLoading = false;
 
-  // 🔥 SEND OTP
+  // 🔥 SEND EMAIL OTP
   Future<void> sendOtp() async {
     setState(() => isLoading = true);
 
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: "+91${phoneController.text}",
+    final res = await ApiService.sendEmailOtp(emailController.text.trim());
 
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        final userCred =
-        await FirebaseAuth.instance.signInWithCredential(credential);
+    setState(() => isLoading = false);
 
-        final res = await ApiService.loginOrRegister({
-          "phone": phoneController.text,
-          "firebase_uid": userCred.user!.uid,
-        });
+    if (res["status"] == true) {
+      _showOtpSheet();
+    } else {
+      if (!mounted) return;
 
-        await _saveLogin(res);
-      },
-
-      verificationFailed: (FirebaseAuthException e) {
-        setState(() => isLoading = false);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(e.message ?? "OTP Failed"),
-          ),
-        );
-      },
-
-      codeSent: (String verId, int? resendToken) {
-        verificationId = verId;
-
-        setState(() => isLoading = false);
-
-        _showOtpSheet();
-      },
-
-      codeAutoRetrievalTimeout: (String verId) {},
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(res["message"]?.toString() ?? "Could not send code"),
+        ),
+      );
+    }
   }
 
-  // 🔥 VERIFY OTP
+  // 🔥 VERIFY EMAIL OTP
   Future<void> verifyOtp(
       String otp, {
         required VoidCallback onInvalidOtp,
@@ -68,142 +46,45 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => isLoading = true);
 
-    try {
+    final res = await ApiService.verifyEmailOtp(
+      emailController.text.trim(),
+      otp,
+    );
 
-      PhoneAuthCredential credential =
-      PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: otp,
-      );
-
-      await FirebaseAuth.instance
-          .signInWithCredential(credential);
-
-      var res=
-
-      await ApiService
-          .loginOrRegister({
-
-        "phone":
-        phoneController.text,
-
-      });
-
-      if (res["status"] != true) {
-
-        setState(() => isLoading = false);
-
-        onInvalidOtp();
-
-        return;
-      }
-
-      // 🔥 SAVE SESSION *BEFORE* ANY AUTHENTICATED CALL,
-      // so ApiService's auth params pick up the fresh id/token.
-      final prefs = await SharedPreferences.getInstance();
-
-      prefs.setInt(
-        "user_id",
-        int.parse(res["user"]["id"].toString()),
-      );
-
-      prefs.setString(
-        "auth_token",
-        res["token"]?.toString() ?? "",
-      );
-
-      prefs.setBool("isLoggedIn", true);
-
-      final token=
-
-      await NotificationService
-          .getToken();
-
-      await ApiService
-          .saveFcmToken(
-
-        int.parse(
-
-          res["user"]["id"]
-              .toString(),
-
-        ),
-
-        token,
-
-      );
+    if (res["status"] != true) {
 
       setState(() => isLoading = false);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomePage(),
-        ),
-      );
-
-    } on FirebaseAuthException catch (e) {
-
-      setState(() => isLoading = false);
-
-      debugPrint(
-        "🔥 OTP VERIFY FAILED — code: ${e.code}, message: ${e.message}",
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 6),
-            content: Text(
-              "Firebase error [${e.code}]: ${e.message ?? 'unknown'}",
-            ),
-          ),
-        );
-      }
 
       onInvalidOtp();
 
-    } catch (e) {
-
-      setState(() => isLoading = false);
-
-      debugPrint("🔥 OTP VERIFY FAILED — non-Firebase error: $e");
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 6),
-            content: Text("Login error: $e"),
-          ),
-        );
-      }
-
-      onInvalidOtp();
+      return;
     }
+
+    await _saveLogin(res);
   }
 
-  // 🔥 SAVE LOGIN
+  // 🔥 SAVE SESSION + NAVIGATE HOME
   Future<void> _saveLogin(Map<String, dynamic> res) async {
     final prefs = await SharedPreferences.getInstance();
 
-    if (res["status"] == true && res["user"] != null) {
+    final userId = int.parse(res["user"]["id"].toString());
 
-      prefs.setInt(
-        "user_id",
-        int.parse(res["user"]["id"].toString()),
-      );
+    prefs.setInt("user_id", userId);
 
-      prefs.setString(
-        "auth_token",
-        res["token"]?.toString() ?? "",
-      );
-    }
+    prefs.setString(
+      "auth_token",
+      res["token"]?.toString() ?? "",
+    );
 
     await prefs.setBool("isLoggedIn", true);
 
+    final token = await NotificationService.getToken();
+
+    await ApiService.saveFcmToken(userId, token);
+
     setState(() => isLoading = false);
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
@@ -361,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   Text(
 
-                    "Enter the 6-digit code sent to +91 ${phoneController.text}",
+                    "Enter the 6-digit code sent to ${emailController.text}",
 
                     textAlign:
                     TextAlign.center,
@@ -705,8 +586,8 @@ class _LoginPageState extends State<LoginPage> {
       sheetMounted = false;
     });
   }
-  // 🔥 PHONE FIELD
-  Widget _phoneInputField() {
+  // 🔥 EMAIL FIELD
+  Widget _emailInputField() {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -745,13 +626,10 @@ class _LoginPageState extends State<LoginPage> {
               ),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Text(
-              "+91",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            child: const Icon(
+              Icons.email_rounded,
+              color: Colors.white,
+              size: 20,
             ),
           ),
 
@@ -767,18 +645,16 @@ class _LoginPageState extends State<LoginPage> {
 
           Expanded(
             child: TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.number,
-              maxLength: 10,
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
               decoration: const InputDecoration(
-                counterText: "",
                 border: InputBorder.none,
-                hintText: "Enter mobile number",
+                hintText: "Enter your email",
                 hintStyle: TextStyle(
                   color: Colors.white70,
                   fontWeight: FontWeight.w500,
@@ -789,6 +665,10 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
+  }
+
+  bool _isValidEmail(String value) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
   }
 
   @override
@@ -880,7 +760,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 30),
 
-                        _phoneInputField(),
+                        _emailInputField(),
 
                         const SizedBox(height: 24),
 
@@ -890,13 +770,13 @@ class _LoginPageState extends State<LoginPage> {
                           height: 60,
                           child: ElevatedButton(
                             onPressed: () {
-                              if (phoneController.text.length == 10) {
+                              if (_isValidEmail(emailController.text.trim())) {
                                 sendOtp();
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                      "Enter valid mobile number",
+                                      "Enter a valid email address",
                                     ),
                                   ),
                                 );
@@ -923,10 +803,10 @@ class _LoginPageState extends State<LoginPage> {
                               mainAxisAlignment:
                               MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.phone_rounded, size: 22),
+                                Icon(Icons.email_rounded, size: 22),
                                 SizedBox(width: 10),
                                 Text(
-                                  "Continue with Phone",
+                                  "Continue with Email",
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
