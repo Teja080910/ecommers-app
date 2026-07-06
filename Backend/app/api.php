@@ -119,8 +119,8 @@ if ($action == "login_register") {
 
         // 🔥 INSERT USER
         $insert = mysqli_prepare($conn,
-            "INSERT INTO users (name, phone, referral_code, auth_token)
-             VALUES (?, ?, ?, ?)");
+            "INSERT INTO users (name, phone, referral_code, auth_token, wallet_balance)
+             VALUES (?, ?, ?, ?, 0)");
 
         mysqli_stmt_bind_param($insert, "ssss", $name, $phone, $referral_code, $auth_token);
         mysqli_stmt_execute($insert);
@@ -297,8 +297,8 @@ if ($action == "verify_email_otp") {
         } while (mysqli_num_rows($check_code) > 0);
 
         $insert = mysqli_prepare($conn,
-            "INSERT INTO users (name, email, referral_code, auth_token)
-             VALUES (?, ?, ?, ?)");
+            "INSERT INTO users (name, email, referral_code, auth_token, wallet_balance)
+             VALUES (?, ?, ?, ?, 0)");
 
         mysqli_stmt_bind_param($insert, "ssss", $name, $email, $referral_code, $auth_token);
         mysqli_stmt_execute($insert);
