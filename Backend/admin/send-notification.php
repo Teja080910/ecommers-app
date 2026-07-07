@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once __DIR__ . '/../app/fcm_helper.php';
 
 /* LOGIN CHECK */
 
@@ -37,7 +38,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_broadcast'])){
         );
 
         // fetch the FCM access token once for the whole batch, not per user
-        $access = trim(file_get_contents("https://zipzapcart.com/app/addaccess_token.php"));
+        $access = getFcmAccessToken();
         $project = "ftnews-79e5c";
 
         foreach($users as $user){

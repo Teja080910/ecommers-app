@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once __DIR__ . '/../app/fcm_helper.php';
 
 /* LOGIN CHECK */
 
@@ -43,7 +44,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_refund_notificati
         // 🔥 push, same pattern used elsewhere -- best-effort, doesn't block the notification above
         if(!empty($order['fcm_token'])){
 
-            $access = trim(file_get_contents("https://zipzapcart.com/app/addaccess_token.php"));
+            $access = getFcmAccessToken();
             $project = "ftnews-79e5c";
 
             $payload = [
