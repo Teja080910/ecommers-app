@@ -9,19 +9,24 @@
 
 function getFcmAccessToken(){
 
-    // This repo is public, so the credential is never committed -- in
-    // production it's uploaded via Render's "Secret Files" feature, which
-    // mounts it at /etc/secrets/<filename>. Fall back to a local copy
-    // (gitignored) for local development.
-    $renderSecretPath = "/etc/secrets/firebase-service-account.json";
-    $localPath = __DIR__ . "/firebase-service-account.json";
+    // This repo is public, so the credential is never committed. In
+    // production it's set as the FIREBASE_SERVICE_ACCOUNT_JSON environment
+    // variable (the raw JSON file contents, pasted as one value) --
+    // Render's "Secret Files" was tried first but its mount at
+    // /etc/secrets/ isn't readable by the web server user in this Docker
+    // image (permission denied), so an env var is used instead since
+    // that's always readable by the process. Falls back to a local
+    // gitignored file copy for local development.
+    $envJson = getenv("FIREBASE_SERVICE_ACCOUNT_JSON");
 
-    $credsPath = file_exists($renderSecretPath) ? $renderSecretPath : $localPath;
-
-    $creds = json_decode(
-        file_get_contents($credsPath),
-        true
-    );
+    if (!empty($envJson)) {
+        $creds = json_decode($envJson, true);
+    } else {
+        $creds = json_decode(
+            file_get_contents(__DIR__ . "/firebase-service-account.json"),
+            true
+        );
+    }
 
     $private_key = $creds["private_key"];
     $client_email = $creds["client_email"];
