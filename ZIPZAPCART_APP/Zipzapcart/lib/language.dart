@@ -181,40 +181,63 @@ class _LanguagePageState
       selectedLang,
     );
 
-    if(
-    selectedLang!="en"
-    ){
+    try{
 
-      final model=
-      OnDeviceTranslatorModelManager();
+      if(
+      selectedLang!="en"
+      ){
 
-      await model
-          .downloadModel(
+        final model=
+        OnDeviceTranslatorModelManager();
 
-        getLang(
-          selectedLang,
-        ),
+        await model
+            .downloadModel(
 
-      );
+          getLang(
+            selectedLang,
+          ),
 
-    }
+        )
+        // 🔥 without a timeout, a stalled/failed download (no network,
+        // Play Services unavailable, etc.) leaves the button spinning
+        // forever since nothing ever completes the Future
+            .timeout(
+          const Duration(seconds: 30),
+        );
 
-    // 🔥 actually switch the active translator so `t()` calls translate
-    await TranslatorService().reload();
+      }
 
-    setState(() {
-      loading=false;
-    });
+      // 🔥 actually switch the active translator so `t()` calls translate
+      await TranslatorService().reload();
 
-    if(
-    mounted
-    ){
+      if(mounted){
 
-      Navigator.pop(
-        context,
-        true,
-      );
+        setState(() {
+          loading=false;
+        });
 
+        Navigator.pop(
+          context,
+          true,
+        );
+      }
+
+    }catch(e){
+
+      if(mounted){
+
+        setState(() {
+          loading=false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Couldn't download the language pack. Check your internet connection and try again.",
+            ),
+          ),
+        );
+      }
     }
 
   }

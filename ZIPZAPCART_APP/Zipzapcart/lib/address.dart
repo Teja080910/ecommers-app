@@ -93,6 +93,8 @@ class _AddressPageState
 
     bool fetching=false;
 
+    bool savingAddress=false;
+
     String errorMessage = '';
 
     showModalBottomSheet(
@@ -436,8 +438,12 @@ class _AddressPageState
                       child:
                       ElevatedButton(
 
-                        onPressed:
+                        onPressed: savingAddress ? null :
                             () async {
+
+                          setStateSheet(() {
+                            savingAddress = true;
+                          });
 
                           var data =
                           await ApiService
@@ -462,6 +468,11 @@ class _AddressPageState
                             longitude,
 
                           );
+
+                          if (!context.mounted) {
+                            return;
+                          }
+
                           if (data[
                           "status"] ==
                               true) {
@@ -475,6 +486,7 @@ class _AddressPageState
                           } else {
 
                             setStateSheet(() {
+                              savingAddress = false;
                               errorMessage =
                                   data["message"] ??
                                   "Failed to save address";
@@ -498,7 +510,16 @@ class _AddressPageState
                           ),
                         ),
 
-                        child: Text(
+                        child: savingAddress
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                            : Text(
                           "Save Address",
 
                           style:

@@ -11,6 +11,76 @@ if(!isset($_SESSION['admin_id'])){
     exit;
 }
 
+/* SEND REFUND NOTIFICATION
+   No wallet/refund ledger in this app -- refunds are processed manually
+   outside the system (bank/UPI transfer), and the customer is just
+   notified in-app + via push once it's done. */
+$refundSent = false;
+
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_refund_notification'])){
+
+    $order_id = intval($_POST['order_id']);
+    $amount = trim($_POST['refund_amount']);
+
+    $orderStmt = $pdo->prepare(
+        "SELECT orders.user_id, orders.order_no, users.fcm_token
+         FROM orders
+         LEFT JOIN users ON users.id = orders.user_id
+         WHERE orders.id = ?"
+    );
+    $orderStmt->execute([$order_id]);
+    $order = $orderStmt->fetch();
+
+    if($order && !empty($amount)){
+
+        $message = "Your refund of ₹{$amount} for order #{$order['order_no']} has been processed.";
+
+        $notifStmt = $pdo->prepare(
+            "INSERT INTO user_notifications (user_id, notification_text) VALUES (?, ?)"
+        );
+        $notifStmt->execute([$order['user_id'], $message]);
+
+        // 🔥 push, same pattern used elsewhere -- best-effort, doesn't block the notification above
+        if(!empty($order['fcm_token'])){
+
+            $access = trim(file_get_contents("https://zipzapcart.com/app/addaccess_token.php"));
+            $project = "ftnews-79e5c";
+
+            $payload = [
+                "message" => [
+                    "token" => $order['fcm_token'],
+                    "notification" => [
+                        "title" => "Refund Processed",
+                        "body" => $message
+                    ],
+                    "data" => [
+                        "type" => "refund",
+                        "order_id" => (string)$order_id,
+                        "screen" => "orders"
+                    ]
+                ]
+            ];
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, "https://fcm.googleapis.com/v1/projects/" . $project . "/messages:send");
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer " . $access,
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_exec($ch);
+            curl_close($ch);
+        }
+
+        $refundSent = true;
+    }
+
+    header("Location: cancelled-orders.php?refund_sent=" . ($refundSent ? 1 : 0));
+    exit;
+}
+
 /* CANCELLED ORDERS QUERY */
 
 $sql = "
@@ -128,7 +198,8 @@ body{
     130px
     140px
     150px
-    170px;
+    170px
+    220px;
 
     gap:14px;
 
@@ -154,7 +225,8 @@ body{
     130px
     140px
     150px
-    170px;
+    170px
+    220px;
 
     gap:14px;
 
@@ -233,6 +305,55 @@ body{
     color:#22d3ee;
 }
 
+/* REFUND NOTIFICATION FORM */
+
+.refund-form{
+    display:flex;
+    gap:6px;
+}
+
+.refund-input{
+    width:80px;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid #334155;
+    background:#0f172a;
+    color:#fff;
+    font-size:12px;
+}
+
+.refund-btn{
+    padding:8px 12px;
+    border-radius:8px;
+    border:none;
+    background:#4ade8020;
+    color:#4ade80;
+    font-size:11px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.refund-btn:hover{
+    background:#4ade8040;
+}
+
+.refund-sent{
+    font-size:12px;
+    color:#4ade80;
+    font-weight:600;
+}
+
+.success-banner{
+    background:#16a34a20;
+    color:#4ade80;
+    padding:14px 20px;
+    border-radius:16px;
+    margin-bottom:18px;
+    font-size:13px;
+    font-weight:600;
+}
+
 /* ITEMS */
 
 .order-items{
@@ -281,7 +402,7 @@ body{
 
     .table-head,
     .table-row{
-        min-width:1400px;
+        min-width:1620px;
     }
 }
 
@@ -315,6 +436,16 @@ body{
         </p>
 
     </div>
+
+    <?php if(isset($_GET['refund_sent'])){ ?>
+
+        <div class="success-banner">
+            <?php echo $_GET['refund_sent'] == '1'
+                ? "Refund notification sent to the customer."
+                : "Couldn't send the refund notification. Please try again."; ?>
+        </div>
+
+    <?php } ?>
 
     <?php if(count($orders) > 0){ ?>
 
@@ -354,6 +485,10 @@ body{
 
             <div>
                 Date
+            </div>
+
+            <div>
+                Refund
             </div>
 
         </div>
@@ -528,6 +663,36 @@ body{
                 )
 
                 ); ?>
+
+            </div>
+
+            <!-- REFUND NOTIFICATION -->
+
+            <div>
+
+                <form method="post" class="refund-form">
+
+                    <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="refund_amount"
+                        class="refund-input"
+                        placeholder="Amount"
+                        required>
+
+                    <button
+                        type="submit"
+                        name="send_refund_notification"
+                        value="1"
+                        class="refund-btn"
+                        onclick="return confirm('Send a refund notification to this customer? (Process the actual refund yourself first -- this only notifies them.)');">
+                        Notify
+                    </button>
+
+                </form>
 
             </div>
 

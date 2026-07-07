@@ -29,6 +29,7 @@ class _CheckoutPageState
   double longitude=0;
 
   bool fetchingLocation=false;
+  bool placingOrder = false;
   double subtotal = 0;
 
   double deliveryCharge=0;
@@ -485,8 +486,12 @@ class _CheckoutPageState
 
   void couponBottomSheet() {
 
+    bool applyingCoupon = false;
+
     showModalBottomSheet(
       context: context,
+
+      isScrollControlled: true,
 
       backgroundColor: Colors.white,
 
@@ -500,9 +505,15 @@ class _CheckoutPageState
 
       builder: (_) {
 
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+
         return Padding(
           padding:
-          const EdgeInsets.all(20),
+          EdgeInsets.fromLTRB(
+            20, 20, 20,
+            20 + MediaQuery.of(context).viewInsets.bottom,
+          ),
 
           child: Column(
             mainAxisSize:
@@ -609,9 +620,19 @@ class _CheckoutPageState
                 child:
                 ElevatedButton(
 
-                  onPressed: () {
+                  onPressed: applyingCoupon ? null : () async {
 
-                    applyCoupon();
+                    setModalState(() {
+                      applyingCoupon = true;
+                    });
+
+                    await applyCoupon();
+
+                    if (context.mounted) {
+                      setModalState(() {
+                        applyingCoupon = false;
+                      });
+                    }
                   },
 
                   style:
@@ -628,7 +649,16 @@ class _CheckoutPageState
                     ),
                   ),
 
-                  child: Text(
+                  child: applyingCoupon
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                      : Text(
                     "Apply Coupon",
 
                     style:
@@ -644,6 +674,8 @@ class _CheckoutPageState
               ),
             ],
           ),
+        );
+          },
         );
       },
     );
@@ -1045,11 +1077,8 @@ class _CheckoutPageState
           child:
           ElevatedButton(
 
-            onPressed: () async {
-              print("BUTTON CLICKED");
-              print(userId);
-              print(selectedAddress);
-              print(finalTotal);
+            onPressed: placingOrder ? null : () async {
+
               if (selectedAddress == null) {
 
                 ScaffoldMessenger.of(
@@ -1070,6 +1099,10 @@ class _CheckoutPageState
                 openRazorpay();
 
               } else {
+
+                setState(() {
+                  placingOrder = true;
+                });
 
                 var order =
                 await ApiService.placeOrder(
@@ -1092,7 +1125,9 @@ class _CheckoutPageState
 
                 );
 
-                print(order);
+                if (!mounted) {
+                  return;
+                }
 
                 if (order["status"] == true) {
 
@@ -1109,6 +1144,10 @@ class _CheckoutPageState
                   );
 
                 } else {
+
+                  setState(() {
+                    placingOrder = false;
+                  });
 
                   ScaffoldMessenger.of(context)
                       .showSnackBar(
@@ -1136,7 +1175,16 @@ class _CheckoutPageState
               ),
             ),
 
-            child: Text(
+            child: placingOrder
+                ? const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
+            )
+                : Text(
               "Place Order ${AppConstants.formatPrice(finalTotal)}",
 
               style:

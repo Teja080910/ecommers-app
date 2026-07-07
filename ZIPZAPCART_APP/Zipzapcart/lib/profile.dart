@@ -7,7 +7,6 @@ import 'api_service.dart';
 // 🔥 IMPORT PAGES
 import 'myorder.dart';
 import 'address.dart';
-import 'wallet.dart';
 import 'wishlist.dart';
 import 'language.dart';
 import 'mode.dart';
@@ -158,6 +157,8 @@ class _ProfilePageState
       text: name,
     );
 
+    bool submitting = false;
+
     showModalBottomSheet(
 
       context: context,
@@ -168,6 +169,9 @@ class _ProfilePageState
       Colors.transparent,
 
       builder: (_) {
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
 
         return Padding(
 
@@ -447,7 +451,7 @@ class _ProfilePageState
                   ElevatedButton(
 
                     onPressed:
-                        () async {
+                        submitting ? null : () async {
 
                       if(
                       controller.text
@@ -458,6 +462,10 @@ class _ProfilePageState
                         return;
 
                       }
+
+                      setModalState((){
+                        submitting = true;
+                      });
 
                       final res =
 
@@ -470,6 +478,10 @@ class _ProfilePageState
                             .trim(),
 
                       );
+
+                      if(!context.mounted){
+                        return;
+                      }
 
                       if(res["status"] == true){
 
@@ -495,14 +507,15 @@ class _ProfilePageState
 
                         });
 
-                      }
-
-                      if(context.mounted){
-
                         Navigator.pop(
                           context,
                         );
 
+                      }else{
+
+                        setModalState((){
+                          submitting = false;
+                        });
                       }
 
                     },
@@ -533,7 +546,16 @@ class _ProfilePageState
 
                     child:
 
-                    const Text(
+                    submitting
+                        ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                        : const Text(
 
                       "Update",
 
@@ -562,6 +584,8 @@ class _ProfilePageState
           ),
 
         );
+          },
+        );
 
       },
 
@@ -577,6 +601,12 @@ class _ProfilePageState
       text: phone,
     );
 
+    // 🔥 hoisted above the builder -- these must survive rebuilds
+    // triggered by setModalState, otherwise they reset to their
+    // initial value on every rebuild and the error/spinner never show
+    String? error;
+    bool submitting = false;
+
     showModalBottomSheet(
 
       context: context,
@@ -590,8 +620,6 @@ class _ProfilePageState
 
         return StatefulBuilder(
           builder: (context, setModalState) {
-
-        String? error;
 
         return Padding(
 
@@ -690,7 +718,7 @@ class _ProfilePageState
 
                   child: ElevatedButton(
 
-                    onPressed: () async {
+                    onPressed: submitting ? null : () async {
 
                       final value = controller.text.trim();
 
@@ -703,11 +731,21 @@ class _ProfilePageState
                         return;
                       }
 
+                      setModalState(() {
+                        submitting = true;
+                        error = null;
+                      });
+
                       final res = await ApiService.updateProfile(
                         userId,
                         name,
                         phone: value,
                       );
+
+                      // sheet may have been dismissed while the request was in flight
+                      if(!context.mounted){
+                        return;
+                      }
 
                       if(res["status"] == true){
 
@@ -719,13 +757,12 @@ class _ProfilePageState
                           phone = value;
                         });
 
-                        if(context.mounted){
-                          Navigator.pop(context);
-                        }
+                        Navigator.pop(context);
 
                       }else{
 
                         setModalState(() {
+                          submitting = false;
                           error = res["message"]?.toString() ?? "Could not update phone number";
                         });
                       }
@@ -738,7 +775,16 @@ class _ProfilePageState
                       ),
                     ),
 
-                    child: const Text(
+                    child: submitting
+                        ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                        : const Text(
                       "Update",
                       style: TextStyle(
                         color: Colors.white,
@@ -762,6 +808,9 @@ class _ProfilePageState
 
     final controller = TextEditingController(text: username);
 
+    String? error;
+    bool submitting = false;
+
     showModalBottomSheet(
 
       context: context,
@@ -771,6 +820,9 @@ class _ProfilePageState
       backgroundColor: Colors.transparent,
 
       builder: (_) {
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
 
         return Padding(
 
@@ -846,6 +898,7 @@ class _ProfilePageState
 
                   decoration: InputDecoration(
                     hintText: "Enter username",
+                    errorText: error,
                     filled: true,
                     fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
                     prefixIcon: const Icon(Icons.alternate_email, color: Color(0xFFEF4138)),
@@ -865,7 +918,7 @@ class _ProfilePageState
 
                   child: ElevatedButton(
 
-                    onPressed: () async {
+                    onPressed: submitting ? null : () async {
 
                       final value = controller.text.trim();
 
@@ -873,11 +926,20 @@ class _ProfilePageState
                         return;
                       }
 
+                      setModalState(() {
+                        submitting = true;
+                        error = null;
+                      });
+
                       final res = await ApiService.updateProfile(
                         userId,
                         name,
                         username: value,
                       );
+
+                      if (!context.mounted) {
+                        return;
+                      }
 
                       if (res["status"] == true) {
 
@@ -889,9 +951,14 @@ class _ProfilePageState
                           username = value;
                         });
 
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
+                        Navigator.pop(context);
+
+                      }else{
+
+                        setModalState(() {
+                          submitting = false;
+                          error = res["message"]?.toString() ?? "Could not update username";
+                        });
                       }
                     },
 
@@ -902,7 +969,16 @@ class _ProfilePageState
                       ),
                     ),
 
-                    child: const Text(
+                    child: submitting
+                        ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                        : const Text(
                       "Update",
                       style: TextStyle(
                         color: Colors.white,
@@ -915,6 +991,8 @@ class _ProfilePageState
               ],
             ),
           ),
+        );
+          },
         );
       },
     );
@@ -1459,19 +1537,6 @@ class _ProfilePageState
 
                       () => nav(
                     const AddressPage(),
-                  ),
-                ),
-
-                _settingTile(
-
-                  Icons.account_balance_wallet_outlined,
-
-                  "Wallet & Payments",
-
-                  "Cards, UPI, refunds and balance",
-
-                      () => nav(
-                    const WalletPage(),
                   ),
                 ),
 

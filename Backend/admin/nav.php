@@ -315,6 +315,21 @@ $settings_pages = ['app-settings.php','change-password.php'];
 
     </li>
 
+    <!-- Notifications -->
+
+    <li class="<?= ($current_page == 'send-notification.php') ? 'active' : '' ?>">
+
+        <a href="send-notification.php">
+
+            <div class="menu-left">
+                <i class="fa-solid fa-bullhorn"></i>
+                Send Notification
+            </div>
+
+        </a>
+
+    </li>
+
     <!-- Products -->
 
     <li class="<?= in_array($current_page,$product_pages) ? 'active' : '' ?>">
