@@ -45,7 +45,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_refund_notificati
         if(!empty($order['fcm_token'])){
 
             $access = getFcmAccessToken();
-            $project = "ftnews-79e5c";
+            $project = "zipzapcart-app";
 
             $payload = [
                 "message" => [

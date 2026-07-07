@@ -39,7 +39,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_broadcast'])){
 
         // fetch the FCM access token once for the whole batch, not per user
         $access = getFcmAccessToken();
-        $project = "ftnews-79e5c";
+        $project = "zipzapcart-app";
 
         foreach($users as $user){
 

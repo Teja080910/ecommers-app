@@ -3,6 +3,7 @@
 session_start();
 
 require_once 'db.php';
+require_once __DIR__ . '/../app/fcm_helper.php';
 
 /* LOGIN */
 
@@ -188,21 +189,11 @@ $user["fcm_token"]
 
 ){
 
-$access=
-
-trim(
-
-file_get_contents(
-
-"https://zipzapcart.com/app/addaccess_token.php"
-
-)
-
-);
+$access= getFcmAccessToken();
 
 $project=
 
-"ftnews-79e5c";
+"zipzapcart-app";
 
 $title=
 

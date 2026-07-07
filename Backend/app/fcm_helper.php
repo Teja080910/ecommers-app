@@ -9,8 +9,17 @@
 
 function getFcmAccessToken(){
 
+    // This repo is public, so the credential is never committed -- in
+    // production it's uploaded via Render's "Secret Files" feature, which
+    // mounts it at /etc/secrets/<filename>. Fall back to a local copy
+    // (gitignored) for local development.
+    $renderSecretPath = "/etc/secrets/firebase-service-account.json";
+    $localPath = __DIR__ . "/firebase-service-account.json";
+
+    $credsPath = file_exists($renderSecretPath) ? $renderSecretPath : $localPath;
+
     $creds = json_decode(
-        file_get_contents(__DIR__ . "/firebase-service-account.json"),
+        file_get_contents($credsPath),
         true
     );
 
