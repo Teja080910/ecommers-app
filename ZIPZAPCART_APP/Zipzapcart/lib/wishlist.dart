@@ -156,8 +156,9 @@ class _WishlistPageState
 
                   onPressed: () {
 
-                    Navigator.pop(
+                    Navigator.popUntil(
                       context,
+                      (route) => route.isFirst,
                     );
                   },
 

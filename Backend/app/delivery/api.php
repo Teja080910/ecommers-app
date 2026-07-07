@@ -403,6 +403,17 @@ WHERE id='$order_id'
 
 );
 
+/* IN-APP NOTIFICATION (independent of whether push delivery succeeds) */
+
+$deliveredNotifText =
+"Your order #" . $order["order_no"] . " has been delivered successfully";
+
+$deliveredNotifStmt = mysqli_prepare($conn,
+    "INSERT INTO user_notifications (user_id, notification_text) VALUES (?, ?)");
+
+mysqli_stmt_bind_param($deliveredNotifStmt, "is", $order["user_id"], $deliveredNotifText);
+mysqli_stmt_execute($deliveredNotifStmt);
+
 /* SEND FCM */
 
 $token=

@@ -46,6 +46,44 @@ function requireAuth($conn){
 }
 
 /* ==============================
+   COUPON DISCOUNT HELPER
+   Single source of truth for coupon validation/discount math,
+   used by both apply_coupon (preview) and place_order (authoritative)
+   so a stale/tampered client-side discount can never be trusted.
+================================ */
+function calculateCouponDiscount($conn, $code, $amount){
+
+    if (empty($code)) {
+        return ["valid" => true, "discount" => 0, "message" => ""];
+    }
+
+    $stmt = mysqli_prepare($conn,
+        "SELECT * FROM coupons WHERE code=? AND status='active'");
+
+    mysqli_stmt_bind_param($stmt, "s", $code);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    if (mysqli_num_rows($result) == 0) {
+        return ["valid" => false, "discount" => 0, "message" => "Invalid Coupon"];
+    }
+
+    $coupon = mysqli_fetch_assoc($result);
+
+    if ($amount < $coupon['min_amount']) {
+        return ["valid" => false, "discount" => 0, "message" => "Minimum order not matched"];
+    }
+
+    if ($coupon['discount_type'] == "flat") {
+        $discount = floatval($coupon['discount_amount']);
+    } else {
+        $discount = ($amount * floatval($coupon['discount_amount'])) / 100;
+    }
+
+    return ["valid" => true, "discount" => $discount, "message" => ""];
+}
+
+/* ==============================
    LOGIN / REGISTER USER
 ================================ */
 if ($action == "login_register") {
@@ -416,6 +454,16 @@ trim(
 $_POST["phone"] ?? ""
 );
 
+$username =
+trim(
+$_POST["username"] ?? ""
+);
+
+$gender =
+trim(
+$_POST["gender"] ?? ""
+);
+
 if(
 empty($name)
 ){
@@ -431,6 +479,16 @@ echo json_encode([
 
 exit;
 
+}
+
+if(!empty($gender) && !in_array($gender, ["male", "female", "other"])){
+
+    echo json_encode([
+        "status"=>false,
+        "message"=>"Invalid gender value"
+    ]);
+
+    exit;
 }
 
 if(!empty($phone)){
@@ -453,19 +511,26 @@ if(!empty($phone)){
 
         exit;
     }
-
-    $stmt = mysqli_prepare($conn,
-        "UPDATE users SET name=?, phone=? WHERE id=?");
-
-    mysqli_stmt_bind_param($stmt, "ssi", $name, $phone, $user_id);
-
-}else{
-
-    $stmt = mysqli_prepare($conn,
-        "UPDATE users SET name=? WHERE id=?");
-
-    mysqli_stmt_bind_param($stmt, "si", $name, $user_id);
 }
+
+// phone/username/gender are optional -- only overwrite when a
+// non-empty value was actually posted, otherwise keep the existing value
+$stmt = mysqli_prepare($conn,
+    "UPDATE users SET
+        name=?,
+        phone=CASE WHEN ?<>'' THEN ? ELSE phone END,
+        username=CASE WHEN ?<>'' THEN ? ELSE username END,
+        gender=CASE WHEN ?<>'' THEN ? ELSE gender END
+     WHERE id=?");
+
+mysqli_stmt_bind_param(
+    $stmt, "sssssssi",
+    $name,
+    $phone, $phone,
+    $username, $username,
+    $gender, $gender,
+    $user_id
+);
 
 $update = mysqli_stmt_execute($stmt);
 
@@ -896,6 +961,72 @@ if ($action == "get_top_deals") {
     $query = mysqli_query($conn,
         "SELECT * FROM products
          WHERE topdeals='yes'
+         ORDER BY id DESC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "name" => $row['name'],
+            "rate" => $row['rate'],
+            "saleprice" => $row['saleprice'],
+            "image" => $row['image'],
+            "stock" => $row['stock'],
+            "hasvarients" => $row['hasvarients']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "products" => $data
+    ]);
+
+    exit;
+}
+
+/* =====================================
+   GET BEST SELLER PRODUCTS
+===================================== */
+if ($action == "get_best_sellers") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM products
+         WHERE bestseller='yes'
+         ORDER BY id DESC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "name" => $row['name'],
+            "rate" => $row['rate'],
+            "saleprice" => $row['saleprice'],
+            "image" => $row['image'],
+            "stock" => $row['stock'],
+            "hasvarients" => $row['hasvarients']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "products" => $data
+    ]);
+
+    exit;
+}
+
+/* =====================================
+   GET RECOMMENDED PRODUCTS
+===================================== */
+if ($action == "get_recommended") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM products
+         WHERE recommended='yes'
          ORDER BY id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
@@ -1660,54 +1791,24 @@ exit;
 ===================================== */
 if ($action == "apply_coupon") {
 
-    $code = $_POST['code'];
-    $amount = $_POST['amount'];
+    $code = $_POST['code'] ?? '';
+    $amount = floatval($_POST['amount'] ?? 0);
 
-    $query = mysqli_query($conn,
-        "SELECT * FROM coupons
-         WHERE code='$code'
-         AND status='active'");
+    $result = calculateCouponDiscount($conn, $code, $amount);
 
-    if (mysqli_num_rows($query) == 0) {
+    if (!$result['valid']) {
 
         echo json_encode([
             "status" => false,
-            "message" => "Invalid Coupon"
+            "message" => $result['message']
         ]);
 
         exit;
-    }
-
-    $coupon = mysqli_fetch_assoc($query);
-
-    if ($amount < $coupon['min_amount']) {
-
-        echo json_encode([
-            "status" => false,
-            "message" =>
-            "Minimum order not matched"
-        ]);
-
-        exit;
-    }
-
-    $discount = 0;
-
-    if ($coupon['discount_type'] == "flat") {
-
-        $discount =
-            $coupon['discount_amount'];
-
-    } else {
-
-        $discount =
-            ($amount *
-                $coupon['discount_amount']) / 100;
     }
 
     echo json_encode([
         "status" => true,
-        "discount" => $discount
+        "discount" => $result['discount']
     ]);
 
     exit;
@@ -1782,6 +1883,15 @@ if ($action == "check_delivery") {
                 $estimate = date('Y-m-d', strtotime('+1 day'));
                 $estimate_text = "Get it by " . date('D, d M', strtotime('+1 day'));
             }
+
+        } else {
+
+            // Pincode isn't in our local service area -- still deliverable,
+            // just slower, so show a real estimate instead of hiding it.
+            $deliverable = true;
+            $is_express = false;
+            $estimate = date('Y-m-d', strtotime('+7 days'));
+            $estimate_text = "Delivery in 5-7 business days";
         }
     }
 
@@ -1861,6 +1971,23 @@ if ($action == "place_order") {
 
     $payment_method =
         $_POST['payment_method'] ?? 'cod';
+
+    // 🔥 SERVER-SIDE COUPON REVALIDATION
+    // Never trust the client-sent discount_amount/total_amount for the coupon
+    // portion -- recompute from the coupons table and re-derive total_amount
+    // so a stale/tampered client value can't under- or over-discount an order.
+    $couponResult = calculateCouponDiscount($conn, $coupon_code, $subtotal);
+
+    $verifiedDiscount = (!empty($coupon_code) && $couponResult['valid'])
+        ? $couponResult['discount']
+        : 0;
+
+    $total_amount = $total_amount - $discount_amount + $verifiedDiscount;
+    $discount_amount = $verifiedDiscount;
+
+    if (!empty($coupon_code) && !$couponResult['valid']) {
+        $coupon_code = '';
+    }
 
     // 🔥 VALIDATION
     if (empty($address_id)) {
@@ -2155,6 +2282,13 @@ $insertOrder = mysqli_stmt_execute($orderStmt);
 
     mysqli_stmt_bind_param($clearCartStmt, "i", $user_id);
     mysqli_stmt_execute($clearCartStmt);
+
+    // 🔥 IN-APP NOTIFICATION (independent of whether push delivery succeeds)
+    $notifText = "Your order #$order_no placed successfully";
+    $notifStmt = mysqli_prepare($conn,
+        "INSERT INTO user_notifications (user_id, notification_text) VALUES (?, ?)");
+    mysqli_stmt_bind_param($notifStmt, "is", $user_id, $notifText);
+    mysqli_stmt_execute($notifStmt);
 // 🔥 SEND FCM AFTER ORDER
 
 $fcmStmt = mysqli_prepare($conn,

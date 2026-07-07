@@ -130,6 +130,12 @@ if(isset($_POST['update_product'])){
     $topdeals =
     $_POST['topdeals'];
 
+    $bestseller =
+    $_POST['bestseller'] ?? 'no';
+
+    $recommended =
+    $_POST['recommended'] ?? 'no';
+
     $hasvarients =
     $_POST['hasvarients'];
 
@@ -220,6 +226,8 @@ if(isset($_POST['update_product'])){
         image=?,
         other_images=?,
         topdeals=?,
+        bestseller=?,
+        recommended=?,
         hasvarients=?,
         product_description=?,
         stock=?
@@ -239,6 +247,8 @@ if(isset($_POST['update_product'])){
         $image,
         $other_images,
         $topdeals,
+        $bestseller,
+        $recommended,
         $hasvarients,
         $product_description,
         $stock,
@@ -824,6 +834,100 @@ value="yes"
 
 <?php
 if($product['topdeals']
+== "yes")
+echo 'selected';
+?>
+
+>
+
+Yes
+
+</option>
+
+</select>
+
+</div>
+
+<!-- BEST SELLER -->
+
+<div class="input-box">
+
+<label>
+Best Seller
+</label>
+
+<select
+name="bestseller">
+
+<option
+
+value="no"
+
+<?php
+if($product['bestseller']
+== "no")
+echo 'selected';
+?>
+
+>
+
+No
+
+</option>
+
+<option
+
+value="yes"
+
+<?php
+if($product['bestseller']
+== "yes")
+echo 'selected';
+?>
+
+>
+
+Yes
+
+</option>
+
+</select>
+
+</div>
+
+<!-- RECOMMENDED -->
+
+<div class="input-box">
+
+<label>
+Recommended
+</label>
+
+<select
+name="recommended">
+
+<option
+
+value="no"
+
+<?php
+if($product['recommended']
+== "no")
+echo 'selected';
+?>
+
+>
+
+No
+
+</option>
+
+<option
+
+value="yes"
+
+<?php
+if($product['recommended']
 == "yes")
 echo 'selected';
 ?>

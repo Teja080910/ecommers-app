@@ -547,6 +547,10 @@ class _CheckoutPageState
                         setState(() {
                           couponController.text = code.toString();
                         });
+
+                        // 🔥 selecting an offer should actually apply it,
+                        // not just pre-fill the text field
+                        applyCoupon();
                       }
                     },
 

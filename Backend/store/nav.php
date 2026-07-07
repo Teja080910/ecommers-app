@@ -340,10 +340,6 @@ $settings_pages = ['app-settings.php','change-password.php'];
     </li>
 
     <!-- Subscription -->
-    <!-- Temporarily disabled until real Razorpay credentials are added.
-         Do not remove -- re-enable by removing this if(false) wrapper. -->
-    <?php if(false): ?>
-
     <li class="<?= ($current_page == 'subscription-plans.php') ? 'active' : '' ?>">
 
         <a href="subscription-plans.php">
@@ -356,8 +352,6 @@ $settings_pages = ['app-settings.php','change-password.php'];
         </a>
 
     </li>
-
-    <?php endif; ?>
 <?php
 $food_product_pages = [
     'add-food-product.php',

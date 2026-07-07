@@ -29,6 +29,8 @@ class _ProfilePageState
 
   String name = "Loading...";
   String phone = "";
+  String username = "";
+  String gender = "";
   String appTheme = "light";
 
   bool get isDark =>
@@ -67,6 +69,14 @@ class _ProfilePageState
       phone =
           prefs.getString("phone") ??
               "";
+
+      username =
+          prefs.getString("username") ??
+              "";
+
+      gender =
+          prefs.getString("gender") ??
+              "";
     });
 
     if (userId == 0) {
@@ -96,6 +106,14 @@ class _ProfilePageState
             res["user"]["phone"] ??
                 "";
 
+        username =
+            res["user"]["username"] ??
+                "";
+
+        gender =
+            res["user"]["gender"] ??
+                "";
+
         await prefs.setString(
           "name",
           name,
@@ -104,6 +122,16 @@ class _ProfilePageState
         await prefs.setString(
           "phone",
           phone,
+        );
+
+        await prefs.setString(
+          "username",
+          username,
+        );
+
+        await prefs.setString(
+          "gender",
+          gender,
         );
 
         print(
@@ -730,6 +758,268 @@ class _ProfilePageState
     );
   }
 
+  void editUsername() {
+
+    final controller = TextEditingController(text: username);
+
+    showModalBottomSheet(
+
+      context: context,
+
+      isScrollControlled: true,
+
+      backgroundColor: Colors.transparent,
+
+      builder: (_) {
+
+        return Padding(
+
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+
+          child: Container(
+
+            padding: const EdgeInsets.all(20),
+
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                Container(
+                  width: 60,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4138).withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.alternate_email,
+                        size: 20,
+                        color: Color(0xFFEF4138),
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    Expanded(
+                      child: Text(
+                        "Update Username",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 18),
+
+                TextField(
+
+                  controller: controller,
+
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+
+                  decoration: InputDecoration(
+                    hintText: "Enter username",
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
+                    prefixIcon: const Icon(Icons.alternate_email, color: Color(0xFFEF4138)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                SizedBox(
+
+                  width: double.infinity,
+                  height: 54,
+
+                  child: ElevatedButton(
+
+                    onPressed: () async {
+
+                      final value = controller.text.trim();
+
+                      if (value.isEmpty) {
+                        return;
+                      }
+
+                      final res = await ApiService.updateProfile(
+                        userId,
+                        name,
+                        username: value,
+                      );
+
+                      if (res["status"] == true) {
+
+                        final prefs = await SharedPreferences.getInstance();
+
+                        await prefs.setString("username", value);
+
+                        setState(() {
+                          username = value;
+                        });
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                      }
+                    },
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4138),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+
+                    child: const Text(
+                      "Update",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void editGender() {
+
+    showModalBottomSheet(
+
+      context: context,
+
+      backgroundColor: Colors.transparent,
+
+      builder: (_) {
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+
+            return Container(
+
+              padding: const EdgeInsets.all(20),
+
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  Container(
+                    width: 60,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Text(
+                    "Select Gender",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  for (final option in const ["male", "female", "other"])
+                    RadioListTile<String>(
+                      value: option,
+                      groupValue: gender,
+                      activeColor: const Color(0xFFEF4138),
+                      title: Text(
+                        option[0].toUpperCase() + option.substring(1),
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      onChanged: (value) async {
+
+                        if (value == null) {
+                          return;
+                        }
+
+                        setModalState(() {
+                          gender = value;
+                        });
+
+                        final res = await ApiService.updateProfile(
+                          userId,
+                          name,
+                          gender: value,
+                        );
+
+                        if (res["status"] == true) {
+
+                          final prefs = await SharedPreferences.getInstance();
+
+                          await prefs.setString("gender", value);
+
+                          setState(() {
+                            gender = value;
+                          });
+                        }
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _logout(
       BuildContext context,
       ) async {
@@ -1006,6 +1296,72 @@ class _ProfilePageState
                                         fontSize:
                                         11.8,
 
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 5),
+
+                                    Icon(
+                                      Icons.edit,
+                                      size: 11,
+                                      color: isDark ? Colors.white70 : Colors.black54,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              GestureDetector(
+
+                                onTap: editUsername,
+
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+
+                                    Text(
+
+                                      username.isEmpty
+                                          ? "Add username"
+                                          : "@$username",
+
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white70 : Colors.black54,
+                                        fontSize: 11.8,
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 5),
+
+                                    Icon(
+                                      Icons.edit,
+                                      size: 11,
+                                      color: isDark ? Colors.white70 : Colors.black54,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              GestureDetector(
+
+                                onTap: editGender,
+
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+
+                                    Text(
+
+                                      gender.isEmpty
+                                          ? "Add gender"
+                                          : gender[0].toUpperCase() + gender.substring(1),
+
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white70 : Colors.black54,
+                                        fontSize: 11.8,
                                       ),
                                     ),
 

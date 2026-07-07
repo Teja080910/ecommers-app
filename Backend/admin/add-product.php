@@ -81,6 +81,12 @@ if(isset($_POST['add_product'])){
     $topdeals =
     $_POST['topdeals'];
 
+    $bestseller =
+    $_POST['bestseller'] ?? 'no';
+
+    $recommended =
+    $_POST['recommended'] ?? 'no';
+
     $hasvarients =
     $_POST['hasvarients'];
 
@@ -163,6 +169,8 @@ if(isset($_POST['add_product'])){
             image,
             other_images,
             topdeals,
+            bestseller,
+            recommended,
             hasvarients,
             product_description,
             stock
@@ -171,6 +179,8 @@ if(isset($_POST['add_product'])){
             VALUES
 
             (
+            ?,
+            ?,
             ?,
             ?,
             ?,
@@ -197,6 +207,8 @@ if(isset($_POST['add_product'])){
             $image,
             $other_images,
             $topdeals,
+            $bestseller,
+            $recommended,
             $hasvarients,
             $product_description,
             $stock
@@ -723,6 +735,52 @@ body{
 
                     <select
                     name="topdeals">
+
+                        <option value="no">
+                            No
+                        </option>
+
+                        <option value="yes">
+                            Yes
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- BEST SELLER -->
+
+                <div class="input-box">
+
+                    <label>
+                        Best Seller
+                    </label>
+
+                    <select
+                    name="bestseller">
+
+                        <option value="no">
+                            No
+                        </option>
+
+                        <option value="yes">
+                            Yes
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- RECOMMENDED -->
+
+                <div class="input-box">
+
+                    <label>
+                        Recommended
+                    </label>
+
+                    <select
+                    name="recommended">
 
                         <option value="no">
                             No

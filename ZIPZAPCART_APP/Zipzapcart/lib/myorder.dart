@@ -247,8 +247,9 @@ class _MyOrderPageState
 
                 onPressed: () {
 
-                  Navigator.pop(
+                  Navigator.popUntil(
                     context,
+                    (route) => route.isFirst,
                   );
                 },
 

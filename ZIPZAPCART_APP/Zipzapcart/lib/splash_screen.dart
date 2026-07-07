@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home.dart';
 import 'onboarding.dart';
+import 'translator_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({
@@ -61,6 +62,9 @@ class _SplashScreenState
     final prefs =
     await SharedPreferences
         .getInstance();
+
+    // 🔥 pick up any previously-selected language before Home renders
+    await TranslatorService().init();
 
     bool isLoggedIn =
         prefs.getBool(

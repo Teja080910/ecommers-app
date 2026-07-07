@@ -253,7 +253,8 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> updateProfile(
-      int userId, String name, {String? phone}) async {
+      int userId, String name,
+      {String? phone, String? username, String? gender}) async {
     try {
       final auth = await _authParams();
 
@@ -264,6 +265,8 @@ class ApiService {
           ...auth,
           "name": name,
           if (phone != null) "phone": phone,
+          if (username != null) "username": username,
+          if (gender != null) "gender": gender,
         },
       );
 
@@ -375,6 +378,48 @@ class ApiService {
         Uri.parse(AppConstants.baseUrl),
         body: {
           "action": "get_top_deals",
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["products"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
+  static Future<List> getBestSellers() async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_best_sellers",
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["products"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
+  static Future<List> getRecommended() async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_recommended",
         },
       );
 

@@ -63,6 +63,8 @@ class _HomePageState extends State<HomePage> {
   List portraitBanners = [];
   List categories = [];
   List topDeals = [];
+  List bestSellers = [];
+  List recommended = [];
   List homeCategories = [];
   List wishlistProducts = [];
 
@@ -752,6 +754,12 @@ class _HomePageState extends State<HomePage> {
 
     topDeals =
     await ApiService.getTopDeals();
+
+    bestSellers =
+    await ApiService.getBestSellers();
+
+    recommended =
+    await ApiService.getRecommended();
 
     homeCategories =
     await ApiService.getHomeCategoryProducts();
@@ -1892,69 +1900,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // 🔥 SELECT LOCATION
-              Padding(
-                padding:
-                const EdgeInsets.fromLTRB(18, 0, 18, 12),
-
-                child: GestureDetector(
-
-                  onTap: openLocationPicker,
-
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFF0F0F0)),
-                    ),
-
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-
-                        Icon(
-                          Icons.location_on,
-                          size: 15,
-                          color: primaryColor,
-                        ),
-
-                        const SizedBox(width: 6),
-
-                        Flexible(
-                          child: t(
-                            deliveryAddress != null
-                                ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
-                                : "Select Location",
-
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 4),
-
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: Colors.black54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
+              // 🔥 SEARCH BAR
               Padding(
                 padding:
                 const EdgeInsets.symmetric(
@@ -2050,6 +1996,71 @@ class _HomePageState extends State<HomePage> {
                   ),
                     ),
                   ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 🔥 SELECT LOCATION
+              Padding(
+                padding:
+                const EdgeInsets.fromLTRB(18, 0, 18, 12),
+
+                child: GestureDetector(
+
+                  onTap: openLocationPicker,
+
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF0F0F0)),
+                    ),
+
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+
+                        Icon(
+                          Icons.location_on,
+                          size: 15,
+                          color: primaryColor,
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Flexible(
+                          child: t(
+                            deliveryAddress != null
+                                ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
+                                : "Select Location",
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 4),
+
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -2240,6 +2251,74 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
+
+              // 🔥 BEST SELLERS
+              if (bestSellers.isNotEmpty) ...[
+
+                const SizedBox(height: 26),
+
+                sectionHeader(
+                  "Best Sellers",
+                  onViewAll: null,
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 122,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+
+                    itemCount: bestSellers.length,
+
+                    itemBuilder: (_, index) {
+
+                      return topDealLandscapeCard(
+                        bestSellers[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // 🔥 RECOMMENDED FOR YOU
+              if (recommended.isNotEmpty) ...[
+
+                const SizedBox(height: 26),
+
+                sectionHeader(
+                  "Recommended For You",
+                  onViewAll: null,
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 122,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+
+                    itemCount: recommended.length,
+
+                    itemBuilder: (_, index) {
+
+                      return topDealLandscapeCard(
+                        recommended[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
 
               // 🔥 FROM YOUR WISHLIST
               if (wishlistProducts.isNotEmpty) ...[

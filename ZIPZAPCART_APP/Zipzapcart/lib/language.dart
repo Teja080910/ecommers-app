@@ -2,6 +2,8 @@
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'translator_service.dart';
+
 class LanguagePage extends StatefulWidget {
   const LanguagePage({super.key});
 
@@ -196,6 +198,9 @@ class _LanguagePageState
       );
 
     }
+
+    // 🔥 actually switch the active translator so `t()` calls translate
+    await TranslatorService().reload();
 
     setState(() {
       loading=false;

@@ -60,7 +60,7 @@ CREATE TABLE `appsetting` (
 --
 
 INSERT INTO `appsetting` (`id`, `cashbackper`, `supportnumber`, `supportemail`, `created_at`) VALUES
-(1, 0, '+919999999999', 'support@example.com', '2026-06-12 15:01:24');
+(1, 0, '+918237556643', 'support@zipzapcart.com', '2026-06-12 15:01:24');
 
 -- --------------------------------------------------------
 
@@ -427,6 +427,8 @@ CREATE TABLE `products` (
   `image` varchar(255) DEFAULT NULL,
   `other_images` longtext DEFAULT NULL,
   `topdeals` enum('yes','no') DEFAULT 'no',
+  `bestseller` enum('yes','no') DEFAULT 'no',
+  `recommended` enum('yes','no') DEFAULT 'no',
   `hasvarients` enum('yes','no') DEFAULT 'no',
   `product_description` longtext DEFAULT NULL,
   `stock` int(11) DEFAULT 0,
@@ -680,6 +682,8 @@ CREATE TABLE `users` (
   `referral_code` varchar(20) DEFAULT NULL,
   `sponsor_code` varchar(20) DEFAULT NULL,
   `name` varchar(100) DEFAULT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `gender` enum('male','female','other') DEFAULT NULL,
   `photo` text DEFAULT NULL,
   `firebase_uid` varchar(255) DEFAULT NULL,
   `login_type` enum('phone','google') DEFAULT 'phone',

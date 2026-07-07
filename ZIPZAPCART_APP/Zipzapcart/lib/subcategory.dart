@@ -89,9 +89,9 @@ class _SubCategoryPageState
         gridDelegate:
         const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          mainAxisSpacing: 18,
-          crossAxisSpacing: 18,
-          childAspectRatio: 0.78,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 0.68,
         ),
 
         itemBuilder: (_, index) {
@@ -150,8 +150,8 @@ class _SubCategoryPageState
                   children: [
 
                     Container(
-                      height: 90,
-                      width: 90,
+                      height: 74,
+                      width: 74,
 
                       decoration:
                       BoxDecoration(
