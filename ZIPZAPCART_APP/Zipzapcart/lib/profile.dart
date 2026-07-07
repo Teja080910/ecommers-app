@@ -145,6 +145,10 @@ class _ProfilePageState
       );
     }
 
+    if (!mounted) {
+      return;
+    }
+
     setState(() {
       isLoading = false;
     });

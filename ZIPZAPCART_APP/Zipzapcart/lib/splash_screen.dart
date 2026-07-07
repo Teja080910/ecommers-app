@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api_service.dart';
 import 'home.dart';
+import 'notification_service.dart';
 import 'onboarding.dart';
 import 'translator_service.dart';
 
@@ -78,6 +80,21 @@ class _SplashScreenState
 
       nextPage =
       const HomePage();
+
+      // 🔥 refresh the saved FCM token on every startup, not just at login --
+      // otherwise a token that changes after login (reinstall, OS-level
+      // rotation) never reaches the server and push silently stops working
+      final userId = prefs.getInt("user_id") ?? 0;
+
+      if (userId != 0) {
+
+        NotificationService.getToken().then((token) {
+
+          if (token.isNotEmpty) {
+            ApiService.saveFcmToken(userId, token);
+          }
+        });
+      }
 
     } else {
 
