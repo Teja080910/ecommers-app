@@ -15,27 +15,10 @@ isset($_GET['q'])
 ? trim($_GET['q'])
 : '';
 
-if($search === ''){
-?>
-
-<div style="
-text-align:center;
-padding:40px 20px;
-color:#94a3b8;
-font-size:14px;
-">
-
-    Type a product name to search
-
-</div>
-
-<?php
-exit;
-}
-
 /* SEARCH APPROVED, NON-VARIANT MASTER PRODUCTS
-   (sellers already mapped to a product are flagged so the UI can point
-   them to "My Products" instead of letting them create a duplicate) */
+   Empty search shows the full catalog (up to the limit); typing narrows
+   it down. Sellers already mapped to a product are flagged so the UI can
+   point them to "My Products" instead of letting them create a duplicate. */
 
 $stmt = $pdo->prepare(
 
@@ -48,7 +31,7 @@ $stmt = $pdo->prepare(
      AND products.hasvarients = 'no'
      AND products.name LIKE ?
      ORDER BY products.name ASC
-     LIMIT 30"
+     LIMIT 50"
 );
 
 $stmt->execute([
@@ -68,7 +51,7 @@ color:#94a3b8;
 font-size:14px;
 ">
 
-    No matching products found. Try a different search, or add it manually below.
+    <?php echo $search === '' ? 'No products available yet.' : 'No matching products found. Try a different search, or add it manually below.'; ?>
 
 </div>
 

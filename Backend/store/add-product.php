@@ -1418,11 +1418,11 @@ function switchMode(mode){
 
 let masterSearchTimer = null;
 
-function searchMasterProducts(query){
+function searchMasterProducts(query, immediate){
 
     clearTimeout(masterSearchTimer);
 
-    masterSearchTimer = setTimeout(function(){
+    const run = function(){
 
         fetch('search-master-products.php?q=' + encodeURIComponent(query))
             .then(function(res){ return res.text(); })
@@ -1447,9 +1447,17 @@ function searchMasterProducts(query){
                     });
                 });
             });
+    };
 
-    }, 300);
+    if(immediate){
+        run();
+    }else{
+        masterSearchTimer = setTimeout(run, 300);
+    }
 }
+
+/* Load the full catalog by default so sellers can browse, not just search */
+searchMasterProducts('', true);
 
 </script>
 
