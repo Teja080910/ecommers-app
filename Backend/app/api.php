@@ -1945,6 +1945,10 @@ if ($action == "check_delivery") {
         mysqli_stmt_execute($check);
         $result = mysqli_stmt_get_result($check);
 
+        // Two fixed states only, no computed date: local/express pincodes
+        // always say "within 24 hours", everything else always says
+        // "within 7 days" -- static and predictable rather than a date
+        // that can be wrong relative to when the order actually ships.
         if ($row = mysqli_fetch_assoc($result)) {
 
             $deliverable = true;
@@ -1954,22 +1958,22 @@ if ($action == "check_delivery") {
             if ($is_express) {
 
                 $estimate = date('Y-m-d H:i:s', strtotime('+24 hours'));
-                $estimate_text = "Get it within 24 hours";
+                $estimate_text = "Delivery within 24 hours";
 
             } else {
 
-                $estimate = date('Y-m-d', strtotime('+1 day'));
-                $estimate_text = "Get it by " . date('D, d M', strtotime('+1 day'));
+                $estimate = date('Y-m-d', strtotime('+7 days'));
+                $estimate_text = "Delivery within 7 days";
             }
 
         } else {
 
             // Pincode isn't in our local service area -- still deliverable,
-            // just slower, so show a real estimate instead of hiding it.
+            // just slower.
             $deliverable = true;
             $is_express = false;
             $estimate = date('Y-m-d', strtotime('+7 days'));
-            $estimate_text = "Delivery in 5-7 business days";
+            $estimate_text = "Delivery within 7 days";
         }
     }
 
