@@ -11,7 +11,17 @@ import 'package:geolocator/geolocator.dart';
 
 import 'package:geocoding/geocoding.dart';
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({super.key});
+
+  // 🔥 BUY NOW — when set, checkout is scoped to just this one item instead
+  // of the user's whole cart, and their real cart is never touched.
+  final Map? buyNowItem;
+  final String? couponCode;
+
+  const CheckoutPage({
+    super.key,
+    this.buyNowItem,
+    this.couponCode,
+  });
 
   @override
   State<CheckoutPage> createState() =>
@@ -201,6 +211,9 @@ class _CheckoutPageState
       subtotal,
       finalTotal,
       "online",
+      buyNowProductId: buyNowProductId,
+      buyNowVariantId: buyNowVariantId,
+      buyNowQuantity: buyNowQuantity,
     );
 
     if (order["status"] == true) {
@@ -240,8 +253,9 @@ class _CheckoutPageState
 
     await getRazorpayKey();
 
-    items =
-    await ApiService.getCart(userId);
+    items = widget.buyNowItem != null
+        ? [widget.buyNowItem!]
+        : await ApiService.getCart(userId);
 
     print(items);
 
@@ -302,6 +316,14 @@ class _CheckoutPageState
 
     }
 
+    // 🔥 a coupon selected on the product page's "Exclusive Offers" carries
+    // forward into a Buy Now checkout and applies automatically here.
+    if (widget.couponCode != null) {
+
+      couponController.text = widget.couponCode!;
+      await applyCoupon(closeSheet: false);
+    }
+
     setState(() {
       loading = false;
     });
@@ -313,6 +335,18 @@ class _CheckoutPageState
         deliveryCharge -
         discount;
   }
+
+  int? get buyNowProductId => widget.buyNowItem != null
+      ? int.parse(widget.buyNowItem!["product_id"].toString())
+      : null;
+
+  int? get buyNowVariantId => widget.buyNowItem != null
+      ? int.parse((widget.buyNowItem!["variant_id"] ?? 0).toString())
+      : null;
+
+  int get buyNowQuantity => widget.buyNowItem != null
+      ? int.parse((widget.buyNowItem!["quantity"] ?? 1).toString())
+      : 1;
   Future loadDeliveryCharge()
   async{
 
@@ -377,7 +411,7 @@ class _CheckoutPageState
     setState((){});
 
   }
-  Future<void> applyCoupon() async {
+  Future<void> applyCoupon({bool closeSheet = true}) async {
 
     var data =
     await ApiService.applyCoupon(
@@ -395,7 +429,9 @@ class _CheckoutPageState
 
       setState(() {});
 
-      Navigator.pop(context);
+      if (closeSheet) {
+        Navigator.pop(context);
+      }
 
     } else {
 
@@ -1122,6 +1158,10 @@ class _CheckoutPageState
                   finalTotal,
 
                   paymentMethod,
+
+                  buyNowProductId: buyNowProductId,
+                  buyNowVariantId: buyNowVariantId,
+                  buyNowQuantity: buyNowQuantity,
 
                 );
 

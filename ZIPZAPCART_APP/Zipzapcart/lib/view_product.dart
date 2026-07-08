@@ -60,6 +60,9 @@ class _ViewProductPageState
   bool isExpressDelivery = false;
   String? deliveryEstimateText;
 
+  String? appliedCouponCode;
+  double couponDiscount = 0;
+
   final TextEditingController reviewController =
   TextEditingController();
 
@@ -272,9 +275,42 @@ class _ViewProductPageState
     return false;
   }
 
-  Future<void> addToCart({
-    bool buyNow = false,
-  }) async {
+  int get selectedVariantId => variants.isEmpty
+      ? 0
+      : int.parse(
+    variants[selectedVariant]["id"]
+        .toString(),
+  );
+
+  // 🔥 BUY NOW — checkout only this one product, without touching the
+  // user's actual cart (does NOT call add_to_cart at all).
+  void buyNow() {
+
+    if (!requireLogin()) {
+      return;
+    }
+
+    final buyNowItem = {
+      "product_id": widget.productId,
+      "variant_id": selectedVariantId,
+      "name": product["name"] ?? "",
+      "image": product["image"] ?? "",
+      "saleprice": selectedSaleRate.toString(),
+      "quantity": 1,
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutPage(
+          buyNowItem: buyNowItem,
+          couponCode: appliedCouponCode,
+        ),
+      ),
+    );
+  }
+
+  Future<void> addToCart() async {
 
     if (!requireLogin()) {
       return;
@@ -283,13 +319,7 @@ class _ViewProductPageState
     var data = await ApiService.addToCart(
       userId,
       widget.productId,
-
-      variants.isEmpty
-          ? 0
-          : int.parse(
-        variants[selectedVariant]["id"]
-            .toString(),
-      ),
+      selectedVariantId,
     );
 
     if (data["status"] == true) {
@@ -298,34 +328,21 @@ class _ViewProductPageState
         return;
       }
 
-      if (buyNow) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFF1F1F1F),
+          content: Text("Added to cart"),
+        ),
+      );
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-            const CheckoutPage(),
-          ),
-        );
-
-      } else {
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Color(0xFF1F1F1F),
-            content: Text("Added to cart"),
-          ),
-        );
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-            const CartPage(),
-          ),
-        );
-      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+          const CartPage(),
+        ),
+      );
 
     } else if (mounted) {
 
@@ -528,9 +545,7 @@ class _ViewProductPageState
 
                         (){
 
-                      addToCart(
-                        buyNow:true,
-                      );
+                      buyNow();
 
                     },
 
@@ -1209,14 +1224,52 @@ class _ViewProductPageState
                   // 🔥 EXCLUSIVE OFFERS
                   GestureDetector(
 
-                    onTap: () {
+                    onTap: () async {
 
-                      Navigator.push(
+                      final code = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const OffersPage(),
                         ),
                       );
+
+                      if (code == null || !mounted) {
+                        return;
+                      }
+
+                      // 🔥 preview the discount against this product's price
+                      // so selecting a coupon here actually shows something,
+                      // instead of just navigating and doing nothing.
+                      final data = await ApiService.applyCoupon(
+                        code.toString(),
+                        selectedSaleRate,
+                      );
+
+                      if (!mounted) {
+                        return;
+                      }
+
+                      if (data["status"] == true) {
+
+                        setState(() {
+                          appliedCouponCode = code.toString();
+                          couponDiscount = double.parse(
+                            data["discount"].toString(),
+                          );
+                        });
+
+                      } else {
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            content: Text(
+                              data["message"]?.toString() ??
+                                  "Coupon not applicable",
+                            ),
+                          ),
+                        );
+                      }
                     },
 
                     child: Container(
@@ -1276,13 +1329,17 @@ class _ViewProductPageState
                                 const SizedBox(height: 3),
 
                                 Text(
-                                  "Save more on every order",
+                                  appliedCouponCode != null
+                                      ? "$appliedCouponCode applied — you save ${AppConstants.formatPrice(couponDiscount)}"
+                                      : "Save more on every order",
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.grey.shade500,
+                                    color: appliedCouponCode != null
+                                        ? Colors.green.shade600
+                                        : Colors.grey.shade500,
                                   ),
                                 ),
                               ],

@@ -2103,23 +2103,42 @@ if ($action == "place_order") {
         exit;
     }
 
-    // 🔥 GET CART
-    $cartStmt = mysqli_prepare($conn,
-        "SELECT * FROM cart WHERE user_id=?");
+    // 🔥 GET CART (or a single Buy Now item that bypasses the cart entirely)
+    $buyNowProductId = intval($_POST['buy_now_product_id'] ?? 0);
 
-    mysqli_stmt_bind_param($cartStmt, "i", $user_id);
-    mysqli_stmt_execute($cartStmt);
-    $cartQuery = mysqli_stmt_get_result($cartStmt);
+    if ($buyNowProductId > 0) {
 
-    if (mysqli_num_rows($cartQuery) == 0) {
+        $cartItems = [[
+            'product_id' => $buyNowProductId,
+            'variant_id' => intval($_POST['buy_now_variant_id'] ?? 0),
+            'quantity' => max(1, intval($_POST['buy_now_quantity'] ?? 1)),
+        ]];
 
-        echo json_encode([
-            "status" => false,
-            "message" =>
-            "Cart Empty"
-        ]);
+    } else {
 
-        exit;
+        $cartStmt = mysqli_prepare($conn,
+            "SELECT * FROM cart WHERE user_id=?");
+
+        mysqli_stmt_bind_param($cartStmt, "i", $user_id);
+        mysqli_stmt_execute($cartStmt);
+        $cartQuery = mysqli_stmt_get_result($cartStmt);
+
+        if (mysqli_num_rows($cartQuery) == 0) {
+
+            echo json_encode([
+                "status" => false,
+                "message" =>
+                "Cart Empty"
+            ]);
+
+            exit;
+        }
+
+        $cartItems = [];
+
+        while ($row = mysqli_fetch_assoc($cartQuery)) {
+            $cartItems[] = $row;
+        }
     }
 
     // 🔥 ORDER NUMBER
@@ -2266,8 +2285,7 @@ $insertOrder = mysqli_stmt_execute($orderStmt);
         mysqli_insert_id($conn);
 
     // 🔥 INSERT ITEMS
-    while ($cart =
-    mysqli_fetch_assoc($cartQuery)) {
+    foreach ($cartItems as $cart) {
 
         $product_id =
             intval($cart['product_id']);
@@ -2379,12 +2397,15 @@ $insertOrder = mysqli_stmt_execute($orderStmt);
         }
     }
 
-    // 🔥 CLEAR CART
-    $clearCartStmt = mysqli_prepare($conn,
-        "DELETE FROM cart WHERE user_id=?");
+    // 🔥 CLEAR CART (a Buy Now order never touched the cart, so leave it alone)
+    if ($buyNowProductId == 0) {
 
-    mysqli_stmt_bind_param($clearCartStmt, "i", $user_id);
-    mysqli_stmt_execute($clearCartStmt);
+        $clearCartStmt = mysqli_prepare($conn,
+            "DELETE FROM cart WHERE user_id=?");
+
+        mysqli_stmt_bind_param($clearCartStmt, "i", $user_id);
+        mysqli_stmt_execute($clearCartStmt);
+    }
 
     // 🔥 IN-APP NOTIFICATION (independent of whether push delivery succeeds)
     $notifText = "Your order #$order_no placed successfully";

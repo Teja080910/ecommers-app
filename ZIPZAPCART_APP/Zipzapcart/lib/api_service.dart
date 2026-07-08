@@ -825,8 +825,11 @@ class ApiService {
       double discount,
       double subtotal,
       double total,
-      String paymentMethod,
-      ) async {
+      String paymentMethod, {
+        int? buyNowProductId,
+        int? buyNowVariantId,
+        int buyNowQuantity = 1,
+      }) async {
 
     try {
 
@@ -851,6 +854,15 @@ class ApiService {
 
           "payment_method":
           paymentMethod,
+
+          if (buyNowProductId != null)
+            "buy_now_product_id": buyNowProductId.toString(),
+
+          if (buyNowProductId != null)
+            "buy_now_variant_id": (buyNowVariantId ?? 0).toString(),
+
+          if (buyNowProductId != null)
+            "buy_now_quantity": buyNowQuantity.toString(),
         },
       );
 
