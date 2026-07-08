@@ -61,51 +61,50 @@ setTimeout(function(){
 exit;
 }
 
-/* DELETE PRODUCT */
+/* DELETE / STOP SELLING
+   Mapping-backed listings: remove only this seller's own mapping row --
+   the master product and other sellers' listings of it are untouched.
+   Legacy variant listings: this seller fully owns the product row, so it
+   (and its image) can be deleted outright, same as before. Both paths
+   check ownership so a seller can never touch another seller's listing. */
 
 if(isset($_GET['delete'])){
 
-    $delete_id =
-    intval($_GET['delete']);
+    $delete_id = intval($_GET['delete']);
+    $seller_id_for_delete = intval($_SESSION['seller_id']);
 
-    $getImage =
-    $pdo->prepare(
+    if(($_GET['type'] ?? '') === 'mapping'){
 
-        "SELECT image
-        FROM products
-        WHERE id=?"
-    );
-
-    $getImage->execute([
-        $delete_id
-    ]);
-
-    $img =
-    $getImage->fetch();
-
-    if($img){
-
-        if(!empty($img['image'])){
-
-            $path =
-            "../app/" .
-            $img['image'];
-
-            if(file_exists($path)){
-                unlink($path);
-            }
-        }
-
-        $del =
         $pdo->prepare(
+            "DELETE FROM seller_product_mapping WHERE id=? AND seller_id=?"
+        )->execute([$delete_id, $seller_id_for_delete]);
 
-            "DELETE FROM products
-            WHERE id=?"
+    }else{
+
+        $getImage = $pdo->prepare(
+            "SELECT image FROM products
+             WHERE id=? AND seller_id=? AND hasvarients='yes'"
         );
 
-        $del->execute([
-            $delete_id
-        ]);
+        $getImage->execute([$delete_id, $seller_id_for_delete]);
+
+        $img = $getImage->fetch();
+
+        if($img){
+
+            if(!empty($img['image'])){
+
+                $path = "../app/" . $img['image'];
+
+                if(file_exists($path)){
+                    unlink($path);
+                }
+            }
+
+            $pdo->prepare(
+                "DELETE FROM products WHERE id=? AND seller_id=? AND hasvarients='yes'"
+            )->execute([$delete_id, $seller_id_for_delete]);
+        }
     }
 
     header(
@@ -152,86 +151,123 @@ ORDER BY name ASC"
 
 )->fetchAll();
 
-/* PRODUCT QUERY */
+/* MY LISTINGS
+   Two shapes to merge: mapping-backed (shared catalog, non-variant) and
+   legacy variant products (still fully single-seller, unchanged). */
+
+$my_seller_name =
+$pdo->prepare("SELECT name FROM seller WHERE id=?");
+$my_seller_name->execute([$seller_id]);
+$my_seller_name = $my_seller_name->fetchColumn() ?: '';
+
+/* MAPPED (non-variant) LISTINGS */
 
 $sql = "
 
 SELECT
 
-products.*,
+products.id,
+products.name,
+products.image,
+products.hasvarients,
+products.status,
 
-categories.name
-AS category_name,
+categories.name AS category_name,
+subcategories.name AS subcategory_name,
 
-subcategories.name
-AS subcategory_name,
+spm.id AS mapping_id,
+spm.saleprice,
+spm.stock
 
-seller.name
-AS seller_name
+FROM seller_product_mapping spm
+
+JOIN products ON products.id = spm.product_id
+
+LEFT JOIN categories ON categories.id = products.cat_id
+LEFT JOIN subcategories ON subcategories.id = products.subcat_id
+
+WHERE spm.seller_id = ?
+";
+
+$params = [$seller_id];
+
+if(!empty($search)){
+    $sql .= " AND products.name LIKE ?";
+    $params[] = "%".$search."%";
+}
+
+if(!empty($category_id)){
+    $sql .= " AND products.cat_id=?";
+    $params[] = $category_id;
+}
+
+$sql .= " ORDER BY products.id DESC";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$mapped_products = $stmt->fetchAll();
+
+foreach($mapped_products as &$mp){
+    $mp['is_mapping'] = true;
+    $mp['seller_name'] = $my_seller_name;
+}
+unset($mp);
+
+/* LEGACY VARIANT LISTINGS (single-seller, unchanged) */
+
+$sql = "
+
+SELECT
+
+products.id,
+products.name,
+products.image,
+products.hasvarients,
+products.status,
+products.saleprice,
+products.stock,
+
+categories.name AS category_name,
+subcategories.name AS subcategory_name
 
 FROM products
 
-LEFT JOIN categories
-ON categories.id =
-products.cat_id
+LEFT JOIN categories ON categories.id = products.cat_id
+LEFT JOIN subcategories ON subcategories.id = products.subcat_id
 
-LEFT JOIN subcategories
-ON subcategories.id =
-products.subcat_id
-
-LEFT JOIN seller
-ON seller.id =
-products.seller_id
-
-WHERE 1
+WHERE products.hasvarients = 'yes' AND products.seller_id = ?
 ";
 
-$params = [];
-
-/* SEARCH */
+$params = [$seller_id];
 
 if(!empty($search)){
-
-    $sql .= "
-    AND products.name
-    LIKE ?";
-
-    $params[] =
-    "%".$search."%";
+    $sql .= " AND products.name LIKE ?";
+    $params[] = "%".$search."%";
 }
-
-/* CATEGORY */
 
 if(!empty($category_id)){
-
-    $sql .= "
-    AND products.cat_id=?";
-
-    $params[] =
-    $category_id;
+    $sql .= " AND products.cat_id=?";
+    $params[] = $category_id;
 }
 
-/* SELLER */
+$sql .= " ORDER BY products.id DESC";
 
-if(!empty($seller_id)){
-
-    $sql .= "
-    AND products.seller_id=?";
-
-    $params[] =
-   $_SESSION['seller_id'];
-}
-
-$sql .= "
-ORDER BY products.id DESC";
-
-$stmt =
-$pdo->prepare($sql);
-
+$stmt = $pdo->prepare($sql);
 $stmt->execute($params);
+$variant_products = $stmt->fetchAll();
 
-$products =
-$stmt->fetchAll();
+foreach($variant_products as &$vp){
+    $vp['is_mapping'] = false;
+    $vp['mapping_id'] = null;
+    $vp['seller_name'] = $my_seller_name;
+}
+unset($vp);
+
+$products = array_merge($mapped_products, $variant_products);
+
+usort($products, function($a, $b){
+    return $b['id'] <=> $a['id'];
+});
 ?>
 
 <!DOCTYPE html>
@@ -796,9 +832,17 @@ body{
                 <div class="table-text">
 
                     Stock :
-                    <?php echo $product['stock']; ?>
+                    <?php echo $product['stock'] ?? 0; ?>
 
                 </div>
+
+                <?php if($product['status'] === 'pending'){ ?>
+
+                <div class="badge" style="background:#eab30820;color:#facc15;margin-top:6px;">
+                    Pending Approval
+                </div>
+
+                <?php } ?>
 
             </div>
 
@@ -830,7 +874,7 @@ body{
 
             <div class="product-price">
 
-                ₹<?php echo $product['saleprice']; ?>
+                ₹<?php echo $product['saleprice'] ?? 0; ?>
 
             </div>
 
@@ -877,7 +921,7 @@ body{
 
                 <a
 
-                href="edit-product.php?id=<?php echo $product['id']; ?>"
+                href="edit-product.php?id=<?php echo $product['id']; ?><?php echo $product['is_mapping'] ? '&mapping_id='.$product['mapping_id'] : ''; ?>"
 
                 class="edit-btn">
 
@@ -885,11 +929,31 @@ body{
 
                 </a>
 
-                <!-- DELETE -->
+                <!-- DELETE / STOP SELLING -->
+
+                <?php if($product['is_mapping']){ ?>
 
                 <a
 
-                href="all-products.php?delete=<?php echo $product['id']; ?>"
+                href="all-products.php?delete=<?php echo $product['mapping_id']; ?>&type=mapping"
+
+                class="delete-btn"
+
+                onclick="
+                return confirm(
+                'Stop selling this product? (Only your listing is removed -- the product itself stays if other sellers carry it.)'
+                )
+                ">
+
+                    <i class="fa fa-trash"></i>
+
+                </a>
+
+                <?php }else{ ?>
+
+                <a
+
+                href="all-products.php?delete=<?php echo $product['id']; ?>&type=product"
 
                 class="delete-btn"
 
@@ -902,6 +966,8 @@ body{
                     <i class="fa fa-trash"></i>
 
                 </a>
+
+                <?php } ?>
 
             </div>
 

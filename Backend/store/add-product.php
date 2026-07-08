@@ -48,7 +48,64 @@ $subcategories = $pdo->query(
 $success = "";
 $error = "";
 
-/* ADD PRODUCT */
+/* MAP TO AN EXISTING MASTER PRODUCT (shared catalog) */
+
+if(isset($_POST['map_product'])){
+
+    $seller_id = intval($_SESSION['seller_id']);
+    $map_product_id = intval($_POST['product_id']);
+    $map_price = $_POST['price'];
+    $map_saleprice = $_POST['saleprice'];
+    $map_stock = $_POST['stock'];
+    $map_discount = (isset($_POST['discount']) && $_POST['discount'] !== '') ? $_POST['discount'] : null;
+    $map_sku = trim($_POST['sku'] ?? '');
+
+    $check = $pdo->prepare(
+        "SELECT id FROM products WHERE id=? AND status='approved' AND hasvarients='no'"
+    );
+    $check->execute([$map_product_id]);
+
+    if(!$check->fetch()){
+
+        $error = "That product isn't available to add right now.";
+
+    }else{
+
+        try{
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO seller_product_mapping
+                (seller_id, product_id, price, saleprice, stock, discount, sku)
+                VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+
+            $stmt->execute([
+                $seller_id,
+                $map_product_id,
+                $map_price,
+                $map_saleprice,
+                $map_stock,
+                $map_discount,
+                $map_sku !== '' ? $map_sku : null
+            ]);
+
+            $success = "Product added to your store.";
+
+        }catch(PDOException $e){
+
+            if((int)$e->getCode() === 23000 || strpos($e->getMessage(), 'uniq_seller_product') !== false){
+
+                $error = "You already sell this product -- edit it from My Products instead.";
+
+            }else{
+
+                $error = "Failed to add product.";
+            }
+        }
+    }
+}
+
+/* ADD PRODUCT (manual -- submits a new master product for admin approval) */
 
 if(isset($_POST['add_product'])){
 
@@ -168,7 +225,9 @@ $_SESSION['seller_id'];
             recommended,
             hasvarients,
             product_description,
-            stock
+            stock,
+            status,
+            submitted_by_seller_id
             )
 
             VALUES
@@ -187,6 +246,8 @@ $_SESSION['seller_id'];
             ?,
             ?,
             ?,
+            ?,
+            'pending',
             ?
             )"
         );
@@ -206,13 +267,34 @@ $_SESSION['seller_id'];
             $recommended,
             $hasvarients,
             $product_description,
-            $stock
+            $stock,
+            $seller_id
         ]);
 
         if($insert){
 
             $product_id =
             $pdo->lastInsertId();
+
+            /* SELLER MAPPING (non-variant only -- stays invisible to
+               everyone until admin approves the product itself) */
+
+            if($hasvarients != "yes"){
+
+                $mappingStmt = $pdo->prepare(
+                    "INSERT INTO seller_product_mapping
+                    (seller_id, product_id, price, saleprice, stock)
+                    VALUES (?, ?, ?, ?, ?)"
+                );
+
+                $mappingStmt->execute([
+                    $seller_id,
+                    $product_id,
+                    $rate,
+                    $saleprice,
+                    $stock
+                ]);
+            }
 
             /* INSERT VARIANTS */
 
@@ -289,7 +371,7 @@ $_SESSION['seller_id'];
             }
 
             $success =
-            "Product Added Successfully";
+            "Submitted for admin approval. It'll appear in your store and the shared catalog once approved.";
 
         }else{
 
@@ -521,6 +603,124 @@ body{
 
 /* Crop modal styles now in ../assets/css/image-crop.css */
 
+/* TABS */
+
+.mode-tabs{
+    display:flex;
+    gap:10px;
+    margin-bottom:26px;
+}
+
+.mode-tab{
+    flex:1;
+    text-align:center;
+    padding:16px;
+    border-radius:16px;
+    background:#1e293b;
+    color:#94a3b8;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    border:2px solid transparent;
+}
+
+.mode-tab.active{
+    background:#06b6d420;
+    color:#22d3ee;
+    border-color:#06b6d4;
+}
+
+.mode-panel{
+    display:none;
+}
+
+.mode-panel.active{
+    display:block;
+}
+
+/* SEARCH */
+
+.search-box{
+    width:100%;
+    padding:16px 18px;
+    border:none;
+    border-radius:16px;
+    background:#1e293b;
+    color:#fff;
+    font-size:14px;
+    margin-bottom:16px;
+}
+
+.search-results{
+    max-height:360px;
+    overflow-y:auto;
+    border-radius:16px;
+    background:#1e293b;
+    margin-bottom:20px;
+}
+
+.master-product-item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 16px;
+    cursor:pointer;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+}
+
+.master-product-item:hover{
+    background:rgba(255,255,255,0.04);
+}
+
+.master-product-thumb{
+    width:44px;
+    height:44px;
+    border-radius:10px;
+    object-fit:cover;
+    background:#0f172a;
+    flex-shrink:0;
+}
+
+.master-product-name{
+    font-size:14px;
+    font-weight:600;
+}
+
+.master-product-tag{
+    font-size:11px;
+    color:#facc15;
+    margin-top:2px;
+}
+
+.map-form{
+    display:none;
+    background:#1e293b;
+    border-radius:18px;
+    padding:22px;
+}
+
+.map-form.active{
+    display:block;
+}
+
+.map-form-title{
+    font-size:16px;
+    font-weight:700;
+    margin-bottom:18px;
+}
+
+.manual-link{
+    text-align:center;
+    margin-top:20px;
+    font-size:13px;
+}
+
+.manual-link a{
+    color:#22d3ee;
+    cursor:pointer;
+    text-decoration:underline;
+}
+
 </style>
 </head>
 <body>
@@ -555,6 +755,83 @@ body{
         </div>
 
         <?php } ?>
+
+        <div class="mode-tabs">
+            <div class="mode-tab active" id="tabSearch" onclick="switchMode('search')">Sell an Existing Product</div>
+            <div class="mode-tab" id="tabManual" onclick="switchMode('manual')">Add New Product</div>
+        </div>
+
+        <!-- SEARCH / MAP EXISTING PRODUCT -->
+
+        <div class="mode-panel active" id="searchPanel">
+
+            <input type="text" class="search-box" id="masterSearchInput"
+                placeholder="Search for a product you want to sell..."
+                oninput="searchMasterProducts(this.value)">
+
+            <div class="search-results" id="masterSearchResults">
+                <div style="text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px;">
+                    Type a product name to search
+                </div>
+            </div>
+
+            <div class="map-form" id="mapForm">
+
+                <div class="map-form-title">
+                    Selling: <span id="mapProductName"></span>
+                </div>
+
+                <form method="POST">
+
+                    <input type="hidden" name="product_id" id="mapProductId">
+
+                    <div class="grid">
+
+                        <div class="input-box">
+                            <label>Price (MRP)</label>
+                            <input type="number" step="0.01" name="price" required>
+                        </div>
+
+                        <div class="input-box">
+                            <label>Sale Price</label>
+                            <input type="number" step="0.01" name="saleprice" required>
+                        </div>
+
+                        <div class="input-box">
+                            <label>Stock</label>
+                            <input type="number" name="stock" required>
+                        </div>
+
+                        <div class="input-box">
+                            <label>Discount % (optional)</label>
+                            <input type="number" step="0.01" name="discount">
+                        </div>
+
+                        <div class="input-box full">
+                            <label>SKU (optional)</label>
+                            <input type="text" name="sku">
+                        </div>
+
+                    </div>
+
+                    <button type="submit" name="map_product" class="submit-btn">
+                        <i class="fa fa-plus"></i>
+                        Start Selling This Product
+                    </button>
+
+                </form>
+
+            </div>
+
+            <div class="manual-link">
+                Can't find your product? <a onclick="switchMode('manual')">Add it manually</a>
+            </div>
+
+        </div>
+
+        <!-- MANUAL ADD (submits for admin approval) -->
+
+        <div class="mode-panel" id="manualPanel">
 
         <form
         method="POST"
@@ -888,6 +1165,12 @@ body{
 
         </form>
 
+        <div class="manual-link">
+            <a onclick="switchMode('search')">Search existing products instead</a>
+        </div>
+
+        </div>
+
     </div>
 
 </div>
@@ -1118,6 +1401,54 @@ function addVariant(){
         "beforeend",
         html
     );
+}
+
+/* MODE TABS */
+
+function switchMode(mode){
+
+    document.getElementById('tabSearch').classList.toggle('active', mode === 'search');
+    document.getElementById('tabManual').classList.toggle('active', mode === 'manual');
+
+    document.getElementById('searchPanel').classList.toggle('active', mode === 'search');
+    document.getElementById('manualPanel').classList.toggle('active', mode === 'manual');
+}
+
+/* MASTER PRODUCT SEARCH */
+
+let masterSearchTimer = null;
+
+function searchMasterProducts(query){
+
+    clearTimeout(masterSearchTimer);
+
+    masterSearchTimer = setTimeout(function(){
+
+        fetch('search-master-products.php?q=' + encodeURIComponent(query))
+            .then(function(res){ return res.text(); })
+            .then(function(html){
+
+                const results = document.getElementById('masterSearchResults');
+                results.innerHTML = html;
+
+                results.querySelectorAll('.master-product-item').forEach(function(item){
+
+                    item.addEventListener('click', function(){
+
+                        if(item.getAttribute('data-mapped') === '1'){
+                            alert('You already sell this product. Edit it from My Products.');
+                            return;
+                        }
+
+                        document.getElementById('mapProductId').value = item.getAttribute('data-id');
+                        document.getElementById('mapProductName').textContent = item.getAttribute('data-name');
+                        document.getElementById('mapForm').classList.add('active');
+                        document.getElementById('mapForm').scrollIntoView({behavior:'smooth', block:'center'});
+                    });
+                });
+            });
+
+    }, 300);
 }
 
 </script>

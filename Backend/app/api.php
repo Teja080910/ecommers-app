@@ -960,19 +960,28 @@ if ($action == "get_top_deals") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE topdeals='yes'
-         ORDER BY id DESC");
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND topdeals='yes'
+         ORDER BY products.id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
 
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -993,19 +1002,28 @@ if ($action == "get_best_sellers") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE bestseller='yes'
-         ORDER BY id DESC");
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND bestseller='yes'
+         ORDER BY products.id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
 
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -1026,19 +1044,28 @@ if ($action == "get_recommended") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE recommended='yes'
-         ORDER BY id DESC");
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND recommended='yes'
+         ORDER BY products.id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
 
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -1062,19 +1089,28 @@ if ($action == "get_products") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE subcat_id='$subcat_id'
-         ORDER BY id DESC");
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND subcat_id='$subcat_id'
+         ORDER BY products.id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
 
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -1108,11 +1144,20 @@ $conn,
 
 "
 
-SELECT *
+SELECT products.*,
+    COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+    COALESCE(spm.price, products.rate) AS eff_rate,
+    COALESCE(spm.stock, products.stock) AS eff_stock
 
 FROM products
 
-WHERE id='$product_id'
+LEFT JOIN seller_product_mapping spm ON spm.id = (
+    SELECT id FROM seller_product_mapping
+    WHERE product_id = products.id AND stock > 0
+    ORDER BY saleprice ASC, id ASC LIMIT 1
+)
+
+WHERE products.id='$product_id' AND products.status='approved'
 
 "
 
@@ -1143,6 +1188,13 @@ $product =
 mysqli_fetch_assoc(
 $query
 );
+
+// 🔥 USE THE WINNING SELLER'S PRICE/STOCK (mapping-backed products only;
+// hasvarients='yes' products have no mapping, so these just equal the
+// original columns via COALESCE above)
+$product['rate'] = $product['eff_rate'];
+$product['saleprice'] = $product['eff_saleprice'];
+$product['stock'] = $product['eff_stock'];
 
 // 🔥 WISHLIST STATUS
 
@@ -1429,11 +1481,21 @@ if ($action == "get_similar_products") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE subcat_id='$subcat_id'
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved'
+         AND subcat_id='$subcat_id'
          AND id != '$exclude_id'
-         AND stock > 0
-         ORDER BY id DESC
+         HAVING eff_stock > 0
+         ORDER BY products.id DESC
          LIMIT 10");
 
     while ($row = mysqli_fetch_assoc($query)) {
@@ -1441,10 +1503,10 @@ if ($action == "get_similar_products") {
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -1473,9 +1535,18 @@ if ($action == "home_category_products") {
         $products = [];
 
         $productQuery = mysqli_query($conn,
-            "SELECT * FROM products
-             WHERE cat_id='".$cat['id']."'
-             ORDER BY id DESC");
+            "SELECT products.*,
+                COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+                COALESCE(spm.price, products.rate) AS eff_rate,
+                COALESCE(spm.stock, products.stock) AS eff_stock
+             FROM products
+             LEFT JOIN seller_product_mapping spm ON spm.id = (
+                SELECT id FROM seller_product_mapping
+                WHERE product_id = products.id AND stock > 0
+                ORDER BY saleprice ASC, id ASC LIMIT 1
+             )
+             WHERE products.status='approved' AND cat_id='".$cat['id']."'
+             ORDER BY products.id DESC");
 
         while ($p = mysqli_fetch_assoc($productQuery)) {
 
@@ -1483,9 +1554,9 @@ if ($action == "home_category_products") {
                 "id" => $p['id'],
                 "name" => $p['name'],
                 "image" => $p['image'],
-                "rate" => $p['rate'],
-                "saleprice" => $p['saleprice'],
-                "stock" => $p['stock']
+                "rate" => $p['eff_rate'],
+                "saleprice" => $p['eff_saleprice'],
+                "stock" => $p['eff_stock']
             ];
         }
 
@@ -1637,8 +1708,8 @@ if ($action == "get_cart") {
 
             products.name,
             products.image,
-            products.saleprice,
-            products.rate,
+            COALESCE(spm.saleprice, products.saleprice) AS saleprice,
+            COALESCE(spm.price, products.rate) AS rate,
 
             product_varients.varient_name,
             product_varients.salerate,
@@ -1648,6 +1719,12 @@ if ($action == "get_cart") {
 
          LEFT JOIN products
          ON products.id = cart.product_id
+
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
 
          LEFT JOIN product_varients
          ON product_varients.id = cart.variant_id
@@ -2198,9 +2275,23 @@ $insertOrder = mysqli_stmt_execute($orderStmt);
             intval($cart['quantity']);
 
         $price = 0;
+        $item_seller_id = null;
 
+        // 🔥 price/seller off the same "winning mapping" logic used for
+        // customer-facing display, so what they're charged matches what
+        // they were shown -- falls back to products.seller_id for
+        // hasvarients='yes' products, which never have a mapping row
         $productStmt = mysqli_prepare($conn,
-            "SELECT saleprice FROM products WHERE id=?");
+            "SELECT products.seller_id,
+                COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+                COALESCE(spm.seller_id, products.seller_id) AS eff_seller_id
+             FROM products
+             LEFT JOIN seller_product_mapping spm ON spm.id = (
+                SELECT id FROM seller_product_mapping
+                WHERE product_id = products.id AND stock > 0
+                ORDER BY saleprice ASC, id ASC LIMIT 1
+             )
+             WHERE products.id=?");
 
         mysqli_stmt_bind_param($productStmt, "i", $product_id);
         mysqli_stmt_execute($productStmt);
@@ -2210,7 +2301,10 @@ $insertOrder = mysqli_stmt_execute($orderStmt);
         mysqli_fetch_assoc($productQuery)) {
 
             $price =
-            $product['saleprice'];
+            $product['eff_saleprice'];
+
+            $item_seller_id =
+            $product['eff_seller_id'];
         }
 
         if ($variant_id != 0) {
@@ -2227,31 +2321,35 @@ $insertOrder = mysqli_stmt_execute($orderStmt);
                 $price =
                 $variant['salerate'];
             }
+
+            // variants are excluded from the mapping system -- always
+            // the product's own seller
+            $item_seller_id =
+            $product['seller_id'] ?? null;
         }
 
         $total =
             $price * $quantity;
 
         $insertItem =
-        mysqli_query($conn,
+        mysqli_prepare($conn,
             "INSERT INTO order_items
             (
                 order_id,
                 product_id,
                 variant_id,
+                seller_id,
                 quantity,
                 price,
                 total
             )
-            VALUES
-            (
-                '$order_id',
-                '$product_id',
-                '$variant_id',
-                '$quantity',
-                '$price',
-                '$total'
-            )");
+            VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+        mysqli_stmt_bind_param($insertItem, "iiiiidd",
+            $order_id, $product_id, $variant_id, $item_seller_id,
+            $quantity, $price, $total);
+
+        $insertItem = mysqli_stmt_execute($insertItem);
 
         if (!$insertItem) {
 
@@ -2568,11 +2666,24 @@ $conn,
 
 "
 
-SELECT *
+SELECT products.*,
+    COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+    COALESCE(spm.price, products.rate) AS eff_rate,
+    COALESCE(spm.stock, products.stock) AS eff_stock
 
 FROM products
 
+LEFT JOIN seller_product_mapping spm ON spm.id = (
+    SELECT id FROM seller_product_mapping
+    WHERE product_id = products.id AND stock > 0
+    ORDER BY saleprice ASC, id ASC LIMIT 1
+)
+
 WHERE
+
+products.status='approved'
+
+AND (
 
 name
 
@@ -2588,7 +2699,9 @@ LIKE
 
 '%$search%'
 
-ORDER BY id DESC
+)
+
+ORDER BY products.id DESC
 
 LIMIT 100
 
@@ -2605,6 +2718,10 @@ $q
 )
 
 ){
+
+$r['rate'] = $r['eff_rate'];
+$r['saleprice'] = $r['eff_saleprice'];
+$r['stock'] = $r['eff_stock'];
 
 $data[]=
 $r;
@@ -2711,15 +2828,21 @@ if ($action == "get_wishlist") {
 
         products.name,
         products.image,
-        products.saleprice,
-        products.rate,
-        products.stock
+        COALESCE(spm.saleprice, products.saleprice) AS saleprice,
+        COALESCE(spm.price, products.rate) AS rate,
+        COALESCE(spm.stock, products.stock) AS stock
 
         FROM wishlist
 
         LEFT JOIN products
         ON products.id =
         wishlist.product_id
+
+        LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+        )
 
         WHERE wishlist.user_id=?
 

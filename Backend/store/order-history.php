@@ -81,19 +81,13 @@ COUNT(*)
 FROM
 order_items
 
-INNER JOIN products
-
-ON
-products.id=
-order_items.product_id
-
 WHERE
 
 order_items.order_id=?
 
 AND
 
-products.seller_id=?
+order_items.seller_id=?
 
 "
 
@@ -387,12 +381,6 @@ ON
 order_items.order_id=
 orders.id
 
-INNER JOIN products
-
-ON
-products.id=
-order_items.product_id
-
 LEFT JOIN users
 
 ON
@@ -407,7 +395,7 @@ orders.deliveryboy_id
 
 WHERE
 
-products.seller_id=?
+order_items.seller_id=?
 
 ORDER BY
 orders.id DESC
@@ -973,7 +961,7 @@ order_items.order_id=?
 
 AND
 
-products.seller_id=?
+order_items.seller_id=?
 
 "
 

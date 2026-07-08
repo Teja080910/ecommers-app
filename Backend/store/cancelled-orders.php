@@ -42,12 +42,6 @@ ON
 order_items.order_id=
 orders.id
 
-INNER JOIN products
-
-ON
-products.id=
-order_items.product_id
-
 LEFT JOIN users
 
 ON
@@ -56,7 +50,7 @@ orders.user_id
 
 WHERE
 
-products.seller_id=?
+order_items.seller_id=?
 
 AND
 
@@ -428,12 +422,14 @@ body{
         ON product_varients.id =
         order_items.variant_id
 
-        WHERE order_items.order_id=?"
+        WHERE order_items.order_id=?
+        AND order_items.seller_id=?"
 
         );
 
         $itemQuery->execute([
-        $order['id']
+        $order['id'],
+        $seller_id
         ]);
 
         $items =

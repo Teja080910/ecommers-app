@@ -35,8 +35,181 @@ intval(
 $_GET['id']
 );
 
+/* MAPPING EDIT MODE (shared catalog, non-variant listings) --
+   master info (name/description/images/category) is admin-owned and
+   shared across sellers, so only this seller's own price/stock/discount/
+   sku is editable here. Completely separate, simpler flow from the
+   legacy full-product edit below. */
+
+if(isset($_GET['mapping_id'])){
+
+    $mapping_id = intval($_GET['mapping_id']);
+
+    $mapStmt = $pdo->prepare(
+        "SELECT seller_product_mapping.*,
+            products.name, products.image, products.product_description,
+            products.stock AS master_stock
+         FROM seller_product_mapping
+         JOIN products ON products.id = seller_product_mapping.product_id
+         WHERE seller_product_mapping.id = ?
+         AND seller_product_mapping.seller_id = ?
+         AND seller_product_mapping.product_id = ?"
+    );
+
+    $mapStmt->execute([$mapping_id, $seller_id, $id]);
+    $mapping = $mapStmt->fetch();
+
+    if(!$mapping){
+        header("Location:all-products.php");
+        exit;
+    }
+
+    $mapSuccess = "";
+    $mapError = "";
+
+    if(isset($_POST['update_mapping'])){
+
+        $price = $_POST['price'];
+        $saleprice = $_POST['saleprice'];
+        $stock = $_POST['stock'];
+        $discount = (isset($_POST['discount']) && $_POST['discount'] !== '') ? $_POST['discount'] : null;
+        $sku = trim($_POST['sku'] ?? '');
+
+        $upd = $pdo->prepare(
+            "UPDATE seller_product_mapping
+             SET price=?, saleprice=?, stock=?, discount=?, sku=?
+             WHERE id=? AND seller_id=?"
+        );
+
+        $upd->execute([
+            $price, $saleprice, $stock, $discount,
+            $sku !== '' ? $sku : null,
+            $mapping_id, $seller_id
+        ]);
+
+        $mapSuccess = "Listing updated.";
+
+        $mapStmt->execute([$mapping_id, $seller_id, $id]);
+        $mapping = $mapStmt->fetch();
+    }
+    ?>
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Listing</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+
+    *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial; }
+    body{ background:#0f172a; color:#fff; }
+    .main{ margin-left:240px; padding:28px; }
+    .card{ background:#111827; border-radius:28px; padding:28px; max-width:700px; margin:auto; }
+    .title{ font-size:26px; font-weight:700; margin-bottom:6px; }
+    .sub{ color:#94a3b8; font-size:13px; margin-bottom:24px; }
+    .alert{ padding:15px 18px; border-radius:14px; margin-bottom:20px; font-size:13px; }
+    .success{ background:#16a34a20; color:#4ade80; }
+    .error{ background:#dc262620; color:#f87171; }
+    .master-preview{ display:flex; align-items:center; gap:16px; background:#1e293b; border-radius:18px; padding:18px; margin-bottom:24px; }
+    .master-preview img{ width:64px; height:64px; border-radius:12px; object-fit:cover; background:#0f172a; }
+    .master-preview .name{ font-size:16px; font-weight:700; }
+    .master-preview .note{ font-size:12px; color:#94a3b8; margin-top:4px; }
+    .grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+    .input-box{ display:flex; flex-direction:column; }
+    .input-box label{ margin-bottom:8px; font-size:13px; color:#cbd5e1; }
+    .input-box input{ width:100%; border:none; outline:none; background:#1e293b; border-radius:14px; padding:14px 16px; color:#fff; }
+    .full{ grid-column:1/3; }
+    .submit-btn{ width:100%; height:58px; border:none; border-radius:18px; margin-top:24px; background:linear-gradient(135deg,#06b6d4,#7c3aed); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+
+    @media(max-width:900px){
+        .main{ margin-left:0; padding:85px 15px; }
+        .grid{ grid-template-columns:1fr; }
+        .full{ grid-column:auto; }
+    }
+
+    </style>
+    </head>
+    <body>
+
+    <?php include 'nav.php'; ?>
+
+    <div class="main">
+    <div class="card">
+
+        <div class="title">Edit Listing</div>
+        <div class="sub">Only your price, stock and SKU are editable here &mdash; product details are shared and managed by the admin.</div>
+
+        <?php if($mapSuccess != ""){ ?>
+        <div class="alert success"><?php echo $mapSuccess; ?></div>
+        <?php } ?>
+
+        <?php if($mapError != ""){ ?>
+        <div class="alert error"><?php echo $mapError; ?></div>
+        <?php } ?>
+
+        <div class="master-preview">
+            <img src="../app/<?php echo htmlspecialchars($mapping['image'] ?? ''); ?>">
+            <div>
+                <div class="name"><?php echo htmlspecialchars($mapping['name']); ?></div>
+                <div class="note">Want to change the name, description or images? Contact admin.</div>
+            </div>
+        </div>
+
+        <form method="POST">
+
+            <div class="grid">
+
+                <div class="input-box">
+                    <label>Price (MRP)</label>
+                    <input type="number" step="0.01" name="price" value="<?php echo $mapping['price']; ?>" required>
+                </div>
+
+                <div class="input-box">
+                    <label>Sale Price</label>
+                    <input type="number" step="0.01" name="saleprice" value="<?php echo $mapping['saleprice']; ?>" required>
+                </div>
+
+                <div class="input-box">
+                    <label>Stock</label>
+                    <input type="number" name="stock" value="<?php echo $mapping['stock']; ?>" required>
+                </div>
+
+                <div class="input-box">
+                    <label>Discount % (optional)</label>
+                    <input type="number" step="0.01" name="discount" value="<?php echo htmlspecialchars($mapping['discount'] ?? ''); ?>">
+                </div>
+
+                <div class="input-box full">
+                    <label>SKU (optional)</label>
+                    <input type="text" name="sku" value="<?php echo htmlspecialchars($mapping['sku'] ?? ''); ?>">
+                </div>
+
+            </div>
+
+            <button type="submit" name="update_mapping" class="submit-btn">
+                <i class="fa fa-save"></i>
+                Update Listing
+            </button>
+
+        </form>
+
+    </div>
+    </div>
+
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 /* FETCH PRODUCT
-ONLY OWNER CAN EDIT */
+ONLY OWNER CAN EDIT (legacy variant products only -- non-variant
+listings are shared and only reachable via the mapping edit mode above) */
 
 $stmt =
 $pdo->prepare(
@@ -54,6 +227,10 @@ id=?
 AND
 
 seller_id=?
+
+AND
+
+hasvarients='yes'
 
 "
 

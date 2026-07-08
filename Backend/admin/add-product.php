@@ -219,6 +219,25 @@ if(isset($_POST['add_product'])){
             $product_id =
             $pdo->lastInsertId();
 
+            /* SELLER MAPPING (shared catalog -- non-variant products only) */
+
+            if($hasvarients != "yes" && !empty($seller_id)){
+
+                $mappingStmt = $pdo->prepare(
+                    "INSERT INTO seller_product_mapping
+                    (seller_id, product_id, price, saleprice, stock)
+                    VALUES (?, ?, ?, ?, ?)"
+                );
+
+                $mappingStmt->execute([
+                    $seller_id,
+                    $product_id,
+                    $rate,
+                    $saleprice,
+                    $stock
+                ]);
+            }
+
             /* INSERT VARIANTS */
 
             if($hasvarients == "yes" &&

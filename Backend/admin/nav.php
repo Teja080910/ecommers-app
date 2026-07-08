@@ -276,7 +276,7 @@ body{
 
 <?php
 
-$product_pages = ['add-product.php','all-products.php','categories.php'];
+$product_pages = ['add-product.php','all-products.php','categories.php','product-requests.php'];
 
 $franchise_pages = ['add-franchise.php','all-franchises.php','franchise-payouts.php'];
 
@@ -352,6 +352,8 @@ $settings_pages = ['app-settings.php','change-password.php'];
             <li><a class="<?= isActive('all-products.php') ?>" href="all-products.php">All Products</a></li>
 
             <li><a class="<?= isActive('categories.php') ?>" href="categories.php">Categories</a></li>
+
+            <li><a class="<?= isActive('product-requests.php') ?>" href="product-requests.php">Product Requests</a></li>
 
         </ul>
 
