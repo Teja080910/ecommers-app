@@ -3,6 +3,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 if(!isset($_SESSION['seller_id'])){
     exit;
@@ -68,7 +69,7 @@ exit;
      data-mapped="<?php echo $p['already_mapped'] > 0 ? '1' : '0'; ?>">
 
     <img class="master-product-thumb"
-         src="../app/uploads/products/<?php echo htmlspecialchars(basename($p['image'] ?? '')); ?>"
+         src="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? '')); ?>"
          onerror="this.style.visibility='hidden'">
 
     <div style="flex:1">

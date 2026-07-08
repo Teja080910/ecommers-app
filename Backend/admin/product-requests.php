@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN CHECK */
 
@@ -374,7 +375,7 @@ body{
 
             <div class="request-card-header">
 
-                <img class="request-thumb" src="../app/uploads/products/<?php echo htmlspecialchars(basename(s($req['image']))); ?>" onerror="this.style.visibility='hidden'">
+                <img class="request-thumb" src="<?php echo htmlspecialchars(resolveProductImageSrc($req['image'])); ?>" onerror="this.style.visibility='hidden'">
 
                 <div style="flex:1">
                     <div class="product-name"><?php echo htmlspecialchars(s($req['name'])); ?></div>

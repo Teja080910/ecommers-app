@@ -319,11 +319,7 @@ class _CategoryPageState
 
                           Image.network(
 
-                            AppConstants
-                                .imageUrl +
-
-                                item[
-                                "image"],
+                            AppConstants.resolveImage(item["image"]),
 
                             fit:
                             BoxFit.contain,
@@ -591,11 +587,7 @@ class _CategoryPageState
 
                                 : Image.network(
 
-                              AppConstants
-                                  .imageUrl +
-
-                                  item[
-                                  "image"],
+                              AppConstants.resolveImage(item["image"]),
 
                               fit:
                               BoxFit.contain,

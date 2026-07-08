@@ -180,9 +180,7 @@ class _SubCategoryPageState
                         )
 
                             : Image.network(
-                          AppConstants
-                              .imageUrl +
-                              item["image"],
+                          AppConstants.resolveImage(item["image"]),
 
                           fit: BoxFit.contain,
 

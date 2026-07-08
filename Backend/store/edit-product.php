@@ -153,7 +153,7 @@ if(isset($_GET['mapping_id'])){
         <?php } ?>
 
         <div class="master-preview">
-            <img src="../app/<?php echo htmlspecialchars($mapping['image'] ?? ''); ?>">
+            <img src="<?php echo htmlspecialchars(resolveProductImageSrc($mapping['image'] ?? '')); ?>">
             <div>
                 <div class="name"><?php echo htmlspecialchars($mapping['name']); ?></div>
                 <div class="note">Want to change the name, description or images? Contact admin.</div>
@@ -387,7 +387,7 @@ if($uploadError != ""){
 
 }else if($mainImageFile){
 
-    $image = "uploads/products/".$mainImageFile;
+    $image = resolveUploadedImagePath($mainImageFile);
 }
 
 /* OTHER IMAGES (max 3 - 4 total with main image) */
@@ -425,7 +425,7 @@ if(count($otherImageFiles) > 0){
     $imgs = [];
 
     foreach($otherImageFiles as $f){
-        $imgs[] = "uploads/products/".$f;
+        $imgs[] = resolveUploadedImagePath($f);
     }
 
     $other_images = implode(",", $imgs);
@@ -1234,7 +1234,7 @@ onchange="ImageCrop.open(this,'croppedImageData')">
 
 <img
 
-src="../app/<?php echo $product['image']; ?>"
+src="<?php echo resolveProductImageSrc($product['image']); ?>"
 
 class="preview">
 

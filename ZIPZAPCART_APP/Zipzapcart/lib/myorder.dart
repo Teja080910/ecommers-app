@@ -425,7 +425,7 @@ class _MyOrderPageState
                               size: 22,
                             )
                                 : Image.network(
-                              AppConstants.imageUrl + img,
+                              AppConstants.resolveImage(img),
                               fit: BoxFit.contain,
                               errorBuilder: (_, e, s) => Icon(
                                 Icons.shopping_bag_outlined,

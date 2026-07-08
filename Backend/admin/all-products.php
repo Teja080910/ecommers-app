@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN CHECK */
 
@@ -804,7 +805,7 @@ body{
 
                 <img
 
-                src="../app/<?php echo $product['image']; ?>"
+                src="<?php echo resolveProductImageSrc($product['image']); ?>"
 
                 alt="">
 

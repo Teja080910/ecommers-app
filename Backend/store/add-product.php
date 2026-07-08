@@ -167,7 +167,7 @@ $_SESSION['seller_id'];
 
     }else if($mainImageFile){
 
-        $image = "uploads/products/".$mainImageFile;
+        $image = resolveUploadedImagePath($mainImageFile);
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
@@ -196,7 +196,7 @@ $_SESSION['seller_id'];
         );
 
         foreach($otherImageFiles as $f){
-            $other_images[] = "uploads/products/".$f;
+            $other_images[] = resolveUploadedImagePath($f);
         }
     }
 

@@ -360,7 +360,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
                     ),
 
                     child: Image.network(
-                      AppConstants.imageUrl + (item["image"] ?? ""),
+                      AppConstants.resolveImage(item["image"]),
                       fit: BoxFit.contain,
                       errorBuilder: (_, e, s) => Icon(
                         Icons.shopping_bag_outlined,

@@ -163,7 +163,7 @@ if(isset($_POST['update_product'])){
 
     }else if($mainImageFile){
 
-        $image = "uploads/products/".$mainImageFile;
+        $image = resolveUploadedImagePath($mainImageFile);
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
@@ -199,7 +199,7 @@ if(isset($_POST['update_product'])){
             $imgs = [];
 
             foreach($otherImageFiles as $f){
-                $imgs[] = "uploads/products/".$f;
+                $imgs[] = resolveUploadedImagePath($f);
             }
 
             $other_images = implode(",", $imgs);
@@ -1009,7 +1009,7 @@ onchange="ImageCrop.open(this,'croppedImageData')">
 
 <img
 
-src="../app/<?php echo $product['image']; ?>"
+src="<?php echo resolveProductImageSrc($product['image']); ?>"
 
 class="preview">
 

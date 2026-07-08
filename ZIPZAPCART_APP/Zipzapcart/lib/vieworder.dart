@@ -1553,10 +1553,7 @@ class _ViewOrderPageState
 
                                 child:
                                 Image.network(
-                                  AppConstants
-                                      .imageUrl +
-                                      item[
-                                      "image"],
+                                  AppConstants.resolveImage(item["image"]),
 
                                   fit:
                                   BoxFit.contain,

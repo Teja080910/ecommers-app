@@ -115,7 +115,7 @@ if(isset($_POST['add_product'])){
 
     }else if($mainImageFile){
 
-        $image = "uploads/products/".$mainImageFile;
+        $image = resolveUploadedImagePath($mainImageFile);
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
@@ -144,7 +144,7 @@ if(isset($_POST['add_product'])){
         );
 
         foreach($otherImageFiles as $f){
-            $other_images[] = "uploads/products/".$f;
+            $other_images[] = resolveUploadedImagePath($f);
         }
     }
 

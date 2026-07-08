@@ -856,8 +856,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(20),
 
               child: Image.network(
-                AppConstants.imageUrl +
-                    (portraitBanners[i]["image"] ?? ""),
+                AppConstants.resolveImage(portraitBanners[i]["image"]),
                 width: _portraitCardWidth,
                 height: _heroSectionHeight,
                 fit: BoxFit.cover,
@@ -909,7 +908,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(18),
 
               child: Image.network(
-                AppConstants.imageUrl + (banners[i]["image"] ?? ""),
+                AppConstants.resolveImage(banners[i]["image"]),
                 width: _landscapeCardWidth,
                 height: _landscapeCardHeight,
                 fit: BoxFit.cover,
@@ -991,7 +990,7 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   child: Image.network(
-                    AppConstants.imageUrl + (item["image"] ?? ""),
+                    AppConstants.resolveImage(item["image"]),
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -1239,8 +1238,7 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   child: Image.network(
-                    AppConstants.imageUrl +
-                        item["image"],
+                    AppConstants.resolveImage(item["image"]),
 
                     fit: BoxFit.contain,
                   ),
@@ -2068,10 +2066,7 @@ class _HomePageState extends State<HomePage> {
 
                               child:
                               Image.network(
-                                AppConstants
-                                    .imageUrl +
-                                    item[
-                                    "image"],
+                                AppConstants.resolveImage(item["image"]),
 
                                 fit:
                                 BoxFit.contain,

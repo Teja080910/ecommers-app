@@ -2,6 +2,23 @@ class AppConstants {
   static const String baseUrl = "https://ecommers-app-a6b8.onrender.com/Backend/app/api.php";
   static const String imageUrl = "https://ecommers-app-a6b8.onrender.com/Backend/app/";
 
+  /// Newer uploads are stored on Cloudinary and come back as a full URL
+  /// already; older ones are still a relative path served from the backend.
+  /// This resolves either correctly instead of assuming the old format.
+  static String resolveImage(dynamic path) {
+    final value = path?.toString() ?? "";
+
+    if (value.isEmpty) {
+      return "";
+    }
+
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      return value;
+    }
+
+    return imageUrl + value;
+  }
+
   /// Formats any numeric/price value into a consistent
   /// "₹12,499" style string (Indian digit grouping, no decimals).
   static String formatPrice(dynamic value) {

@@ -676,10 +676,7 @@ class _ViewProductPageState
 
                             child:
                             Image.network(
-                              AppConstants
-                                  .imageUrl +
-                                  images[
-                                  index],
+                              AppConstants.resolveImage(images[index]),
 
                               fit:
                               BoxFit.contain,
@@ -1638,8 +1635,7 @@ class _ViewProductPageState
                                       top: Radius.circular(18),
                                     ),
                                     child: Image.network(
-                                      AppConstants.imageUrl +
-                                          (item["image"] ?? ""),
+                                      AppConstants.resolveImage(item["image"]),
                                       height: 130,
                                       width: 150,
                                       fit: BoxFit.contain,
