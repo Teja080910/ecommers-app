@@ -154,14 +154,85 @@ class _ProfilePageState
     });
   }
 
-  void editName() {
+  void editProfile() {
 
-    final controller =
-    TextEditingController(
-      text: name,
-    );
+    final nameController = TextEditingController(text: name);
+    final phoneController = TextEditingController(text: phone);
+    final usernameController = TextEditingController(text: username);
 
+    String selectedGender = gender;
+    String? error;
     bool submitting = false;
+
+    Widget genderChip(
+      String value,
+      String label,
+      void Function(void Function()) setModalState,
+    ) {
+
+      final selected = selectedGender == value;
+
+      return Expanded(
+        child: GestureDetector(
+          onTap: () {
+            setModalState(() {
+              selectedGender = value;
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFFEF4138)
+                  : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7)),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? const Color(0xFFEF4138) : Colors.transparent,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.black87),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget fieldLabel(String text) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 14),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+      );
+    }
+
+    InputDecoration fieldDecoration(String hint, IconData icon) {
+      return InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
+        prefixIcon: Icon(icon, color: const Color(0xFFEF4138)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+      );
+    }
 
     showModalBottomSheet(
 
@@ -169,931 +240,222 @@ class _ProfilePageState
 
       isScrollControlled: true,
 
-      backgroundColor:
-      Colors.transparent,
+      backgroundColor: Colors.transparent,
 
       builder: (_) {
 
         return StatefulBuilder(
           builder: (context, setModalState) {
 
-        return Padding(
+            return Padding(
 
-          padding:
-
-          EdgeInsets.only(
-
-            bottom:
-
-            MediaQuery.of(
-              context,
-            )
-
-                .viewInsets
-                .bottom,
-
-          ),
-
-          child:
-
-          Container(
-
-            padding:
-            const EdgeInsets.all(
-              20,
-            ),
-
-            decoration:
-
-            BoxDecoration(
-
-              color:
-
-              isDark
-
-                  ?
-
-              const Color(
-                0xFF1E1E1E,
-              )
-
-                  :
-
-              Colors.white,
-
-              borderRadius:
-
-              const BorderRadius.vertical(
-
-                top:
-                Radius.circular(
-                  28,
-                ),
-
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
 
-            ),
+              child: Container(
 
-            child:
+                padding: const EdgeInsets.all(20),
 
-            Column(
-
-              mainAxisSize:
-              MainAxisSize.min,
-
-              children:[
-
-                Container(
-
-                  width:60,
-                  height:5,
-
-                  decoration:
-
-                  BoxDecoration(
-
-                    color:
-                    Colors.grey,
-
-                    borderRadius:
-                    BorderRadius.circular(
-                      20,
-                    ),
-
-                  ),
-
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 ),
 
-                const SizedBox(
-                  height:20,
-                ),
+                child: SingleChildScrollView(
 
-                Row(
+                  child: Column(
 
-                  children:[
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-                    Container(
+                    children: [
 
-                      width:54,
-                      height:54,
-
-                      decoration:
-
-                      BoxDecoration(
-
-                        color:
-
-                        const Color(
-                          0xFFEF4138,
-                        )
-
-                            .withOpacity(
-                          0.12,
+                      Center(
+                        child: Container(
+                          width: 60,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
-
-                        shape:
-                        BoxShape.circle,
-
                       ),
 
-                      child:
-
-                      const Icon(
-
-                        Icons.edit,
-
-                        size: 20,
-
-                        color:
-                        Color(
-                          0xFFEF4138,
-                        ),
-
-                      ),
-
-                    ),
-
-                    const SizedBox(
-                      width:14,
-                    ),
-
-                    Expanded(
-
-                      child:
+                      const SizedBox(height: 20),
 
                       Text(
-
-                        "Update Name",
-
-                        style:
-
-                        TextStyle(
-
-                          fontSize:20,
-
-                          fontWeight:
-                          FontWeight.w800,
-
-                          color:
-
-                          isDark
-
-                              ?
-
-                          Colors.white
-
-                              :
-
-                          Colors.black,
-
-                        ),
-
-                      ),
-
-                    ),
-
-                  ],
-
-                ),
-
-                const SizedBox(
-                  height:18,
-                ),
-
-                TextField(
-
-                  controller:
-                  controller,
-
-                  style:
-
-                  TextStyle(
-
-                    color:
-
-                    isDark
-
-                        ?
-
-                    Colors.white
-
-                        :
-
-                    Colors.black,
-
-                  ),
-
-                  decoration:
-
-                  InputDecoration(
-
-                    hintText:
-                    "Enter display name",
-
-                    filled:true,
-
-                    fillColor:
-
-                    isDark
-
-                        ?
-
-                    const Color(
-                      0xFF2A2A2A,
-                    )
-
-                        :
-
-                    const Color(
-                      0xFFF7F7F7,
-                    ),
-
-                    prefixIcon:
-
-                    const Icon(
-
-                      Icons.person,
-
-                      color:
-                      Color(
-                        0xFFEF4138,
-                      ),
-
-                    ),
-
-                    border:
-
-                    OutlineInputBorder(
-
-                      borderRadius:
-                      BorderRadius.circular(
-                        18,
-                      ),
-
-                      borderSide:
-                      BorderSide.none,
-
-                    ),
-
-                  ),
-
-                ),
-
-                const SizedBox(
-                  height:18,
-                ),
-
-                SizedBox(
-
-                  width:
-                  double.infinity,
-
-                  height:54,
-
-                  child:
-
-                  ElevatedButton(
-
-                    onPressed:
-                        submitting ? null : () async {
-
-                      if(
-                      controller.text
-                          .trim()
-                          .isEmpty
-                      ){
-
-                        return;
-
-                      }
-
-                      setModalState((){
-                        submitting = true;
-                      });
-
-                      final res =
-
-                      await ApiService
-                          .updateProfile(
-
-                        userId,
-
-                        controller.text
-                            .trim(),
-
-                      );
-
-                      if(!context.mounted){
-                        return;
-                      }
-
-                      if(res["status"] == true){
-
-                        final prefs =
-
-                        await SharedPreferences
-                            .getInstance();
-
-                        await prefs.setString(
-
-                          "name",
-
-                          controller.text
-                              .trim(),
-
-                        );
-
-                        setState(() {
-
-                          name =
-                              controller.text
-                                  .trim();
-
-                        });
-
-                        Navigator.pop(
-                          context,
-                        );
-
-                      }else{
-
-                        setModalState((){
-                          submitting = false;
-                        });
-                      }
-
-                    },
-
-                    style:
-
-                    ElevatedButton
-                        .styleFrom(
-
-                      backgroundColor:
-
-                      const Color(
-                        0xFFEF4138,
-                      ),
-
-                      shape:
-
-                      RoundedRectangleBorder(
-
-                        borderRadius:
-                        BorderRadius.circular(
-                          16,
-                        ),
-
-                      ),
-
-                    ),
-
-                    child:
-
-                    submitting
-                        ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                        : const Text(
-
-                      "Update",
-
-                      style:
-
-                      TextStyle(
-                        color:
-                        Colors.white,
-                        fontSize:16,
-
-                        fontWeight:
-                        FontWeight.w700,
-
-                      ),
-
-                    ),
-
-                  ),
-
-                ),
-
-              ],
-
-            ),
-
-          ),
-
-        );
-          },
-        );
-
-      },
-
-    );
-
-  }
-
-
-  void editPhone() {
-
-    final controller =
-    TextEditingController(
-      text: phone,
-    );
-
-    // 🔥 hoisted above the builder -- these must survive rebuilds
-    // triggered by setModalState, otherwise they reset to their
-    // initial value on every rebuild and the error/spinner never show
-    String? error;
-    bool submitting = false;
-
-    showModalBottomSheet(
-
-      context: context,
-
-      isScrollControlled: true,
-
-      backgroundColor:
-      Colors.transparent,
-
-      builder: (_) {
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-
-        return Padding(
-
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-
-          child: Container(
-
-            padding: const EdgeInsets.all(20),
-
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                Container(
-                  width: 60,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4138).withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.phone,
-                        size: 20,
-                        color: Color(0xFFEF4138),
-                      ),
-                    ),
-
-                    const SizedBox(width: 14),
-
-                    Expanded(
-                      child: Text(
-                        "Update Phone Number",
+                        "Edit Profile",
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
                           color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
-                    ),
-                  ],
-                ),
 
-                const SizedBox(height: 18),
+                      if (error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          error!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
 
-                TextField(
+                      fieldLabel("Full Name"),
 
-                  controller: controller,
-                  keyboardType: TextInputType.number,
-                  maxLength: 10,
-
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-
-                  decoration: InputDecoration(
-                    hintText: "Enter mobile number",
-                    counterText: "",
-                    errorText: error,
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
-                    prefixIcon: const Icon(Icons.phone, color: Color(0xFFEF4138)),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                SizedBox(
-
-                  width: double.infinity,
-                  height: 54,
-
-                  child: ElevatedButton(
-
-                    onPressed: submitting ? null : () async {
-
-                      final value = controller.text.trim();
-
-                      if(value.length != 10){
-
-                        setModalState(() {
-                          error = "Enter a valid 10-digit number";
-                        });
-
-                        return;
-                      }
-
-                      setModalState(() {
-                        submitting = true;
-                        error = null;
-                      });
-
-                      final res = await ApiService.updateProfile(
-                        userId,
-                        name,
-                        phone: value,
-                      );
-
-                      // sheet may have been dismissed while the request was in flight
-                      if(!context.mounted){
-                        return;
-                      }
-
-                      if(res["status"] == true){
-
-                        final prefs = await SharedPreferences.getInstance();
-
-                        await prefs.setString("phone", value);
-
-                        setState(() {
-                          phone = value;
-                        });
-
-                        Navigator.pop(context);
-
-                      }else{
-
-                        setModalState(() {
-                          submitting = false;
-                          error = res["message"]?.toString() ?? "Could not update phone number";
-                        });
-                      }
-                    },
-
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4138),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      TextField(
+                        controller: nameController,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: fieldDecoration("Enter your name", Icons.person),
                       ),
-                    ),
 
-                    child: submitting
-                        ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                        : const Text(
-                      "Update",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-          },
-        );
-      },
-    );
-  }
+                      fieldLabel("Mobile Number"),
 
-  void editUsername() {
-
-    final controller = TextEditingController(text: username);
-
-    String? error;
-    bool submitting = false;
-
-    showModalBottomSheet(
-
-      context: context,
-
-      isScrollControlled: true,
-
-      backgroundColor: Colors.transparent,
-
-      builder: (_) {
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-
-        return Padding(
-
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-
-          child: Container(
-
-            padding: const EdgeInsets.all(20),
-
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                Container(
-                  width: 60,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4138).withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.alternate_email,
-                        size: 20,
-                        color: Color(0xFFEF4138),
-                      ),
-                    ),
-
-                    const SizedBox(width: 14),
-
-                    Expanded(
-                      child: Text(
-                        "Update Username",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : Colors.black,
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 10,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: fieldDecoration("Enter mobile number", Icons.phone).copyWith(
+                          counterText: "",
                         ),
                       ),
-                    ),
-                  ],
-                ),
 
-                const SizedBox(height: 18),
+                      fieldLabel("Username"),
 
-                TextField(
-
-                  controller: controller,
-
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-
-                  decoration: InputDecoration(
-                    hintText: "Enter username",
-                    errorText: error,
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
-                    prefixIcon: const Icon(Icons.alternate_email, color: Color(0xFFEF4138)),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                SizedBox(
-
-                  width: double.infinity,
-                  height: 54,
-
-                  child: ElevatedButton(
-
-                    onPressed: submitting ? null : () async {
-
-                      final value = controller.text.trim();
-
-                      if (value.isEmpty) {
-                        return;
-                      }
-
-                      setModalState(() {
-                        submitting = true;
-                        error = null;
-                      });
-
-                      final res = await ApiService.updateProfile(
-                        userId,
-                        name,
-                        username: value,
-                      );
-
-                      if (!context.mounted) {
-                        return;
-                      }
-
-                      if (res["status"] == true) {
-
-                        final prefs = await SharedPreferences.getInstance();
-
-                        await prefs.setString("username", value);
-
-                        setState(() {
-                          username = value;
-                        });
-
-                        Navigator.pop(context);
-
-                      }else{
-
-                        setModalState(() {
-                          submitting = false;
-                          error = res["message"]?.toString() ?? "Could not update username";
-                        });
-                      }
-                    },
-
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4138),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      TextField(
+                        controller: usernameController,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: fieldDecoration("Enter username", Icons.alternate_email),
                       ),
-                    ),
 
-                    child: submitting
-                        ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
+                      fieldLabel("Gender"),
+
+                      Row(
+                        children: [
+                          genderChip("male", "Male", setModalState),
+                          genderChip("female", "Female", setModalState),
+                          genderChip("other", "Other", setModalState),
+                        ],
                       ),
-                    )
-                        : const Text(
-                      "Update",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-          },
-        );
-      },
-    );
-  }
 
-  void editGender() {
+                      const SizedBox(height: 22),
 
-    showModalBottomSheet(
+                      SizedBox(
 
-      context: context,
+                        width: double.infinity,
+                        height: 54,
 
-      backgroundColor: Colors.transparent,
+                        child: ElevatedButton(
 
-      builder: (_) {
+                          onPressed: submitting ? null : () async {
 
-        return StatefulBuilder(
-          builder: (context, setModalState) {
+                            final newName = nameController.text.trim();
 
-            return Container(
+                            if (newName.isEmpty) {
+                              setModalState(() {
+                                error = "Name is required";
+                              });
+                              return;
+                            }
 
-              padding: const EdgeInsets.all(20),
+                            final newPhone = phoneController.text.trim();
 
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              ),
+                            if (newPhone.isNotEmpty && newPhone.length != 10) {
+                              setModalState(() {
+                                error = "Enter a valid 10-digit mobile number";
+                              });
+                              return;
+                            }
 
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+                            setModalState(() {
+                              submitting = true;
+                              error = null;
+                            });
 
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
+                            final newUsername = usernameController.text.trim();
 
-                  const SizedBox(height: 20),
+                            final res = await ApiService.updateProfile(
+                              userId,
+                              newName,
+                              phone: newPhone.isEmpty ? null : newPhone,
+                              username: newUsername.isEmpty ? null : newUsername,
+                              gender: selectedGender.isEmpty ? null : selectedGender,
+                            );
 
-                  Text(
-                    "Select Gender",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
+                            if (!context.mounted) {
+                              return;
+                            }
 
-                  const SizedBox(height: 10),
+                            if (res["status"] == true) {
 
-                  for (final option in const ["male", "female", "other"])
-                    RadioListTile<String>(
-                      value: option,
-                      groupValue: gender,
-                      activeColor: const Color(0xFFEF4138),
-                      title: Text(
-                        option[0].toUpperCase() + option.substring(1),
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
+                              final prefs = await SharedPreferences.getInstance();
+
+                              await prefs.setString("name", newName);
+
+                              if (newPhone.isNotEmpty) {
+                                await prefs.setString("phone", newPhone);
+                              }
+
+                              if (newUsername.isNotEmpty) {
+                                await prefs.setString("username", newUsername);
+                              }
+
+                              if (selectedGender.isNotEmpty) {
+                                await prefs.setString("gender", selectedGender);
+                              }
+
+                              setState(() {
+                                name = newName;
+                                if (newPhone.isNotEmpty) phone = newPhone;
+                                if (newUsername.isNotEmpty) username = newUsername;
+                                if (selectedGender.isNotEmpty) gender = selectedGender;
+                              });
+
+                              Navigator.pop(context);
+
+                            } else {
+
+                              setModalState(() {
+                                submitting = false;
+                                error = res["message"]?.toString() ?? "Could not update profile";
+                              });
+                            }
+                          },
+
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4138),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+
+                          child: submitting
+                              ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                              : const Text(
+                            "Save Changes",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
-                      onChanged: (value) async {
-
-                        if (value == null) {
-                          return;
-                        }
-
-                        setModalState(() {
-                          gender = value;
-                        });
-
-                        final res = await ApiService.updateProfile(
-                          userId,
-                          name,
-                          gender: value,
-                        );
-
-                        if (res["status"] == true) {
-
-                          final prefs = await SharedPreferences.getInstance();
-
-                          await prefs.setString("gender", value);
-
-                          setState(() {
-                            gender = value;
-                          });
-                        }
-
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             );
           },
@@ -1285,7 +647,7 @@ class _ProfilePageState
                 // 🔥 USER CARD
                 GestureDetector(
 
-                  onTap: editName,
+                  onTap: editProfile,
 
                   child: Container(
 
@@ -1351,114 +713,50 @@ class _ProfilePageState
                                 height: 12,
                               )
 
-                                  : GestureDetector(
+                                  : Text(
 
-                                onTap: editPhone,
+                                phone.isEmpty
+                                    ? "Add phone number"
+                                    : "+91 $phone",
 
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                style:
+                                 TextStyle(
+                                  color:
 
-                                    Text(
+                                  isDark
 
-                                      phone.isEmpty
-                                          ? "Add phone number"
-                                          : "+91 $phone",
+                                      ? Colors.white70
 
-                                      style:
-                                       TextStyle(
-                                        color:
+                                      : Colors.black54,
 
-                                        isDark
+                                  fontSize:
+                                  11.8,
 
-                                            ? Colors.white70
-
-                                            : Colors.black54,
-
-                                        fontSize:
-                                        11.8,
-
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 5),
-
-                                    Icon(
-                                      Icons.edit,
-                                      size: 11,
-                                      color: isDark ? Colors.white70 : Colors.black54,
-                                    ),
-                                  ],
                                 ),
                               ),
 
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
 
-                              GestureDetector(
+                              Text(
 
-                                onTap: editUsername,
+                                [
+                                  if (username.isNotEmpty) "@$username",
+                                  if (gender.isNotEmpty) gender[0].toUpperCase() + gender.substring(1),
+                                ].join("  •  "),
 
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-
-                                    Text(
-
-                                      username.isEmpty
-                                          ? "Add username"
-                                          : "@$username",
-
-                                      style: TextStyle(
-                                        color: isDark ? Colors.white70 : Colors.black54,
-                                        fontSize: 11.8,
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 5),
-
-                                    Icon(
-                                      Icons.edit,
-                                      size: 11,
-                                      color: isDark ? Colors.white70 : Colors.black54,
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 4),
-
-                              GestureDetector(
-
-                                onTap: editGender,
-
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-
-                                    Text(
-
-                                      gender.isEmpty
-                                          ? "Add gender"
-                                          : gender[0].toUpperCase() + gender.substring(1),
-
-                                      style: TextStyle(
-                                        color: isDark ? Colors.white70 : Colors.black54,
-                                        fontSize: 11.8,
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 5),
-
-                                    Icon(
-                                      Icons.edit,
-                                      size: 11,
-                                      color: isDark ? Colors.white70 : Colors.black54,
-                                    ),
-                                  ],
+                                style: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.black54,
+                                  fontSize: 11.8,
                                 ),
                               ),
                             ],
                           ),
+                        ),
+
+                        Icon(
+                          Icons.edit,
+                          size: 16,
+                          color: isDark ? Colors.white70 : Colors.black45,
                         ),
                       ],
                     ),
