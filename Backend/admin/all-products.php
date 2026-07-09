@@ -62,51 +62,77 @@ setTimeout(function(){
 exit;
 }
 
-/* DELETE PRODUCT */
+/* DELETE PRODUCT / UNMAP SELLER
+   A row in this list can now represent either a whole (legacy, single-
+   seller) product OR one seller's mapping to a shared product. Deleting a
+   mapping row must only remove that seller's own listing, never the
+   shared product other sellers may also be attached to. */
 
 if(isset($_GET['delete'])){
 
     $delete_id =
     intval($_GET['delete']);
 
-    $getImage =
-    $pdo->prepare(
+    $mapping_id =
+    isset($_GET['mapping_id'])
+    ? intval($_GET['mapping_id'])
+    : 0;
 
-        "SELECT image
-        FROM products
-        WHERE id=?"
-    );
+    if($mapping_id > 0){
 
-    $getImage->execute([
-        $delete_id
-    ]);
-
-    $img =
-    $getImage->fetch();
-
-    if($img){
-
-        if(!empty($img['image'])){
-
-            $path =
-            "../app/" .
-            $img['image'];
-
-            if(file_exists($path)){
-                unlink($path);
-            }
-        }
-
-        $del =
+        $delMapping =
         $pdo->prepare(
 
-            "DELETE FROM products
+            "DELETE FROM seller_product_mapping
+            WHERE id=? AND product_id=?"
+        );
+
+        $delMapping->execute([
+            $mapping_id,
+            $delete_id
+        ]);
+
+    }else{
+
+        $getImage =
+        $pdo->prepare(
+
+            "SELECT image
+            FROM products
             WHERE id=?"
         );
 
-        $del->execute([
+        $getImage->execute([
             $delete_id
         ]);
+
+        $img =
+        $getImage->fetch();
+
+        if($img){
+
+            if(!empty($img['image'])){
+
+                $path =
+                "../app/" .
+                $img['image'];
+
+                if(file_exists($path)){
+                    unlink($path);
+                }
+            }
+
+            $del =
+            $pdo->prepare(
+
+                "DELETE FROM products
+                WHERE id=?"
+            );
+
+            $del->execute([
+                $delete_id
+            ]);
+        }
     }
 
     header(
@@ -155,13 +181,23 @@ ORDER BY name ASC"
 
 )->fetchAll();
 
-/* PRODUCT QUERY */
+/* PRODUCT QUERY -- one row per seller-product pairing, not one row per
+   product. Non-variant products can now have several sellers mapped to
+   the same shared product (seller_product_mapping); variant products
+   stay single-seller, owned directly via products.seller_id. Both are
+   fetched separately and merged, since they join on different columns. */
+
+/* MAPPED (non-variant) LISTINGS */
 
 $sql = "
 
 SELECT
 
-products.*,
+products.id,
+products.name,
+products.image,
+products.stock,
+products.hasvarients,
 
 categories.name
 AS category_name,
@@ -170,7 +206,83 @@ subcategories.name
 AS subcategory_name,
 
 seller.name
-AS seller_name
+AS seller_name,
+
+spm.saleprice,
+spm.stock AS mapping_stock,
+spm.id AS mapping_id
+
+FROM seller_product_mapping spm
+
+JOIN products
+ON products.id = spm.product_id
+
+LEFT JOIN categories
+ON categories.id =
+products.cat_id
+
+LEFT JOIN subcategories
+ON subcategories.id =
+products.subcat_id
+
+LEFT JOIN seller
+ON seller.id =
+spm.seller_id
+
+WHERE 1
+";
+
+$params = [];
+
+if(!empty($search)){
+    $sql .= " AND products.name LIKE ?";
+    $params[] = "%".$search."%";
+}
+
+if(!empty($category_id)){
+    $sql .= " AND products.cat_id=?";
+    $params[] = $category_id;
+}
+
+if(!empty($seller_id)){
+    $sql .= " AND spm.seller_id=?";
+    $params[] = $seller_id;
+}
+
+$sql .= " ORDER BY products.id DESC";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$mapped_products = $stmt->fetchAll();
+
+foreach($mapped_products as &$mp){
+    $mp['stock'] = $mp['mapping_stock'];
+}
+unset($mp);
+
+/* LEGACY VARIANT LISTINGS (single-seller, unchanged) */
+
+$sql = "
+
+SELECT
+
+products.id,
+products.name,
+products.image,
+products.stock,
+products.hasvarients,
+products.saleprice,
+
+categories.name
+AS category_name,
+
+subcategories.name
+AS subcategory_name,
+
+seller.name
+AS seller_name,
+
+NULL AS mapping_id
 
 FROM products
 
@@ -186,55 +298,37 @@ LEFT JOIN seller
 ON seller.id =
 products.seller_id
 
-WHERE 1
+WHERE products.hasvarients='yes'
 ";
 
 $params = [];
 
-/* SEARCH */
-
 if(!empty($search)){
-
-    $sql .= "
-    AND products.name
-    LIKE ?";
-
-    $params[] =
-    "%".$search."%";
+    $sql .= " AND products.name LIKE ?";
+    $params[] = "%".$search."%";
 }
-
-/* CATEGORY */
 
 if(!empty($category_id)){
-
-    $sql .= "
-    AND products.cat_id=?";
-
-    $params[] =
-    $category_id;
+    $sql .= " AND products.cat_id=?";
+    $params[] = $category_id;
 }
-
-/* SELLER */
 
 if(!empty($seller_id)){
-
-    $sql .= "
-    AND products.seller_id=?";
-
-    $params[] =
-    $seller_id;
+    $sql .= " AND products.seller_id=?";
+    $params[] = $seller_id;
 }
 
-$sql .= "
-ORDER BY products.id DESC";
+$sql .= " ORDER BY products.id DESC";
 
-$stmt =
-$pdo->prepare($sql);
-
+$stmt = $pdo->prepare($sql);
 $stmt->execute($params);
+$variant_products = $stmt->fetchAll();
 
-$products =
-$stmt->fetchAll();
+$products = array_merge($mapped_products, $variant_products);
+
+usort($products, function($a, $b){
+    return $b['id'] <=> $a['id'];
+});
 ?>
 
 <!DOCTYPE html>
@@ -917,13 +1011,15 @@ body{
 
                 <a
 
-                href="all-products.php?delete=<?php echo $product['id']; ?>"
+                href="all-products.php?delete=<?php echo $product['id']; ?><?php echo !empty($product['mapping_id']) ? '&mapping_id='.$product['mapping_id'] : ''; ?>"
 
                 class="delete-btn"
 
                 onclick="
                 return confirm(
-                'Delete this product?'
+                <?php echo !empty($product['mapping_id'])
+                    ? "'Remove this seller from this product? The shared product stays for other sellers.'"
+                    : "'Delete this product?'"; ?>
                 )
                 ">
 
