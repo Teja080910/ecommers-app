@@ -48,69 +48,15 @@ $subcategories = $pdo->query(
 $success = "";
 $error = "";
 
-/* MAP TO AN EXISTING MASTER PRODUCT (shared catalog) */
-
-if(isset($_POST['map_product'])){
-
-    $seller_id = intval($_SESSION['seller_id']);
-    $map_product_id = intval($_POST['product_id']);
-    $map_price = $_POST['price'];
-    $map_saleprice = $_POST['saleprice'];
-    $map_stock = $_POST['stock'];
-    $map_discount = (isset($_POST['discount']) && $_POST['discount'] !== '') ? $_POST['discount'] : null;
-    $map_sku = trim($_POST['sku'] ?? '');
-
-    $check = $pdo->prepare(
-        "SELECT id FROM products WHERE id=? AND status='approved' AND hasvarients='no'"
-    );
-    $check->execute([$map_product_id]);
-
-    if(!$check->fetch()){
-
-        $error = "That product isn't available to add right now.";
-
-    }else{
-
-        try{
-
-            $stmt = $pdo->prepare(
-                "INSERT INTO seller_product_mapping
-                (seller_id, product_id, price, saleprice, stock, discount, sku)
-                VALUES (?, ?, ?, ?, ?, ?, ?)"
-            );
-
-            $stmt->execute([
-                $seller_id,
-                $map_product_id,
-                $map_price,
-                $map_saleprice,
-                $map_stock,
-                $map_discount,
-                $map_sku !== '' ? $map_sku : null
-            ]);
-
-            $success = "Product added to your store.";
-
-        }catch(PDOException $e){
-
-            if((int)$e->getCode() === 23000 || strpos($e->getMessage(), 'uniq_seller_product') !== false){
-
-                $error = "You already sell this product -- edit it from My Products instead.";
-
-            }else{
-
-                $error = "Failed to add product.";
-            }
-        }
-    }
-}
-
-/* ADD PRODUCT (manual -- submits a new master product for admin approval) */
+/* ADD PRODUCT -- either maps to an existing master product (nothing shared
+   changed) or submits a new/edited master product for admin approval */
 
 if(isset($_POST['add_product'])){
 
 $seller_id =
 $_SESSION['seller_id'];
+
+    $based_on_product_id = intval($_POST['based_on_product_id'] ?? 0);
 
     $cat_id =
     $_POST['cat_id'];
@@ -144,6 +90,80 @@ $_SESSION['seller_id'];
 
     $product_description =
     trim($_POST['product_description']);
+
+    $discount = (isset($_POST['discount']) && $_POST['discount'] !== '') ? $_POST['discount'] : null;
+    $sku = trim($_POST['sku'] ?? '');
+
+    /* If this form was prefilled from an existing catalog product, load it
+       so we can tell whether the seller actually changed anything shared. */
+
+    $original = null;
+
+    if($based_on_product_id > 0){
+
+        $origStmt = $pdo->prepare(
+            "SELECT * FROM products WHERE id=? AND status='approved' AND hasvarients='no'"
+        );
+        $origStmt->execute([$based_on_product_id]);
+        $original = $origStmt->fetch();
+    }
+
+    $newImageSubmitted = !empty($_POST['cropped_image_data']) ||
+        (isset($_FILES['image']) && $_FILES['image']['error'] == 0);
+
+    $newOtherImagesSubmitted = !empty($_POST['cropped_other_images']) ||
+        (isset($_FILES['other_images']) && count(array_filter(
+            $_FILES['other_images']['tmp_name'],
+            function($tmp){ return $tmp !== ""; }
+        )) > 0);
+
+    $unchanged = $original
+        && $name === trim($original['name'])
+        && (string)$cat_id === (string)$original['cat_id']
+        && (string)$subcat_id === (string)$original['subcat_id']
+        && $product_description === trim($original['product_description'] ?? '')
+        && $hasvarients === 'no'
+        && !$newImageSubmitted
+        && !$newOtherImagesSubmitted;
+
+    if($unchanged){
+
+        /* MAP TO EXISTING PRODUCT -- nothing shared changed, just attach
+           this seller's own price/stock to the product they picked. */
+
+        try{
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO seller_product_mapping
+                (seller_id, product_id, price, saleprice, stock, discount, sku)
+                VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+
+            $stmt->execute([
+                $seller_id,
+                $based_on_product_id,
+                $rate,
+                $saleprice,
+                $stock,
+                $discount,
+                $sku !== '' ? $sku : null
+            ]);
+
+            $success = "Product added to your store.";
+
+        }catch(PDOException $e){
+
+            if((int)$e->getCode() === 23000 || strpos($e->getMessage(), 'uniq_seller_product') !== false){
+
+                $error = "You already sell this product -- edit it from My Products instead.";
+
+            }else{
+
+                $error = "Failed to add product.";
+            }
+        }
+
+    }else{
 
     $image = "";
 
@@ -202,6 +222,16 @@ $_SESSION['seller_id'];
 
     $other_images =
     implode(",", $other_images);
+
+    /* Carry the original product's images forward when the seller (who
+       started from an existing product) didn't upload a new main image --
+       otherwise this "edited" submission would lose its picture entirely. */
+
+    if(empty($error) && $original && !$mainImageFile){
+
+        $image = $original['image'];
+        $other_images = $original['other_images'] ?? '';
+    }
 
     /* INSERT PRODUCT */
 
@@ -283,8 +313,8 @@ $_SESSION['seller_id'];
 
                 $mappingStmt = $pdo->prepare(
                     "INSERT INTO seller_product_mapping
-                    (seller_id, product_id, price, saleprice, stock)
-                    VALUES (?, ?, ?, ?, ?)"
+                    (seller_id, product_id, price, saleprice, stock, discount, sku)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)"
                 );
 
                 $mappingStmt->execute([
@@ -292,7 +322,9 @@ $_SESSION['seller_id'];
                     $product_id,
                     $rate,
                     $saleprice,
-                    $stock
+                    $stock,
+                    $discount,
+                    $sku !== '' ? $sku : null
                 ]);
             }
 
@@ -378,6 +410,8 @@ $_SESSION['seller_id'];
             $error =
             "Failed To Add Product";
         }
+    }
+
     }
 }
 ?>
@@ -758,7 +792,7 @@ body{
 
         <div class="mode-tabs">
             <div class="mode-tab active" id="tabSearch" onclick="switchMode('search')">Sell an Existing Product</div>
-            <div class="mode-tab" id="tabManual" onclick="switchMode('manual')">Add New Product</div>
+            <div class="mode-tab" id="tabManual" onclick="startBlankProduct()">Add New Product</div>
         </div>
 
         <!-- SEARCH / MAP EXISTING PRODUCT -->
@@ -775,56 +809,8 @@ body{
                 </div>
             </div>
 
-            <div class="map-form" id="mapForm">
-
-                <div class="map-form-title">
-                    Selling: <span id="mapProductName"></span>
-                </div>
-
-                <form method="POST">
-
-                    <input type="hidden" name="product_id" id="mapProductId">
-
-                    <div class="grid">
-
-                        <div class="input-box">
-                            <label>Price (MRP)</label>
-                            <input type="number" step="0.01" name="price" required>
-                        </div>
-
-                        <div class="input-box">
-                            <label>Sale Price</label>
-                            <input type="number" step="0.01" name="saleprice" required>
-                        </div>
-
-                        <div class="input-box">
-                            <label>Stock</label>
-                            <input type="number" name="stock" required>
-                        </div>
-
-                        <div class="input-box">
-                            <label>Discount % (optional)</label>
-                            <input type="number" step="0.01" name="discount">
-                        </div>
-
-                        <div class="input-box full">
-                            <label>SKU (optional)</label>
-                            <input type="text" name="sku">
-                        </div>
-
-                    </div>
-
-                    <button type="submit" name="map_product" class="submit-btn">
-                        <i class="fa fa-plus"></i>
-                        Start Selling This Product
-                    </button>
-
-                </form>
-
-            </div>
-
             <div class="manual-link">
-                Can't find your product? <a onclick="switchMode('manual')">Add it manually</a>
+                Can't find your product? <a onclick="startBlankProduct()">Add it manually</a>
             </div>
 
         </div>
@@ -833,9 +819,26 @@ body{
 
         <div class="mode-panel" id="manualPanel">
 
+        <div class="map-form" id="existingProductNotice">
+            <div class="map-form-title">
+                Based on: <span id="basedOnProductName"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <img id="basedOnProductImage" class="master-product-thumb" style="width:60px;height:60px;">
+                <div style="font-size:12.5px;color:#94a3b8;">
+                    Current image shown above. Fields below are pre-filled and fully editable --
+                    if you only change the price/stock, this just adds your listing to the existing
+                    product. If you change the name, category, description, or upload a new image,
+                    it's submitted as a new product for admin approval instead.
+                </div>
+            </div>
+        </div>
+
         <form
         method="POST"
         enctype="multipart/form-data">
+
+            <input type="hidden" name="based_on_product_id" id="basedOnProductId" value="">
 
             <div class="grid">
 
@@ -969,6 +972,20 @@ body{
                     name="stock"
                     required>
 
+                </div>
+
+                <!-- DISCOUNT -->
+
+                <div class="input-box">
+                    <label>Discount % (optional)</label>
+                    <input type="number" step="0.01" name="discount">
+                </div>
+
+                <!-- SKU -->
+
+                <div class="input-box">
+                    <label>SKU (optional)</label>
+                    <input type="text" name="sku">
                 </div>
 
                 <!-- TOP DEAL -->
@@ -1414,6 +1431,17 @@ function switchMode(mode){
     document.getElementById('manualPanel').classList.toggle('active', mode === 'manual');
 }
 
+/* Explicitly starting a brand new product (not based on an existing one) --
+   clears any prior prefill and makes the main image required again. */
+function startBlankProduct(){
+
+    document.getElementById('basedOnProductId').value = '';
+    document.getElementById('existingProductNotice').classList.remove('active');
+    document.getElementById('mainImageInput').required = true;
+
+    switchMode('manual');
+}
+
 /* MASTER PRODUCT SEARCH */
 
 let masterSearchTimer = null;
@@ -1440,18 +1468,38 @@ function searchMasterProducts(query, immediate){
                             return;
                         }
 
-                        document.getElementById('mapProductId').value = item.getAttribute('data-id');
-                        document.getElementById('mapProductName').textContent = item.getAttribute('data-name');
+                        // 🔥 Pre-fill the FULL form from the selected product -- still
+                        // fully editable. Only price/stock/discount/sku changes map to
+                        // the same product; editing name/category/description/images
+                        // submits a new pending product instead (handled server-side).
 
-                        // 🔥 Pre-fill with the master product's existing price/stock so
-                        // the seller isn't typing from scratch -- still fully editable.
-                        const mapForm = document.getElementById('mapForm');
-                        mapForm.querySelector('input[name="price"]').value = item.getAttribute('data-rate');
-                        mapForm.querySelector('input[name="saleprice"]').value = item.getAttribute('data-saleprice');
-                        mapForm.querySelector('input[name="stock"]').value = item.getAttribute('data-stock');
+                        document.getElementById('basedOnProductId').value = item.getAttribute('data-id');
 
-                        mapForm.classList.add('active');
-                        mapForm.scrollIntoView({behavior:'smooth', block:'center'});
+                        const form = document.querySelector('#manualPanel form');
+
+                        form.querySelector('input[name="name"]').value = item.getAttribute('data-name');
+                        form.querySelector('textarea[name="product_description"]').value = item.getAttribute('data-description');
+                        form.querySelector('input[name="rate"]').value = item.getAttribute('data-rate');
+                        form.querySelector('input[name="saleprice"]').value = item.getAttribute('data-saleprice');
+                        form.querySelector('input[name="stock"]').value = item.getAttribute('data-stock');
+
+                        const catSelect = document.getElementById('categorySelect');
+                        catSelect.value = item.getAttribute('data-cat');
+                        catSelect.dispatchEvent(new Event('change'));
+                        document.getElementById('subCategorySelect').value = item.getAttribute('data-subcat');
+
+                        // Main image is no longer required -- the original carries
+                        // forward unless the seller deliberately uploads a new one.
+                        document.getElementById('mainImageInput').required = false;
+
+                        document.getElementById('basedOnProductName').textContent = item.getAttribute('data-name');
+                        const preview = document.getElementById('basedOnProductImage');
+                        preview.src = item.getAttribute('data-image');
+                        preview.style.visibility = item.getAttribute('data-image') ? 'visible' : 'hidden';
+                        document.getElementById('existingProductNotice').classList.add('active');
+
+                        switchMode('manual');
+                        document.getElementById('manualPanel').scrollIntoView({behavior:'smooth', block:'start'});
                     });
                 });
             });

@@ -69,6 +69,10 @@ exit;
      data-rate="<?php echo htmlspecialchars($p['rate']); ?>"
      data-saleprice="<?php echo htmlspecialchars($p['saleprice']); ?>"
      data-stock="<?php echo htmlspecialchars($p['stock']); ?>"
+     data-description="<?php echo htmlspecialchars($p['product_description'] ?? '', ENT_QUOTES); ?>"
+     data-cat="<?php echo htmlspecialchars($p['cat_id'] ?? ''); ?>"
+     data-subcat="<?php echo htmlspecialchars($p['subcat_id'] ?? ''); ?>"
+     data-image="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? ''), ENT_QUOTES); ?>"
      data-mapped="<?php echo $p['already_mapped'] > 0 ? '1' : '0'; ?>">
 
     <img class="master-product-thumb"

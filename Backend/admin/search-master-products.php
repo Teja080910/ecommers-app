@@ -63,7 +63,11 @@ exit;
      data-name="<?php echo htmlspecialchars($p['name'], ENT_QUOTES); ?>"
      data-rate="<?php echo htmlspecialchars($p['rate']); ?>"
      data-saleprice="<?php echo htmlspecialchars($p['saleprice']); ?>"
-     data-stock="<?php echo htmlspecialchars($p['stock']); ?>">
+     data-stock="<?php echo htmlspecialchars($p['stock']); ?>"
+     data-description="<?php echo htmlspecialchars($p['product_description'] ?? '', ENT_QUOTES); ?>"
+     data-cat="<?php echo htmlspecialchars($p['cat_id'] ?? ''); ?>"
+     data-subcat="<?php echo htmlspecialchars($p['subcat_id'] ?? ''); ?>"
+     data-image="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? ''), ENT_QUOTES); ?>">
 
     <img class="master-product-thumb"
          src="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? '')); ?>"
