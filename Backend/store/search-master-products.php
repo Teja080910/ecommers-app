@@ -73,6 +73,10 @@ exit;
      data-cat="<?php echo htmlspecialchars($p['cat_id'] ?? ''); ?>"
      data-subcat="<?php echo htmlspecialchars($p['subcat_id'] ?? ''); ?>"
      data-image="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? ''), ENT_QUOTES); ?>"
+     data-other-images="<?php echo htmlspecialchars($p['other_images'] ?? '', ENT_QUOTES); ?>"
+     data-topdeals="<?php echo htmlspecialchars($p['topdeals'] ?? 'no'); ?>"
+     data-bestseller="<?php echo htmlspecialchars($p['bestseller'] ?? 'no'); ?>"
+     data-recommended="<?php echo htmlspecialchars($p['recommended'] ?? 'no'); ?>"
      data-mapped="<?php echo $p['already_mapped'] > 0 ? '1' : '0'; ?>">
 
     <img class="master-product-thumb"

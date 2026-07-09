@@ -67,7 +67,11 @@ exit;
      data-description="<?php echo htmlspecialchars($p['product_description'] ?? '', ENT_QUOTES); ?>"
      data-cat="<?php echo htmlspecialchars($p['cat_id'] ?? ''); ?>"
      data-subcat="<?php echo htmlspecialchars($p['subcat_id'] ?? ''); ?>"
-     data-image="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? ''), ENT_QUOTES); ?>">
+     data-image="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? ''), ENT_QUOTES); ?>"
+     data-other-images="<?php echo htmlspecialchars($p['other_images'] ?? '', ENT_QUOTES); ?>"
+     data-topdeals="<?php echo htmlspecialchars($p['topdeals'] ?? 'no'); ?>"
+     data-bestseller="<?php echo htmlspecialchars($p['bestseller'] ?? 'no'); ?>"
+     data-recommended="<?php echo htmlspecialchars($p['recommended'] ?? 'no'); ?>">
 
     <img class="master-product-thumb"
          src="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? '')); ?>"

@@ -235,13 +235,20 @@ if(isset($_POST['add_product'])){
     $other_images =
     implode(",", $other_images);
 
-    /* Carry the original product's images forward when admin (who started
-       from an existing product) didn't upload a new main image. */
+    /* Carry the original product's images forward piece-by-piece when
+       admin (who started from an existing product) didn't upload a new
+       one -- main image and other images are tracked independently so
+       uploading only one doesn't blank the other. */
 
-    if(empty($error) && $original && !$mainImageFile){
+    if(empty($error) && $original){
 
-        $image = $original['image'];
-        $other_images = $original['other_images'] ?? '';
+        if(!$mainImageFile){
+            $image = $original['image'];
+        }
+
+        if(!$newOtherImagesSubmitted){
+            $other_images = $original['other_images'] ?? '';
+        }
     }
 
     /* INSERT PRODUCT */
@@ -1498,6 +1505,10 @@ function searchMasterProducts(query, immediate){
                         form.querySelector('input[name="rate"]').value = item.getAttribute('data-rate');
                         form.querySelector('input[name="saleprice"]').value = item.getAttribute('data-saleprice');
                         form.querySelector('input[name="stock"]').value = item.getAttribute('data-stock');
+
+                        form.querySelector('select[name="topdeals"]').value = item.getAttribute('data-topdeals') || 'no';
+                        form.querySelector('select[name="bestseller"]').value = item.getAttribute('data-bestseller') || 'no';
+                        form.querySelector('select[name="recommended"]').value = item.getAttribute('data-recommended') || 'no';
 
                         const catSelect = document.getElementById('categorySelect');
                         catSelect.value = item.getAttribute('data-cat');
