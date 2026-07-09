@@ -1442,8 +1442,16 @@ function searchMasterProducts(query, immediate){
 
                         document.getElementById('mapProductId').value = item.getAttribute('data-id');
                         document.getElementById('mapProductName').textContent = item.getAttribute('data-name');
-                        document.getElementById('mapForm').classList.add('active');
-                        document.getElementById('mapForm').scrollIntoView({behavior:'smooth', block:'center'});
+
+                        // 🔥 Pre-fill with the master product's existing price/stock so
+                        // the seller isn't typing from scratch -- still fully editable.
+                        const mapForm = document.getElementById('mapForm');
+                        mapForm.querySelector('input[name="price"]').value = item.getAttribute('data-rate');
+                        mapForm.querySelector('input[name="saleprice"]').value = item.getAttribute('data-saleprice');
+                        mapForm.querySelector('input[name="stock"]').value = item.getAttribute('data-stock');
+
+                        mapForm.classList.add('active');
+                        mapForm.scrollIntoView({behavior:'smooth', block:'center'});
                     });
                 });
             });

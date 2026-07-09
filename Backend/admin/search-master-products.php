@@ -5,11 +5,9 @@ session_start();
 require_once 'db.php';
 require_once '../includes/image_upload.php';
 
-if(!isset($_SESSION['seller_id'])){
+if(!isset($_SESSION['admin_id'])){
     exit;
 }
-
-$seller_id = intval($_SESSION['seller_id']);
 
 $search =
 isset($_GET['q'])
@@ -18,25 +16,22 @@ isset($_GET['q'])
 
 /* SEARCH APPROVED, NON-VARIANT MASTER PRODUCTS
    Empty search shows the full catalog (up to the limit); typing narrows
-   it down. Sellers already mapped to a product are flagged so the UI can
-   point them to "My Products" instead of letting them create a duplicate. */
+   it down. Admin picks the seller after picking the product, so no
+   per-seller "already mapped" flag here -- the unique constraint on
+   seller_product_mapping catches a duplicate at submit time instead. */
 
 $stmt = $pdo->prepare(
 
-    "SELECT products.*,
-        (SELECT COUNT(*) FROM seller_product_mapping
-         WHERE seller_product_mapping.product_id = products.id
-         AND seller_product_mapping.seller_id = ?) AS already_mapped
+    "SELECT *
      FROM products
-     WHERE products.status = 'approved'
-     AND products.hasvarients = 'no'
-     AND products.name LIKE ?
-     ORDER BY products.name ASC
+     WHERE status = 'approved'
+     AND hasvarients = 'no'
+     AND name LIKE ?
+     ORDER BY name ASC
      LIMIT 50"
 );
 
 $stmt->execute([
-    $seller_id,
     '%' . $search . '%'
 ]);
 
@@ -68,8 +63,7 @@ exit;
      data-name="<?php echo htmlspecialchars($p['name'], ENT_QUOTES); ?>"
      data-rate="<?php echo htmlspecialchars($p['rate']); ?>"
      data-saleprice="<?php echo htmlspecialchars($p['saleprice']); ?>"
-     data-stock="<?php echo htmlspecialchars($p['stock']); ?>"
-     data-mapped="<?php echo $p['already_mapped'] > 0 ? '1' : '0'; ?>">
+     data-stock="<?php echo htmlspecialchars($p['stock']); ?>">
 
     <img class="master-product-thumb"
          src="<?php echo htmlspecialchars(resolveProductImageSrc($p['image'] ?? '')); ?>"
@@ -77,9 +71,6 @@ exit;
 
     <div style="flex:1">
         <div class="master-product-name"><?php echo htmlspecialchars($p['name']); ?></div>
-        <?php if($p['already_mapped'] > 0){ ?>
-            <div class="master-product-tag">You already sell this &mdash; edit it from My Products</div>
-        <?php } ?>
     </div>
 
 </div>

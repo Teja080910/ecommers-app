@@ -1736,6 +1736,39 @@ class _HomePageState extends State<HomePage> {
 
                     GestureDetector(
 
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationPage(),
+                          ),
+                        );
+                      },
+
+                      child: Container(
+                        height: 44,
+                        width: 44,
+
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F7F7),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFF0F0F0),
+                          ),
+                        ),
+
+                        child: const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    GestureDetector(
+
                       onTap: openCart,
 
                       child: Stack(
