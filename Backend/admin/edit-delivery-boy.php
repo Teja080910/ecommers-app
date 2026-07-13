@@ -3,6 +3,7 @@
 session_start();
 
 require_once "db.php";
+require_once "../includes/image_upload.php";
 
 if(
 !isset(
@@ -100,121 +101,18 @@ intval(
 $_POST["is_active"]
 );
 
-$profile=
-$boy["profile_photo"];
+$dir = "../app/uploads/delivery";
+$allowedExts = ['jpg','jpeg','png','webp'];
+$uploadError = "";
 
-$aadhaar=
-$boy["aadhaar_photo"];
+$profileFile = handleCroppedOrRawUpload('cropped_profile', 'profile', $dir, $allowedExts, $uploadError);
+$profile = $profileFile ? "uploads/delivery/".$profileFile : $boy["profile_photo"];
 
-$pan=
-$boy["pan_photo"];
+$aadhaarFile = handleCroppedOrRawUpload('cropped_aadhaar', 'aadhaar', $dir, $allowedExts, $uploadError);
+$aadhaar = $aadhaarFile ? "uploads/delivery/".$aadhaarFile : $boy["aadhaar_photo"];
 
-$dir=
-"../app/uploads/delivery/";
-
-if(
-!is_dir(
-$dir
-)
-){
-mkdir(
-$dir,
-0777,
-true
-);
-}
-
-function uploadFile(
-$key,
-$old,
-$dir
-){
-
-if(
-
-isset(
-$_FILES[$key]
-)
-
-&&
-
-$_FILES[$key]["name"]!=""
-
-){
-
-if(
-!empty($old)
-&&
-file_exists(
-$dir.$old
-)
-){
-unlink(
-$dir.$old
-);
-}
-
-$ext=
-
-pathinfo(
-
-$_FILES[$key]["name"],
-
-PATHINFO_EXTENSION
-
-);
-
-$file=
-
-time().
-rand(
-1000,
-9999
-).
-".".
-$ext;
-
-move_uploaded_file(
-
-$_FILES[$key]["tmp_name"],
-
-$dir.$file
-
-);
-
-return
-"uploads/delivery/".$file;
-
-}
-
-return
-$old;
-
-}
-
-$profile=
-
-uploadFile(
-"profile",
-$profile,
-$dir
-);
-
-$aadhaar=
-
-uploadFile(
-"aadhaar",
-$aadhaar,
-$dir
-);
-
-$pan=
-
-uploadFile(
-"pan",
-$pan,
-$dir
-);
+$panFile = handleCroppedOrRawUpload('cropped_pan', 'pan', $dir, $allowedExts, $uploadError);
+$pan = $panFile ? "uploads/delivery/".$panFile : $boy["pan_photo"];
 
 $update=
 
@@ -291,6 +189,11 @@ $error=
 Edit Delivery Boy
 
 </title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -512,7 +415,11 @@ src="../app/<?= $boy["profile_photo"] ?>">
 
 <input
 type="file"
-name="profile">
+name="profile"
+id="profileInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedProfileData')">
+<input type="hidden" name="cropped_profile" id="croppedProfileData">
 
 </div>
 
@@ -526,7 +433,11 @@ Aadhaar
 
 <input
 type="file"
-name="aadhaar">
+name="aadhaar"
+id="aadhaarInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedAadhaarData')">
+<input type="hidden" name="cropped_aadhaar" id="croppedAadhaarData">
 
 </div>
 
@@ -540,7 +451,11 @@ PAN
 
 <input
 type="file"
-name="pan">
+name="pan"
+id="panInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedPanData')">
+<input type="hidden" name="cropped_pan" id="croppedPanData">
 
 </div>
 
@@ -591,6 +506,16 @@ Update Delivery Boy
 
 </div>
 
+</div>
+
+<div class="crop-modal" id="cropModal">
+    <div class="crop-box">
+        <div class="crop-image-wrap"><img id="cropperImage"></div>
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+    </div>
 </div>
 
 </body>

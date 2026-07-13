@@ -203,8 +203,8 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
 
               const SizedBox(height: 16),
 
-              if (!loading &&
-                  (order["delivery_otp"] ?? "").toString().isNotEmpty)
+              // Hidden from the customer — this OTP is for the delivery partner only.
+              if (false)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: _otpCard(),
@@ -360,7 +360,7 @@ class _OrderPlacedPageState extends State<OrderPlacedPage> {
                     ),
 
                     child: Image.network(
-                      AppConstants.imageUrl + (item["image"] ?? ""),
+                      AppConstants.resolveImage(item["image"]),
                       fit: BoxFit.contain,
                       errorBuilder: (_, e, s) => Icon(
                         Icons.shopping_bag_outlined,

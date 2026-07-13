@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN */
 
@@ -52,12 +53,15 @@ $sellers = $pdo->query(
 $success = "";
 $error = "";
 
-/* ADD PRODUCT */
+/* ADD PRODUCT -- either maps an existing master product to the selected
+   seller (nothing shared changed) or submits a new/edited master product */
 
 if(isset($_POST['add_product'])){
 
     $seller_id =
     $_POST['seller_id'];
+
+    $based_on_product_id = intval($_POST['based_on_product_id'] ?? 0);
 
     $cat_id =
     $_POST['cat_id'];
@@ -80,11 +84,98 @@ if(isset($_POST['add_product'])){
     $topdeals =
     $_POST['topdeals'];
 
+    $bestseller =
+    $_POST['bestseller'] ?? 'no';
+
+    $recommended =
+    $_POST['recommended'] ?? 'no';
+
     $hasvarients =
     $_POST['hasvarients'];
 
     $product_description =
     trim($_POST['product_description']);
+
+    $discount = (isset($_POST['discount']) && $_POST['discount'] !== '') ? $_POST['discount'] : null;
+    $sku = trim($_POST['sku'] ?? '');
+
+    /* If this form was prefilled from an existing catalog product, load it
+       so we can tell whether anything shared actually changed. */
+
+    $original = null;
+
+    if($based_on_product_id > 0){
+
+        $origStmt = $pdo->prepare(
+            "SELECT * FROM products WHERE id=? AND status='approved' AND hasvarients='no'"
+        );
+        $origStmt->execute([$based_on_product_id]);
+        $original = $origStmt->fetch();
+    }
+
+    $newImageSubmitted = !empty($_POST['cropped_image_data']) ||
+        (isset($_FILES['image']) && $_FILES['image']['error'] == 0);
+
+    $newOtherImagesSubmitted = !empty($_POST['cropped_other_images']) ||
+        (isset($_FILES['other_images']) && count(array_filter(
+            $_FILES['other_images']['tmp_name'],
+            function($tmp){ return $tmp !== ""; }
+        )) > 0);
+
+    $unchanged = $original
+        && $name === trim($original['name'])
+        && (string)$cat_id === (string)$original['cat_id']
+        && (string)$subcat_id === (string)$original['subcat_id']
+        && $product_description === trim($original['product_description'] ?? '')
+        && $hasvarients === 'no'
+        && !$newImageSubmitted
+        && !$newOtherImagesSubmitted;
+
+    if($unchanged){
+
+        /* ASSIGN EXISTING PRODUCT TO SELLER -- nothing shared changed, just
+           attach the selected seller's price/stock to this product. */
+
+        if(empty($seller_id)){
+
+            $error = "Select a seller to assign this product to.";
+
+        }else{
+
+            try{
+
+                $stmt = $pdo->prepare(
+                    "INSERT INTO seller_product_mapping
+                    (seller_id, product_id, price, saleprice, stock, discount, sku)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)"
+                );
+
+                $stmt->execute([
+                    $seller_id,
+                    $based_on_product_id,
+                    $rate,
+                    $saleprice,
+                    $stock,
+                    $discount,
+                    $sku !== '' ? $sku : null
+                ]);
+
+                $success = "Product assigned to seller.";
+
+            }catch(PDOException $e){
+
+                if((int)$e->getCode() === 23000 || strpos($e->getMessage(), 'uniq_seller_product') !== false){
+
+                    $error = "That seller already sells this product.";
+
+                }else{
+
+                    $error = "Failed to assign product.";
+                }
+            }
+        }
+
+    }else{
 
     $image = "";
 
@@ -92,47 +183,28 @@ if(isset($_POST['add_product'])){
 
     /* MAIN IMAGE */
 
-    if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $ext = strtolower(
+    $mainImageFile = handleCroppedOrRawUpload(
+        'cropped_image_data',
+        'image',
+        "../app/uploads/products",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-            pathinfo(
+    if($uploadError != ""){
 
-                $_FILES['image']['name'],
-                PATHINFO_EXTENSION
-            )
-        );
+        $error = $uploadError;
 
-        $allowed =
-        ['jpg','jpeg','png','webp'];
+    }else if($mainImageFile){
 
-        if(in_array($ext,$allowed)){
-
-            $file =
-            time().'_'.
-            $_FILES['image']['name'];
-
-            move_uploaded_file(
-
-                $_FILES['image']['tmp_name'],
-
-                "../app/uploads/products/".$file
-            );
-
-            $image =
-            "uploads/products/".$file;
-
-        }else{
-
-            $error =
-            "Invalid Main Image";
-        }
+        $image = resolveUploadedImagePath($mainImageFile);
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
 
-    if(isset($_FILES['other_images'])){
+    if(empty($error) && isset($_FILES['other_images'])){
 
         $uploaded_count = count(array_filter(
             $_FILES['other_images']['tmp_name'],
@@ -146,55 +218,38 @@ if(isset($_POST['add_product'])){
         }
     }
 
-    if(empty($error) && isset($_FILES['other_images'])){
+    if(empty($error)){
 
-        foreach(
+        $otherImageFiles = handleCroppedOrRawMultiUpload(
+            'cropped_other_images',
+            'other_images',
+            "../app/uploads/products",
+            ['jpg','jpeg','png','webp']
+        );
 
-            $_FILES['other_images']['tmp_name']
-            as $key => $tmp
-
-        ){
-
-            if($tmp == ""){
-                continue;
-            }
-
-            $ext = strtolower(
-
-                pathinfo(
-
-                    $_FILES['other_images']['name'][$key],
-
-                    PATHINFO_EXTENSION
-                )
-            );
-
-            $allowed =
-            ['jpg','jpeg','png','webp'];
-
-            if(in_array($ext,$allowed)){
-
-                $file =
-                time().
-                rand(1000,9999).
-                "_".
-                $_FILES['other_images']['name'][$key];
-
-                move_uploaded_file(
-
-                    $tmp,
-
-                    "../app/uploads/products/".$file
-                );
-
-                $other_images[] =
-                "uploads/products/".$file;
-            }
+        foreach($otherImageFiles as $f){
+            $other_images[] = resolveUploadedImagePath($f);
         }
     }
 
     $other_images =
     implode(",", $other_images);
+
+    /* Carry the original product's images forward piece-by-piece when
+       admin (who started from an existing product) didn't upload a new
+       one -- main image and other images are tracked independently so
+       uploading only one doesn't blank the other. */
+
+    if(empty($error) && $original){
+
+        if(!$mainImageFile){
+            $image = $original['image'];
+        }
+
+        if(!$newOtherImagesSubmitted){
+            $other_images = $original['other_images'] ?? '';
+        }
+    }
 
     /* INSERT PRODUCT */
 
@@ -214,6 +269,8 @@ if(isset($_POST['add_product'])){
             image,
             other_images,
             topdeals,
+            bestseller,
+            recommended,
             hasvarients,
             product_description,
             stock
@@ -222,6 +279,8 @@ if(isset($_POST['add_product'])){
             VALUES
 
             (
+            ?,
+            ?,
             ?,
             ?,
             ?,
@@ -248,6 +307,8 @@ if(isset($_POST['add_product'])){
             $image,
             $other_images,
             $topdeals,
+            $bestseller,
+            $recommended,
             $hasvarients,
             $product_description,
             $stock
@@ -257,6 +318,27 @@ if(isset($_POST['add_product'])){
 
             $product_id =
             $pdo->lastInsertId();
+
+            /* SELLER MAPPING (shared catalog -- non-variant products only) */
+
+            if($hasvarients != "yes" && !empty($seller_id)){
+
+                $mappingStmt = $pdo->prepare(
+                    "INSERT INTO seller_product_mapping
+                    (seller_id, product_id, price, saleprice, stock, discount, sku)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)"
+                );
+
+                $mappingStmt->execute([
+                    $seller_id,
+                    $product_id,
+                    $rate,
+                    $saleprice,
+                    $stock,
+                    $discount,
+                    $sku !== '' ? $sku : null
+                ]);
+            }
 
             /* INSERT VARIANTS */
 
@@ -341,6 +423,8 @@ if(isset($_POST['add_product'])){
             "Failed To Add Product";
         }
     }
+
+    }
 }
 ?>
 
@@ -359,6 +443,16 @@ Add Product
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -553,6 +647,118 @@ body{
     }
 }
 
+/* TABS */
+
+.mode-tabs{
+    display:flex;
+    gap:10px;
+    margin-bottom:26px;
+}
+
+.mode-tab{
+    flex:1;
+    text-align:center;
+    padding:16px;
+    border-radius:16px;
+    background:#1e293b;
+    color:#94a3b8;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    border:2px solid transparent;
+}
+
+.mode-tab.active{
+    background:#06b6d420;
+    color:#22d3ee;
+    border-color:#06b6d4;
+}
+
+.mode-panel{
+    display:none;
+}
+
+.mode-panel.active{
+    display:block;
+}
+
+/* SEARCH */
+
+.search-box{
+    width:100%;
+    padding:16px 18px;
+    border:none;
+    border-radius:16px;
+    background:#1e293b;
+    color:#fff;
+    font-size:14px;
+    margin-bottom:16px;
+}
+
+.search-results{
+    max-height:360px;
+    overflow-y:auto;
+    border-radius:16px;
+    background:#1e293b;
+    margin-bottom:20px;
+}
+
+.master-product-item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 16px;
+    cursor:pointer;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+}
+
+.master-product-item:hover{
+    background:rgba(255,255,255,0.04);
+}
+
+.master-product-thumb{
+    width:44px;
+    height:44px;
+    border-radius:10px;
+    object-fit:cover;
+    background:#0f172a;
+    flex-shrink:0;
+}
+
+.master-product-name{
+    font-size:14px;
+    font-weight:600;
+}
+
+.map-form{
+    display:none;
+    background:#1e293b;
+    border-radius:18px;
+    padding:22px;
+}
+
+.map-form.active{
+    display:block;
+}
+
+.map-form-title{
+    font-size:16px;
+    font-weight:700;
+    margin-bottom:18px;
+}
+
+.manual-link{
+    text-align:center;
+    margin-top:20px;
+    font-size:13px;
+}
+
+.manual-link a{
+    color:#22d3ee;
+    cursor:pointer;
+    text-decoration:underline;
+}
+
 </style>
 </head>
 <body>
@@ -588,9 +794,55 @@ body{
 
         <?php } ?>
 
+        <div class="mode-tabs">
+            <div class="mode-tab active" id="tabSearch" onclick="switchMode('search')">Sell an Existing Product</div>
+            <div class="mode-tab" id="tabManual" onclick="startBlankProduct()">Add New Product</div>
+        </div>
+
+        <!-- SEARCH / MAP EXISTING PRODUCT -->
+
+        <div class="mode-panel active" id="searchPanel">
+
+            <input type="text" class="search-box" id="masterSearchInput"
+                placeholder="Search for a product to assign to a seller..."
+                oninput="searchMasterProducts(this.value)">
+
+            <div class="search-results" id="masterSearchResults">
+                <div style="text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px;">
+                    Loading products...
+                </div>
+            </div>
+
+            <div class="manual-link">
+                Can't find the product? <a onclick="startBlankProduct()">Add it manually</a>
+            </div>
+
+        </div>
+
+        <!-- ADD NEW PRODUCT (manual) -->
+
+        <div class="mode-panel" id="manualPanel">
+
+        <div class="map-form" id="existingProductNotice">
+            <div class="map-form-title">
+                Based on: <span id="basedOnProductName"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <img id="basedOnProductImage" class="master-product-thumb" style="width:60px;height:60px;">
+                <div style="font-size:12.5px;color:#94a3b8;">
+                    Current image shown above. Fields below are pre-filled and fully editable --
+                    if you only change the price/stock and pick a seller, this just assigns that
+                    seller to the existing product. If you change the name, category, description,
+                    or upload a new image, it's saved as a new/updated product instead.
+                </div>
+            </div>
+        </div>
+
         <form
         method="POST"
         enctype="multipart/form-data">
+
+            <input type="hidden" name="based_on_product_id" id="basedOnProductId" value="">
 
             <div class="grid">
 
@@ -754,6 +1006,20 @@ body{
 
                 </div>
 
+                <!-- DISCOUNT -->
+
+                <div class="input-box">
+                    <label>Discount % (optional)</label>
+                    <input type="number" step="0.01" name="discount">
+                </div>
+
+                <!-- SKU -->
+
+                <div class="input-box">
+                    <label>SKU (optional)</label>
+                    <input type="text" name="sku">
+                </div>
+
                 <!-- TOP DEAL -->
 
                 <div class="input-box">
@@ -764,6 +1030,52 @@ body{
 
                     <select
                     name="topdeals">
+
+                        <option value="no">
+                            No
+                        </option>
+
+                        <option value="yes">
+                            Yes
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- BEST SELLER -->
+
+                <div class="input-box">
+
+                    <label>
+                        Best Seller
+                    </label>
+
+                    <select
+                    name="bestseller">
+
+                        <option value="no">
+                            No
+                        </option>
+
+                        <option value="yes">
+                            Yes
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- RECOMMENDED -->
+
+                <div class="input-box">
+
+                    <label>
+                        Recommended
+                    </label>
+
+                    <select
+                    name="recommended">
 
                         <option value="no">
                             No
@@ -806,13 +1118,18 @@ body{
                 <div class="input-box">
 
                     <label>
-                        Main Image
+                        Main Image (square crop recommended)
                     </label>
 
                     <input
                     type="file"
                     name="image"
+                    id="mainImageInput"
+                    accept="image/*"
+                    onchange="ImageCrop.open(this,'croppedImageData')"
                     required>
+
+                    <input type="hidden" name="cropped_image_data" id="croppedImageData">
 
                 </div>
 
@@ -830,6 +1147,8 @@ body{
                     id="otherImagesInput"
                     onchange="validateOtherImages(this)"
                     multiple>
+
+                    <input type="hidden" name="cropped_other_images" id="croppedOtherImagesData">
 
                 </div>
 
@@ -895,6 +1214,26 @@ body{
 
         </form>
 
+        </div>
+
+    </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
     </div>
 
 </div>
@@ -908,7 +1247,10 @@ function validateOtherImages(input){
         alert("You can upload a maximum of 3 additional images (4 total including the main image).");
 
         input.value = "";
+        return;
     }
+
+    ImageCrop.openMulti(input, 'croppedOtherImagesData');
 }
 
 document
@@ -1105,6 +1447,100 @@ function addVariant(){
         html
     );
 }
+
+/* MODE TABS */
+
+function switchMode(mode){
+
+    document.getElementById('tabSearch').classList.toggle('active', mode === 'search');
+    document.getElementById('tabManual').classList.toggle('active', mode === 'manual');
+
+    document.getElementById('searchPanel').classList.toggle('active', mode === 'search');
+    document.getElementById('manualPanel').classList.toggle('active', mode === 'manual');
+}
+
+/* Explicitly starting a brand new product (not based on an existing one) --
+   clears any prior prefill and makes the main image required again. */
+function startBlankProduct(){
+
+    document.getElementById('basedOnProductId').value = '';
+    document.getElementById('existingProductNotice').classList.remove('active');
+    document.getElementById('mainImageInput').required = true;
+
+    switchMode('manual');
+}
+
+/* MASTER PRODUCT SEARCH */
+
+let masterSearchTimer = null;
+
+function searchMasterProducts(query, immediate){
+
+    clearTimeout(masterSearchTimer);
+
+    const run = function(){
+
+        fetch('search-master-products.php?q=' + encodeURIComponent(query))
+            .then(function(res){ return res.text(); })
+            .then(function(html){
+
+                const results = document.getElementById('masterSearchResults');
+                results.innerHTML = html;
+
+                results.querySelectorAll('.master-product-item').forEach(function(item){
+
+                    item.addEventListener('click', function(){
+
+                        // 🔥 Pre-fill the FULL form from the selected product -- still
+                        // fully editable. Only price/stock/discount/sku/seller changes
+                        // map to the same product; editing name/category/description
+                        // /images saves it as a new/updated product (server-side).
+
+                        document.getElementById('basedOnProductId').value = item.getAttribute('data-id');
+
+                        const form = document.querySelector('#manualPanel form');
+
+                        form.querySelector('input[name="name"]').value = item.getAttribute('data-name');
+                        form.querySelector('textarea[name="product_description"]').value = item.getAttribute('data-description');
+                        form.querySelector('input[name="rate"]').value = item.getAttribute('data-rate');
+                        form.querySelector('input[name="saleprice"]').value = item.getAttribute('data-saleprice');
+                        form.querySelector('input[name="stock"]').value = item.getAttribute('data-stock');
+
+                        form.querySelector('select[name="topdeals"]').value = item.getAttribute('data-topdeals') || 'no';
+                        form.querySelector('select[name="bestseller"]').value = item.getAttribute('data-bestseller') || 'no';
+                        form.querySelector('select[name="recommended"]').value = item.getAttribute('data-recommended') || 'no';
+
+                        const catSelect = document.getElementById('categorySelect');
+                        catSelect.value = item.getAttribute('data-cat');
+                        catSelect.dispatchEvent(new Event('change'));
+                        document.getElementById('subCategorySelect').value = item.getAttribute('data-subcat');
+
+                        // Main image is no longer required -- the original carries
+                        // forward unless a new one is deliberately uploaded.
+                        document.getElementById('mainImageInput').required = false;
+
+                        document.getElementById('basedOnProductName').textContent = item.getAttribute('data-name');
+                        const preview = document.getElementById('basedOnProductImage');
+                        preview.src = item.getAttribute('data-image');
+                        preview.style.visibility = item.getAttribute('data-image') ? 'visible' : 'hidden';
+                        document.getElementById('existingProductNotice').classList.add('active');
+
+                        switchMode('manual');
+                        document.getElementById('manualPanel').scrollIntoView({behavior:'smooth', block:'start'});
+                    });
+                });
+            });
+    };
+
+    if(immediate){
+        run();
+    }else{
+        masterSearchTimer = setTimeout(run, 300);
+    }
+}
+
+/* Load the full catalog by default so admin can browse, not just search */
+searchMasterProducts('', true);
 
 </script>
 

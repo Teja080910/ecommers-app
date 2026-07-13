@@ -11,7 +11,17 @@ import 'package:geolocator/geolocator.dart';
 
 import 'package:geocoding/geocoding.dart';
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({super.key});
+
+  // 🔥 BUY NOW — when set, checkout is scoped to just this one item instead
+  // of the user's whole cart, and their real cart is never touched.
+  final Map? buyNowItem;
+  final String? couponCode;
+
+  const CheckoutPage({
+    super.key,
+    this.buyNowItem,
+    this.couponCode,
+  });
 
   @override
   State<CheckoutPage> createState() =>
@@ -29,9 +39,13 @@ class _CheckoutPageState
   double longitude=0;
 
   bool fetchingLocation=false;
+  bool placingOrder = false;
   double subtotal = 0;
 
   double deliveryCharge=0;
+
+  String? deliveryEstimateText;
+  bool isExpressDelivery=false;
 
   double walletBalance=0;
   double discount = 0;
@@ -197,6 +211,9 @@ class _CheckoutPageState
       subtotal,
       finalTotal,
       "online",
+      buyNowProductId: buyNowProductId,
+      buyNowVariantId: buyNowVariantId,
+      buyNowQuantity: buyNowQuantity,
     );
 
     if (order["status"] == true) {
@@ -236,8 +253,9 @@ class _CheckoutPageState
 
     await getRazorpayKey();
 
-    items =
-    await ApiService.getCart(userId);
+    items = widget.buyNowItem != null
+        ? [widget.buyNowItem!]
+        : await ApiService.getCart(userId);
 
     print(items);
 
@@ -298,6 +316,14 @@ class _CheckoutPageState
 
     }
 
+    // 🔥 a coupon selected on the product page's "Exclusive Offers" carries
+    // forward into a Buy Now checkout and applies automatically here.
+    if (widget.couponCode != null) {
+
+      couponController.text = widget.couponCode!;
+      await applyCoupon(closeSheet: false);
+    }
+
     setState(() {
       loading = false;
     });
@@ -309,6 +335,18 @@ class _CheckoutPageState
         deliveryCharge -
         discount;
   }
+
+  int? get buyNowProductId => widget.buyNowItem != null
+      ? int.parse(widget.buyNowItem!["product_id"].toString())
+      : null;
+
+  int? get buyNowVariantId => widget.buyNowItem != null
+      ? int.parse((widget.buyNowItem!["variant_id"] ?? 0).toString())
+      : null;
+
+  int get buyNowQuantity => widget.buyNowItem != null
+      ? int.parse((widget.buyNowItem!["quantity"] ?? 1).toString())
+      : 1;
   Future loadDeliveryCharge()
   async{
 
@@ -318,20 +356,25 @@ class _CheckoutPageState
     ){
 
       deliveryCharge=0;
+      deliveryEstimateText=null;
+      isExpressDelivery=false;
 
       return;
 
     }
+
+    final pincode =
+    selectedAddress![
+    "pincode"
+    ]
+        .toString();
 
     final data=
 
     await ApiService
         .getDeliveryCharge(
 
-      selectedAddress![
-      "pincode"
-      ]
-          .toString(),
+      pincode,
 
     );
 
@@ -356,10 +399,19 @@ class _CheckoutPageState
 
     }
 
+    final estimateData =
+    await ApiService.checkDelivery(pincode);
+
+    deliveryEstimateText =
+    estimateData["estimate_text"]?.toString();
+
+    isExpressDelivery =
+    estimateData["is_express"] == true;
+
     setState((){});
 
   }
-  Future<void> applyCoupon() async {
+  Future<void> applyCoupon({bool closeSheet = true}) async {
 
     var data =
     await ApiService.applyCoupon(
@@ -377,7 +429,9 @@ class _CheckoutPageState
 
       setState(() {});
 
-      Navigator.pop(context);
+      if (closeSheet) {
+        Navigator.pop(context);
+      }
 
     } else {
 
@@ -468,8 +522,12 @@ class _CheckoutPageState
 
   void couponBottomSheet() {
 
+    bool applyingCoupon = false;
+
     showModalBottomSheet(
       context: context,
+
+      isScrollControlled: true,
 
       backgroundColor: Colors.white,
 
@@ -483,9 +541,15 @@ class _CheckoutPageState
 
       builder: (_) {
 
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+
         return Padding(
           padding:
-          const EdgeInsets.all(20),
+          EdgeInsets.fromLTRB(
+            20, 20, 20,
+            20 + MediaQuery.of(context).viewInsets.bottom,
+          ),
 
           child: Column(
             mainAxisSize:
@@ -530,6 +594,10 @@ class _CheckoutPageState
                         setState(() {
                           couponController.text = code.toString();
                         });
+
+                        // 🔥 selecting an offer should actually apply it,
+                        // not just pre-fill the text field
+                        applyCoupon();
                       }
                     },
 
@@ -588,9 +656,19 @@ class _CheckoutPageState
                 child:
                 ElevatedButton(
 
-                  onPressed: () {
+                  onPressed: applyingCoupon ? null : () async {
 
-                    applyCoupon();
+                    setModalState(() {
+                      applyingCoupon = true;
+                    });
+
+                    await applyCoupon();
+
+                    if (context.mounted) {
+                      setModalState(() {
+                        applyingCoupon = false;
+                      });
+                    }
                   },
 
                   style:
@@ -607,7 +685,16 @@ class _CheckoutPageState
                     ),
                   ),
 
-                  child: Text(
+                  child: applyingCoupon
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                      : Text(
                     "Apply Coupon",
 
                     style:
@@ -623,6 +710,8 @@ class _CheckoutPageState
               ),
             ],
           ),
+        );
+          },
         );
       },
     );
@@ -1024,11 +1113,8 @@ class _CheckoutPageState
           child:
           ElevatedButton(
 
-            onPressed: () async {
-              print("BUTTON CLICKED");
-              print(userId);
-              print(selectedAddress);
-              print(finalTotal);
+            onPressed: placingOrder ? null : () async {
+
               if (selectedAddress == null) {
 
                 ScaffoldMessenger.of(
@@ -1050,6 +1136,10 @@ class _CheckoutPageState
 
               } else {
 
+                setState(() {
+                  placingOrder = true;
+                });
+
                 var order =
                 await ApiService.placeOrder(
                   userId,
@@ -1069,9 +1159,15 @@ class _CheckoutPageState
 
                   paymentMethod,
 
+                  buyNowProductId: buyNowProductId,
+                  buyNowVariantId: buyNowVariantId,
+                  buyNowQuantity: buyNowQuantity,
+
                 );
 
-                print(order);
+                if (!mounted) {
+                  return;
+                }
 
                 if (order["status"] == true) {
 
@@ -1088,6 +1184,10 @@ class _CheckoutPageState
                   );
 
                 } else {
+
+                  setState(() {
+                    placingOrder = false;
+                  });
 
                   ScaffoldMessenger.of(context)
                       .showSnackBar(
@@ -1115,7 +1215,16 @@ class _CheckoutPageState
               ),
             ),
 
-            child: Text(
+            child: placingOrder
+                ? const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
+            )
+                : Text(
               "Place Order ${AppConstants.formatPrice(finalTotal)}",
 
               style:
@@ -1418,10 +1527,7 @@ class _CheckoutPageState
 
                               child:
                               Image.network(
-                                AppConstants
-                                    .imageUrl +
-                                    item[
-                                    "image"],
+                                AppConstants.resolveImage(item["image"]),
 
                                 fit:
                                 BoxFit.contain,
@@ -1731,6 +1837,39 @@ class _CheckoutPageState
                     "Delivery Charges",
                     deliveryCharge,
                   ),
+
+                  if (deliveryEstimateText != null) ...[
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+
+                        Icon(
+                          isExpressDelivery
+                              ? Icons.bolt
+                              : Icons.local_shipping_outlined,
+                          size: 15,
+                          color: isExpressDelivery
+                              ? Colors.green.shade700
+                              : Colors.black54,
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Text(
+                          deliveryEstimateText!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isExpressDelivery
+                                ? Colors.green.shade700
+                                : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
 
                   const SizedBox(height: 14),
 

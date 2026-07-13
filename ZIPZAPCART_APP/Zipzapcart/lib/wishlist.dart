@@ -156,8 +156,9 @@ class _WishlistPageState
 
                   onPressed: () {
 
-                    Navigator.pop(
+                    Navigator.popUntil(
                       context,
+                      (route) => route.isFirst,
                     );
                   },
 
@@ -306,9 +307,7 @@ class _WishlistPageState
 
                       child:
                       Image.network(
-                        AppConstants
-                            .imageUrl +
-                            item["image"],
+                        AppConstants.resolveImage(item["image"]),
 
                         fit:
                         BoxFit.contain,

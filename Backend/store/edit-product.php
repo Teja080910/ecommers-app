@@ -1,8 +1,8 @@
-
 <?php
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN */
 
@@ -35,8 +35,181 @@ intval(
 $_GET['id']
 );
 
+/* MAPPING EDIT MODE (shared catalog, non-variant listings) --
+   master info (name/description/images/category) is admin-owned and
+   shared across sellers, so only this seller's own price/stock/discount/
+   sku is editable here. Completely separate, simpler flow from the
+   legacy full-product edit below. */
+
+if(isset($_GET['mapping_id'])){
+
+    $mapping_id = intval($_GET['mapping_id']);
+
+    $mapStmt = $pdo->prepare(
+        "SELECT seller_product_mapping.*,
+            products.name, products.image, products.product_description,
+            products.stock AS master_stock
+         FROM seller_product_mapping
+         JOIN products ON products.id = seller_product_mapping.product_id
+         WHERE seller_product_mapping.id = ?
+         AND seller_product_mapping.seller_id = ?
+         AND seller_product_mapping.product_id = ?"
+    );
+
+    $mapStmt->execute([$mapping_id, $seller_id, $id]);
+    $mapping = $mapStmt->fetch();
+
+    if(!$mapping){
+        header("Location:all-products.php");
+        exit;
+    }
+
+    $mapSuccess = "";
+    $mapError = "";
+
+    if(isset($_POST['update_mapping'])){
+
+        $price = $_POST['price'];
+        $saleprice = $_POST['saleprice'];
+        $stock = $_POST['stock'];
+        $discount = (isset($_POST['discount']) && $_POST['discount'] !== '') ? $_POST['discount'] : null;
+        $sku = trim($_POST['sku'] ?? '');
+
+        $upd = $pdo->prepare(
+            "UPDATE seller_product_mapping
+             SET price=?, saleprice=?, stock=?, discount=?, sku=?
+             WHERE id=? AND seller_id=?"
+        );
+
+        $upd->execute([
+            $price, $saleprice, $stock, $discount,
+            $sku !== '' ? $sku : null,
+            $mapping_id, $seller_id
+        ]);
+
+        $mapSuccess = "Listing updated.";
+
+        $mapStmt->execute([$mapping_id, $seller_id, $id]);
+        $mapping = $mapStmt->fetch();
+    }
+    ?>
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Listing</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+
+    *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial; }
+    body{ background:#0f172a; color:#fff; }
+    .main{ margin-left:240px; padding:28px; }
+    .card{ background:#111827; border-radius:28px; padding:28px; max-width:700px; margin:auto; }
+    .title{ font-size:26px; font-weight:700; margin-bottom:6px; }
+    .sub{ color:#94a3b8; font-size:13px; margin-bottom:24px; }
+    .alert{ padding:15px 18px; border-radius:14px; margin-bottom:20px; font-size:13px; }
+    .success{ background:#16a34a20; color:#4ade80; }
+    .error{ background:#dc262620; color:#f87171; }
+    .master-preview{ display:flex; align-items:center; gap:16px; background:#1e293b; border-radius:18px; padding:18px; margin-bottom:24px; }
+    .master-preview img{ width:64px; height:64px; border-radius:12px; object-fit:cover; background:#0f172a; }
+    .master-preview .name{ font-size:16px; font-weight:700; }
+    .master-preview .note{ font-size:12px; color:#94a3b8; margin-top:4px; }
+    .grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+    .input-box{ display:flex; flex-direction:column; }
+    .input-box label{ margin-bottom:8px; font-size:13px; color:#cbd5e1; }
+    .input-box input{ width:100%; border:none; outline:none; background:#1e293b; border-radius:14px; padding:14px 16px; color:#fff; }
+    .full{ grid-column:1/3; }
+    .submit-btn{ width:100%; height:58px; border:none; border-radius:18px; margin-top:24px; background:linear-gradient(135deg,#06b6d4,#7c3aed); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+
+    @media(max-width:900px){
+        .main{ margin-left:0; padding:85px 15px; }
+        .grid{ grid-template-columns:1fr; }
+        .full{ grid-column:auto; }
+    }
+
+    </style>
+    </head>
+    <body>
+
+    <?php include 'nav.php'; ?>
+
+    <div class="main">
+    <div class="card">
+
+        <div class="title">Edit Listing</div>
+        <div class="sub">Only your price, stock and SKU are editable here &mdash; product details are shared and managed by the admin.</div>
+
+        <?php if($mapSuccess != ""){ ?>
+        <div class="alert success"><?php echo $mapSuccess; ?></div>
+        <?php } ?>
+
+        <?php if($mapError != ""){ ?>
+        <div class="alert error"><?php echo $mapError; ?></div>
+        <?php } ?>
+
+        <div class="master-preview">
+            <img src="<?php echo htmlspecialchars(resolveProductImageSrc($mapping['image'] ?? '')); ?>">
+            <div>
+                <div class="name"><?php echo htmlspecialchars($mapping['name']); ?></div>
+                <div class="note">Want to change the name, description or images? Contact admin.</div>
+            </div>
+        </div>
+
+        <form method="POST">
+
+            <div class="grid">
+
+                <div class="input-box">
+                    <label>Price (MRP)</label>
+                    <input type="number" step="0.01" name="price" value="<?php echo $mapping['price']; ?>" required>
+                </div>
+
+                <div class="input-box">
+                    <label>Sale Price</label>
+                    <input type="number" step="0.01" name="saleprice" value="<?php echo $mapping['saleprice']; ?>" required>
+                </div>
+
+                <div class="input-box">
+                    <label>Stock</label>
+                    <input type="number" name="stock" value="<?php echo $mapping['stock']; ?>" required>
+                </div>
+
+                <div class="input-box">
+                    <label>Discount % (optional)</label>
+                    <input type="number" step="0.01" name="discount" value="<?php echo htmlspecialchars($mapping['discount'] ?? ''); ?>">
+                </div>
+
+                <div class="input-box full">
+                    <label>SKU (optional)</label>
+                    <input type="text" name="sku" value="<?php echo htmlspecialchars($mapping['sku'] ?? ''); ?>">
+                </div>
+
+            </div>
+
+            <button type="submit" name="update_mapping" class="submit-btn">
+                <i class="fa fa-save"></i>
+                Update Listing
+            </button>
+
+        </form>
+
+    </div>
+    </div>
+
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 /* FETCH PRODUCT
-ONLY OWNER CAN EDIT */
+ONLY OWNER CAN EDIT (legacy variant products only -- non-variant
+listings are shared and only reachable via the mapping edit mode above) */
 
 $stmt =
 $pdo->prepare(
@@ -54,6 +227,10 @@ id=?
 AND
 
 seller_id=?
+
+AND
+
+hasvarients='yes'
 
 "
 
@@ -175,6 +352,12 @@ $_POST['stock'];
 $topdeals =
 $_POST['topdeals'];
 
+$bestseller =
+$_POST['bestseller'] ?? 'no';
+
+$recommended =
+$_POST['recommended'] ?? 'no';
+
 $hasvarients =
 $_POST['hasvarients'];
 
@@ -188,55 +371,23 @@ $product['image'];
 
 /* MAIN IMAGE */
 
-if(!empty($_POST['cropped_image_data'])){
+$uploadError = "";
 
-    /* CROPPED (SQUARE) IMAGE FROM BROWSER */
-
-    $data = $_POST['cropped_image_data'];
-
-    if(preg_match('/^data:image\/(jpeg|png|webp);base64,/', $data)){
-
-        $data = substr($data, strpos($data, ',') + 1);
-
-        $decoded = base64_decode($data);
-
-        if($decoded !== false){
-
-            $file =
-            time().'_cropped.jpg';
-
-            file_put_contents(
-                "../app/uploads/products/".$file,
-                $decoded
-            );
-
-            $image =
-            "uploads/products/".$file;
-        }
-    }
-
-}else if(
-isset($_FILES['image'])
-&&
-$_FILES['image']['error']==0
-){
-
-$file =
-time().
-'_'.
-$_FILES['image']['name'];
-
-move_uploaded_file(
-
-$_FILES['image']['tmp_name'],
-
-"../app/uploads/products/".$file
-
+$mainImageFile = handleCroppedOrRawUpload(
+    'cropped_image_data',
+    'image',
+    "../app/uploads/products",
+    ['jpg','jpeg','png','webp'],
+    $uploadError
 );
 
-$image =
-"uploads/products/".$file;
+if($uploadError != ""){
 
+    $error = $uploadError;
+
+}else if($mainImageFile){
+
+    $image = resolveUploadedImagePath($mainImageFile);
 }
 
 /* OTHER IMAGES (max 3 - 4 total with main image) */
@@ -244,11 +395,7 @@ $image =
 $other_images =
 $product['other_images'];
 
-if(
-isset(
-$_FILES['other_images']
-)
-){
+if(empty($error) && isset($_FILES['other_images'])){
 
 $uploaded_count = count(array_filter(
 $_FILES['other_images']['tmp_name'],
@@ -264,59 +411,24 @@ $error =
 
 }
 
-if(
-empty($error)
-&&
-isset(
-$_FILES['other_images']
-)
-){
+if(empty($error)){
 
-$imgs=[];
-
-foreach(
-
-$_FILES['other_images']['tmp_name']
-
-as
-
-$key=>$tmp
-
-){
-
-if($tmp==""){
-continue;
-}
-
-$file =
-time().
-rand(1000,9999).
-"_".
-$_FILES['other_images']['name'][$key];
-
-move_uploaded_file(
-
-$tmp,
-
-"../app/uploads/products/".$file
-
+$otherImageFiles = handleCroppedOrRawMultiUpload(
+    'cropped_other_images',
+    'other_images',
+    "../app/uploads/products",
+    ['jpg','jpeg','png','webp']
 );
 
-$imgs[]=
-"uploads/products/".$file;
+if(count($otherImageFiles) > 0){
 
-}
+    $imgs = [];
 
-if(
-count($imgs)>0
-){
+    foreach($otherImageFiles as $f){
+        $imgs[] = resolveUploadedImagePath($f);
+    }
 
-$other_images=
-implode(
-",",
-$imgs
-);
-
+    $other_images = implode(",", $imgs);
 }
 
 }
@@ -343,6 +455,8 @@ saleprice=?,
 image=?,
 other_images=?,
 topdeals=?,
+bestseller=?,
+recommended=?,
 hasvarients=?,
 product_description=?,
 stock=?
@@ -368,6 +482,8 @@ $saleprice,
 $image,
 $other_images,
 $topdeals,
+$bestseller,
+$recommended,
 $hasvarients,
 $product_description,
 $stock,
@@ -519,8 +635,12 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
 
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
 <script
 src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -711,66 +831,7 @@ body{
     }
 }
 
-.crop-modal{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.75);
-    z-index:999;
-    align-items:center;
-    justify-content:center;
-}
-
-.crop-modal.active{
-    display:flex;
-}
-
-.crop-box{
-    background:#0c0e1c;
-    border-radius:20px;
-    padding:24px;
-    width:90%;
-    max-width:500px;
-}
-
-.crop-image-wrap{
-    max-height:400px;
-    margin-bottom:18px;
-}
-
-.crop-image-wrap img{
-    max-width:100%;
-    display:block;
-}
-
-.crop-actions{
-    display:flex;
-    gap:12px;
-    margin-top:16px;
-}
-
-.crop-actions button{
-    flex:1;
-    height:46px;
-    border:none;
-    border-radius:12px;
-    cursor:pointer;
-    font-size:14px;
-    font-weight:600;
-}
-
-.crop-use-btn{
-    background:linear-gradient(135deg,#06b6d4,#7c3aed);
-    color:#fff;
-}
-
-.crop-skip-btn{
-    background:#1e293b;
-    color:#cbd5e1;
-}
+/* Crop modal styles now in ../assets/css/image-crop.css */
 
 </style>
 
@@ -1012,6 +1073,100 @@ Yes
 
 </div>
 
+<!-- BEST SELLER -->
+
+<div class="input-box">
+
+<label>
+Best Seller
+</label>
+
+<select
+name="bestseller">
+
+<option
+
+value="no"
+
+<?php
+if($product['bestseller']
+== "no")
+echo 'selected';
+?>
+
+>
+
+No
+
+</option>
+
+<option
+
+value="yes"
+
+<?php
+if($product['bestseller']
+== "yes")
+echo 'selected';
+?>
+
+>
+
+Yes
+
+</option>
+
+</select>
+
+</div>
+
+<!-- RECOMMENDED -->
+
+<div class="input-box">
+
+<label>
+Recommended
+</label>
+
+<select
+name="recommended">
+
+<option
+
+value="no"
+
+<?php
+if($product['recommended']
+== "no")
+echo 'selected';
+?>
+
+>
+
+No
+
+</option>
+
+<option
+
+value="yes"
+
+<?php
+if($product['recommended']
+== "yes")
+echo 'selected';
+?>
+
+>
+
+Yes
+
+</option>
+
+</select>
+
+</div>
+
 <!-- VARIANTS -->
 
 <div class="input-box">
@@ -1073,13 +1228,13 @@ type="file"
 name="image"
 id="mainImageInput"
 accept="image/*"
-onchange="openCropModal(this)">
+onchange="ImageCrop.open(this,'croppedImageData')">
 
 <input type="hidden" name="cropped_image_data" id="croppedImageData">
 
 <img
 
-src="../app/<?php echo $product['image']; ?>"
+src="<?php echo resolveProductImageSrc($product['image']); ?>"
 
 class="preview">
 
@@ -1099,6 +1254,8 @@ name="other_images[]"
 id="otherImagesInput"
 onchange="validateOtherImages(this)"
 multiple>
+
+<input type="hidden" name="cropped_other_images" id="croppedOtherImagesData">
 
 </div>
 
@@ -1295,8 +1452,8 @@ Update Product
         </div>
 
         <div class="crop-actions">
-            <button type="button" class="crop-skip-btn" onclick="skipCrop()">Skip Crop</button>
-            <button type="button" class="crop-use-btn" onclick="applyCrop()">Crop &amp; Use</button>
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
         </div>
 
     </div>
@@ -1305,69 +1462,6 @@ Update Product
 
 <script>
 
-let cropperInstance = null;
-
-function openCropModal(input){
-
-    if(!input.files || !input.files[0]){
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function(e){
-
-        const img = document.getElementById('cropperImage');
-        img.src = e.target.result;
-
-        document.getElementById('cropModal').classList.add('active');
-
-        if(cropperInstance){
-            cropperInstance.destroy();
-        }
-
-        cropperInstance = new Cropper(img, {
-            aspectRatio: 1,
-            viewMode: 1,
-            autoCropArea: 1
-        });
-    };
-
-    reader.readAsDataURL(input.files[0]);
-}
-
-function applyCrop(){
-
-    if(!cropperInstance){
-        return;
-    }
-
-    const canvas = cropperInstance.getCroppedCanvas({
-        width: 800,
-        height: 800
-    });
-
-    document.getElementById('croppedImageData').value =
-        canvas.toDataURL('image/jpeg', 0.9);
-
-    closeCropModal();
-}
-
-function skipCrop(){
-    document.getElementById('croppedImageData').value = '';
-    closeCropModal();
-}
-
-function closeCropModal(){
-
-    document.getElementById('cropModal').classList.remove('active');
-
-    if(cropperInstance){
-        cropperInstance.destroy();
-        cropperInstance = null;
-    }
-}
-
 function validateOtherImages(input){
 
     if(input.files.length > 3){
@@ -1375,7 +1469,10 @@ function validateOtherImages(input){
         alert("You can upload a maximum of 3 additional images (4 total including the main image).");
 
         input.value = "";
+        return;
     }
+
+    ImageCrop.openMulti(input, 'croppedOtherImagesData');
 }
 
 document

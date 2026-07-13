@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN */
 
@@ -129,6 +130,12 @@ if(isset($_POST['update_product'])){
     $topdeals =
     $_POST['topdeals'];
 
+    $bestseller =
+    $_POST['bestseller'] ?? 'no';
+
+    $recommended =
+    $_POST['recommended'] ?? 'no';
+
     $hasvarients =
     $_POST['hasvarients'];
 
@@ -140,22 +147,23 @@ if(isset($_POST['update_product'])){
 
     /* MAIN IMAGE */
 
-    if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $file =
-        time().'_'.
-        $_FILES['image']['name'];
+    $mainImageFile = handleCroppedOrRawUpload(
+        'cropped_image_data',
+        'image',
+        "../app/uploads/products",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($uploadError != ""){
 
-            $_FILES['image']['tmp_name'],
+        $error = $uploadError;
 
-            "../app/uploads/products/".$file
-        );
+    }else if($mainImageFile){
 
-        $image =
-        "uploads/products/".$file;
+        $image = resolveUploadedImagePath($mainImageFile);
     }
 
     /* OTHER IMAGES (max 3 - 4 total with main image) */
@@ -177,42 +185,24 @@ if(isset($_POST['update_product'])){
         }
     }
 
-    if(empty($error) && isset($_FILES['other_images'])){
+    if(empty($error)){
 
-        $imgs = [];
+        $otherImageFiles = handleCroppedOrRawMultiUpload(
+            'cropped_other_images',
+            'other_images',
+            "../app/uploads/products",
+            ['jpg','jpeg','png','webp']
+        );
 
-        foreach(
+        if(count($otherImageFiles) > 0){
 
-            $_FILES['other_images']['tmp_name']
-            as $key => $tmp
+            $imgs = [];
 
-        ){
-
-            if($tmp == ""){
-                continue;
+            foreach($otherImageFiles as $f){
+                $imgs[] = resolveUploadedImagePath($f);
             }
 
-            $file =
-            time().
-            rand(1000,9999).
-            "_".
-            $_FILES['other_images']['name'][$key];
-
-            move_uploaded_file(
-
-                $tmp,
-
-                "../app/uploads/products/".$file
-            );
-
-            $imgs[] =
-            "uploads/products/".$file;
-        }
-
-        if(count($imgs) > 0){
-
-            $other_images =
-            implode(",", $imgs);
+            $other_images = implode(",", $imgs);
         }
     }
 
@@ -236,6 +226,8 @@ if(isset($_POST['update_product'])){
         image=?,
         other_images=?,
         topdeals=?,
+        bestseller=?,
+        recommended=?,
         hasvarients=?,
         product_description=?,
         stock=?
@@ -255,6 +247,8 @@ if(isset($_POST['update_product'])){
         $image,
         $other_images,
         $topdeals,
+        $bestseller,
+        $recommended,
         $hasvarients,
         $product_description,
         $stock,
@@ -380,6 +374,16 @@ Edit Product
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -844,6 +848,100 @@ Yes
 
 </div>
 
+<!-- BEST SELLER -->
+
+<div class="input-box">
+
+<label>
+Best Seller
+</label>
+
+<select
+name="bestseller">
+
+<option
+
+value="no"
+
+<?php
+if($product['bestseller']
+== "no")
+echo 'selected';
+?>
+
+>
+
+No
+
+</option>
+
+<option
+
+value="yes"
+
+<?php
+if($product['bestseller']
+== "yes")
+echo 'selected';
+?>
+
+>
+
+Yes
+
+</option>
+
+</select>
+
+</div>
+
+<!-- RECOMMENDED -->
+
+<div class="input-box">
+
+<label>
+Recommended
+</label>
+
+<select
+name="recommended">
+
+<option
+
+value="no"
+
+<?php
+if($product['recommended']
+== "no")
+echo 'selected';
+?>
+
+>
+
+No
+
+</option>
+
+<option
+
+value="yes"
+
+<?php
+if($product['recommended']
+== "yes")
+echo 'selected';
+?>
+
+>
+
+Yes
+
+</option>
+
+</select>
+
+</div>
+
 <!-- VARIANTS -->
 
 <div class="input-box">
@@ -897,16 +995,21 @@ Yes
 <div class="input-box">
 
 <label>
-Main Image
+Main Image (square crop recommended)
 </label>
 
 <input
 type="file"
-name="image">
+name="image"
+id="mainImageInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedImageData')">
+
+<input type="hidden" name="cropped_image_data" id="croppedImageData">
 
 <img
 
-src="../app/<?php echo $product['image']; ?>"
+src="<?php echo resolveProductImageSrc($product['image']); ?>"
 
 class="preview">
 
@@ -926,6 +1029,8 @@ name="other_images[]"
 id="otherImagesInput"
 onchange="validateOtherImages(this)"
 multiple>
+
+<input type="hidden" name="cropped_other_images" id="croppedOtherImagesData">
 
 </div>
 
@@ -1112,6 +1217,24 @@ Update Product
 
 </div>
 
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
+    </div>
+
+</div>
+
 <script>
 
 function validateOtherImages(input){
@@ -1121,7 +1244,10 @@ function validateOtherImages(input){
         alert("You can upload a maximum of 3 additional images (4 total including the main image).");
 
         input.value = "";
+        return;
     }
+
+    ImageCrop.openMulti(input, 'croppedOtherImagesData');
 }
 
 document

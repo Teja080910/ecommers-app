@@ -458,9 +458,7 @@ class _CartPageState
 
                   child:
                   Image.network(
-                    AppConstants
-                        .imageUrl +
-                        item["image"],
+                    AppConstants.resolveImage(item["image"]),
 
                     fit:
                     BoxFit.contain,
@@ -513,7 +511,7 @@ class _CartPageState
                             onTap:
                                 () async {
 
-                              await ApiService
+                              final res = await ApiService
                                   .removeCartItem(
                                 int.parse(
                                   item["id"]
@@ -521,7 +519,25 @@ class _CartPageState
                                 ),
                               );
 
-                              loadCart();
+                              await loadCart();
+
+                              if (!mounted) {
+                                return;
+                              }
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: res["status"] == true
+                                      ? const Color(0xFF1F1F1F)
+                                      : Colors.red,
+                                  content: Text(
+                                    res["status"] == true
+                                        ? "Item removed from cart"
+                                        : "Couldn't remove item. Please try again.",
+                                  ),
+                                ),
+                              );
                             },
 
                             child:

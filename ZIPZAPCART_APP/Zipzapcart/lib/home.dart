@@ -22,7 +22,6 @@ import 'view_product.dart';
 import 'search.dart';
 import 'topdeals.dart';
 import 'translator_service.dart';
-import 'wallet.dart';
 import 'widgets/shimmer_card.dart';
 import 'wishlist.dart';
 class HomePage extends StatefulWidget {
@@ -55,7 +54,6 @@ class _HomePageState extends State<HomePage> {
   int cartCount = 0;
   Map? deliveryAddress;
   String userName = "";
-  double walletBalance = 0;
 
   final Set<String> wishlistedIds = {};
 
@@ -63,6 +61,8 @@ class _HomePageState extends State<HomePage> {
   List portraitBanners = [];
   List categories = [];
   List topDeals = [];
+  List bestSellers = [];
+  List recommended = [];
   List homeCategories = [];
   List wishlistProducts = [];
 
@@ -393,53 +393,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 🔥 WALLET PILL (dynamic balance, tap opens Wallet / Login)
-  Widget _walletPill() {
-
-    return GestureDetector(
-      onTap: () {
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => userId == 0
-                ? const LoginPage()
-                : const WalletPage(),
-          ),
-        );
-      },
-
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-
-        decoration: BoxDecoration(
-          color: primaryColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(20),
-        ),
-
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.account_balance_wallet_rounded,
-              size: 15,
-              color: primaryColor,
-            ),
-            const SizedBox(width: 6),
-            t(
-              AppConstants.formatPrice(walletBalance),
-              style: GoogleFonts.poppins(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: primaryColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _drawerItem({
     required IconData icon,
@@ -614,21 +567,6 @@ class _HomePageState extends State<HomePage> {
             ),
 
             _drawerItem(
-              icon: Icons.account_balance_wallet_outlined,
-              title: "My Wallet",
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        userId == 0 ? const LoginPage() : const WalletPage(),
-                  ),
-                );
-              },
-            ),
-
-            _drawerItem(
               icon: Icons.notifications_none_rounded,
               title: "Notifications",
               onTap: () {
@@ -753,14 +691,18 @@ class _HomePageState extends State<HomePage> {
     topDeals =
     await ApiService.getTopDeals();
 
+    bestSellers =
+    await ApiService.getBestSellers();
+
+    recommended =
+    await ApiService.getRecommended();
+
     homeCategories =
     await ApiService.getHomeCategoryProducts();
 
     await loadDeliveryAddress();
 
     await loadCartCount();
-
-    await loadWallet();
 
     await loadWishlist();
 
@@ -813,20 +755,6 @@ class _HomePageState extends State<HomePage> {
       ..addAll(
         wishlistProducts.map((e) => e["id"].toString()),
       );
-  }
-
-  Future<void> loadWallet() async {
-
-    if (userId == 0) {
-      return;
-    }
-
-    final data = await ApiService.getWallet();
-
-    if (data["status"] == true) {
-      walletBalance =
-          double.tryParse(data["wallet_balance"].toString()) ?? 0;
-    }
   }
 
   Future<void> loadCartCount() async {
@@ -928,8 +856,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(20),
 
               child: Image.network(
-                AppConstants.imageUrl +
-                    (portraitBanners[i]["image"] ?? ""),
+                AppConstants.resolveImage(portraitBanners[i]["image"]),
                 width: _portraitCardWidth,
                 height: _heroSectionHeight,
                 fit: BoxFit.cover,
@@ -981,7 +908,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(18),
 
               child: Image.network(
-                AppConstants.imageUrl + (banners[i]["image"] ?? ""),
+                AppConstants.resolveImage(banners[i]["image"]),
                 width: _landscapeCardWidth,
                 height: _landscapeCardHeight,
                 fit: BoxFit.cover,
@@ -1063,7 +990,7 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   child: Image.network(
-                    AppConstants.imageUrl + (item["image"] ?? ""),
+                    AppConstants.resolveImage(item["image"]),
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -1311,8 +1238,7 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   child: Image.network(
-                    AppConstants.imageUrl +
-                        item["image"],
+                    AppConstants.resolveImage(item["image"]),
 
                     fit: BoxFit.contain,
                   ),
@@ -1808,10 +1734,38 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    if (userId != 0) ...[
-                      _walletPill(),
-                      const SizedBox(width: 10),
-                    ],
+                    GestureDetector(
+
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationPage(),
+                          ),
+                        );
+                      },
+
+                      child: Container(
+                        height: 44,
+                        width: 44,
+
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F7F7),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFF0F0F0),
+                          ),
+                        ),
+
+                        child: const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
 
                     GestureDetector(
 
@@ -1892,69 +1846,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // 🔥 SELECT LOCATION
-              Padding(
-                padding:
-                const EdgeInsets.fromLTRB(18, 0, 18, 12),
-
-                child: GestureDetector(
-
-                  onTap: openLocationPicker,
-
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFF0F0F0)),
-                    ),
-
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-
-                        Icon(
-                          Icons.location_on,
-                          size: 15,
-                          color: primaryColor,
-                        ),
-
-                        const SizedBox(width: 6),
-
-                        Flexible(
-                          child: t(
-                            deliveryAddress != null
-                                ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
-                                : "Select Location",
-
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 4),
-
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: Colors.black54,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
+              // 🔥 SEARCH BAR
               Padding(
                 padding:
                 const EdgeInsets.symmetric(
@@ -2052,6 +1944,71 @@ class _HomePageState extends State<HomePage> {
                   ),
               ),
 
+              const SizedBox(height: 12),
+
+              // 🔥 SELECT LOCATION
+              Padding(
+                padding:
+                const EdgeInsets.fromLTRB(18, 0, 18, 12),
+
+                child: GestureDetector(
+
+                  onTap: openLocationPicker,
+
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF0F0F0)),
+                    ),
+
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+
+                        Icon(
+                          Icons.location_on,
+                          size: 15,
+                          color: primaryColor,
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Flexible(
+                          child: t(
+                            deliveryAddress != null
+                                ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
+                                : "Select Location",
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 4),
+
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 20),
 
               sectionHeader(
@@ -2142,10 +2099,7 @@ class _HomePageState extends State<HomePage> {
 
                               child:
                               Image.network(
-                                AppConstants
-                                    .imageUrl +
-                                    item[
-                                    "image"],
+                                AppConstants.resolveImage(item["image"]),
 
                                 fit:
                                 BoxFit.contain,
@@ -2240,6 +2194,74 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
+
+              // 🔥 BEST SELLERS
+              if (bestSellers.isNotEmpty) ...[
+
+                const SizedBox(height: 26),
+
+                sectionHeader(
+                  "Best Sellers",
+                  onViewAll: null,
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 122,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+
+                    itemCount: bestSellers.length,
+
+                    itemBuilder: (_, index) {
+
+                      return topDealLandscapeCard(
+                        bestSellers[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // 🔥 RECOMMENDED FOR YOU
+              if (recommended.isNotEmpty) ...[
+
+                const SizedBox(height: 26),
+
+                sectionHeader(
+                  "Recommended For You",
+                  onViewAll: null,
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 122,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+
+                    itemCount: recommended.length,
+
+                    itemBuilder: (_, index) {
+
+                      return topDealLandscapeCard(
+                        recommended[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
 
               // 🔥 FROM YOUR WISHLIST
               if (wishlistProducts.isNotEmpty) ...[

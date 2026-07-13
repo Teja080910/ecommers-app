@@ -5,16 +5,40 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static Future<Map<String, dynamic>> loginOrRegister(
-      Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> sendEmailOtp(String email) async {
 
     try {
 
       final response = await http.post(
         Uri.parse(AppConstants.baseUrl),
         body: {
-          "action": "login_register",
-          "phone": data["phone"] ?? "",
+          "action": "send_email_otp",
+          "email": email,
+        },
+      );
+
+      return json.decode(response.body);
+
+    } catch (e) {
+
+      return {
+        "status": false,
+        "message": "API FAILED"
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyEmailOtp(
+      String email, String otp) async {
+
+    try {
+
+      final response = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "verify_email_otp",
+          "email": email,
+          "otp": otp,
         },
       );
 
@@ -228,7 +252,9 @@ class ApiService {
 
   }
 
-  static Future<bool> updateProfile(int userId, String name) async {
+  static Future<Map<String, dynamic>> updateProfile(
+      int userId, String name,
+      {String? phone, String? username, String? gender}) async {
     try {
       final auth = await _authParams();
 
@@ -238,13 +264,15 @@ class ApiService {
           "action": "update_profile",
           ...auth,
           "name": name,
+          if (phone != null) "phone": phone,
+          if (username != null) "username": username,
+          if (gender != null) "gender": gender,
         },
       );
 
-      final data = json.decode(res.body);
-      return data["status"] == true;
+      return json.decode(res.body);
     } catch (e) {
-      return false;
+      return {"status": false, "message": "API FAILED"};
     }
   }
   // 🔥 ADD IN api_service.dart
@@ -350,6 +378,48 @@ class ApiService {
         Uri.parse(AppConstants.baseUrl),
         body: {
           "action": "get_top_deals",
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["products"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
+  static Future<List> getBestSellers() async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_best_sellers",
+        },
+      );
+
+      final data = json.decode(res.body);
+
+      return data["products"] ?? [];
+
+    } catch (e) {
+
+      return [];
+    }
+  }
+
+  static Future<List> getRecommended() async {
+
+    try {
+
+      final res = await http.post(
+        Uri.parse(AppConstants.baseUrl),
+        body: {
+          "action": "get_recommended",
         },
       );
 
@@ -755,8 +825,11 @@ class ApiService {
       double discount,
       double subtotal,
       double total,
-      String paymentMethod,
-      ) async {
+      String paymentMethod, {
+        int? buyNowProductId,
+        int? buyNowVariantId,
+        int buyNowQuantity = 1,
+      }) async {
 
     try {
 
@@ -781,6 +854,15 @@ class ApiService {
 
           "payment_method":
           paymentMethod,
+
+          if (buyNowProductId != null)
+            "buy_now_product_id": buyNowProductId.toString(),
+
+          if (buyNowProductId != null)
+            "buy_now_variant_id": (buyNowVariantId ?? 0).toString(),
+
+          if (buyNowProductId != null)
+            "buy_now_quantity": buyNowQuantity.toString(),
         },
       );
 

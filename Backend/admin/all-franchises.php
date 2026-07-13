@@ -782,7 +782,7 @@ body{
 
                 <?php
 
-                $pins = explode(",",$f['service_pincodes']);
+                $pins = !empty($f['service_pincodes']) ? explode(",",$f['service_pincodes']) : [];
 
                 foreach($pins as $pin){
 

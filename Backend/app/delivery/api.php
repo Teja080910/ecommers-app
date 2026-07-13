@@ -18,6 +18,7 @@ MYSQLI_REPORT_STRICT
 header("Content-Type:application/json");
 
 require_once "db.php";
+require_once __DIR__ . "/../fcm_helper.php";
 
 $action = $_POST["action"] ?? "";
 
@@ -403,6 +404,17 @@ WHERE id='$order_id'
 
 );
 
+/* IN-APP NOTIFICATION (independent of whether push delivery succeeds) */
+
+$deliveredNotifText =
+"Your order #" . $order["order_no"] . " has been delivered successfully";
+
+$deliveredNotifStmt = mysqli_prepare($conn,
+    "INSERT INTO user_notifications (user_id, notification_text) VALUES (?, ?)");
+
+mysqli_stmt_bind_param($deliveredNotifStmt, "is", $order["user_id"], $deliveredNotifText);
+mysqli_stmt_execute($deliveredNotifStmt);
+
 /* SEND FCM */
 
 $token=
@@ -413,19 +425,10 @@ if(
 !empty($token)
 ){
 
-$access=
-trim(
-
-file_get_contents(
-
-"https://zipzapcart.com/app/addaccess_token.php"
-
-)
-
-);
+$access= getFcmAccessToken();
 
 $project=
-"ftnews-79e5c";
+"zipzapcart-app";
 
 $payload=[
 

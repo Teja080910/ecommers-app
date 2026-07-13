@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* LOGIN CHECK */
 
@@ -114,8 +115,17 @@ if(isset($_POST['update_cast'])){
 
     /* NEW IMAGE */
 
-    if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
+    $uploadError = "";
+
+    $imageFile = handleCroppedOrRawUpload(
+        'cropped_image',
+        'image',
+        "../app/uploads/cast",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
+
+    if($imageFile){
 
         if($old['imagelink'] != ""){
 
@@ -129,19 +139,8 @@ if(isset($_POST['update_cast'])){
             }
         }
 
-        $file_name =
-        time().'_'.
-        $_FILES['image']['name'];
-
-        move_uploaded_file(
-
-            $_FILES['image']['tmp_name'],
-
-            "../app/uploads/cast/".$file_name
-        );
-
         $imagelink =
-        "uploads/cast/".$file_name;
+        "uploads/cast/".$imageFile;
     }
 
     /* UPDATE */
@@ -206,6 +205,14 @@ All Cast
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 rel="stylesheet">
@@ -665,7 +672,12 @@ id="editModal">
 
                 <input
                 type="file"
-                name="image">
+                name="image"
+                id="editImageInput"
+                accept="image/*"
+                onchange="ImageCrop.open(this,'croppedImageData')">
+
+                <input type="hidden" name="cropped_image" id="croppedImageData">
 
                 <div class="preview">
 
@@ -701,6 +713,24 @@ id="editModal">
             </div>
 
         </form>
+
+    </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
 
     </div>
 

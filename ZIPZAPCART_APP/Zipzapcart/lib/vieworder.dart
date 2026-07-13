@@ -843,19 +843,8 @@ class _ViewOrderPageState
             ),
 // 🔥 DELIVERY OTP
             // 🔥 DELIVERY OTP PROFESSIONAL
-
-            if(
-            order["delivery_otp"] != null &&
-                order["delivery_otp"]
-                    .toString()
-                    .isNotEmpty &&
-                order["order_status"]
-                    .toString()
-                    .toLowerCase()
-                    .trim()
-                    !=
-                    "delivered"
-            )
+            // Hidden from the customer — this OTP is for the delivery partner only.
+            if(false)
 
               Column(
 
@@ -1564,10 +1553,7 @@ class _ViewOrderPageState
 
                                 child:
                                 Image.network(
-                                  AppConstants
-                                      .imageUrl +
-                                      item[
-                                      "image"],
+                                  AppConstants.resolveImage(item["image"]),
 
                                   fit:
                                   BoxFit.contain,

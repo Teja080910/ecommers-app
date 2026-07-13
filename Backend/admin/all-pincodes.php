@@ -127,10 +127,12 @@ body{
 
     grid-template-columns:
 
-    120px
-    1.5fr
-    1.5fr
-    160px;
+    90px
+    1fr
+    1fr
+    1fr
+    110px
+    140px;
 
     gap:14px;
 
@@ -149,10 +151,12 @@ body{
 
     grid-template-columns:
 
-    120px
-    1.5fr
-    1.5fr
-    160px;
+    90px
+    1fr
+    1fr
+    1fr
+    110px
+    140px;
 
     gap:14px;
 
@@ -188,6 +192,24 @@ body{
     font-size:15px;
     font-weight:700;
     color:#4ade80;
+}
+
+.express-badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:30px;
+    font-size:11px;
+    font-weight:700;
+}
+
+.express-badge.yes{
+    background:#16a34a20;
+    color:#4ade80;
+}
+
+.express-badge.no{
+    background:#1e293b;
+    color:#64748b;
 }
 
 /* ACTIONS */
@@ -313,7 +335,15 @@ body{
             </div>
 
             <div>
+                City
+            </div>
+
+            <div>
                 Delivery Charge
+            </div>
+
+            <div>
+                Express
             </div>
 
             <div>
@@ -344,11 +374,29 @@ body{
 
             </div>
 
+            <!-- CITY -->
+
+            <div class="pincode-text">
+
+                <?php echo htmlspecialchars($pin['city'] ?? '') ?: '&mdash;'; ?>
+
+            </div>
+
             <!-- CHARGE -->
 
             <div class="charge">
 
                 ₹<?php echo $pin['delivery_charge']; ?>
+
+            </div>
+
+            <!-- EXPRESS -->
+
+            <div>
+
+                <span class="express-badge <?php echo !empty($pin['is_express']) ? 'yes' : 'no'; ?>">
+                    <?php echo !empty($pin['is_express']) ? '24-Hour' : 'Standard'; ?>
+                </span>
 
             </div>
 

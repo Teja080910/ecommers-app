@@ -406,8 +406,7 @@ class _ProductListPageState
               ),
 
               child: Image.network(
-                AppConstants.imageUrl +
-                    item["image"],
+                AppConstants.resolveImage(item["image"]),
 
                 fit: BoxFit.contain,
               ),

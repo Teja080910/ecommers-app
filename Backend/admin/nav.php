@@ -276,11 +276,13 @@ body{
 
 <?php
 
-$product_pages = ['add-product.php','all-products.php','categories.php'];
+$product_pages = ['add-product.php','all-products.php','categories.php','product-requests.php'];
 
 $franchise_pages = ['add-franchise.php','all-franchises.php','franchise-payouts.php'];
 
 $delivery_pages = ['add-delivery-boy.php','all-delivery-boys.php','delivery-boy-payouts.php'];
+
+$post_pages = ['addpost.php','allpost.php'];
 
 $order_pages = ['veg-orders.php','food-orders.php','order-history.php','cancelled-orders.php'];
 
@@ -290,7 +292,7 @@ $user_pages = ['all-users.php','offline-customers.php','saved-address.php'];
 
 $area_pages = ['add-pincode.php','all-pincodes.php','requested_pincodes.php'];
 
-$payment_pages = ['razorpay-settings.php'];
+$payment_pages = ['razorpay-settings.php','smtp-settings.php'];
 
 $settings_pages = ['app-settings.php','change-password.php'];
 
@@ -307,6 +309,21 @@ $settings_pages = ['app-settings.php','change-password.php'];
             <div class="menu-left">
                 <i class="fa-solid fa-house"></i>
                 Dashboard
+            </div>
+
+        </a>
+
+    </li>
+
+    <!-- Notifications -->
+
+    <li class="<?= ($current_page == 'send-notification.php') ? 'active' : '' ?>">
+
+        <a href="send-notification.php">
+
+            <div class="menu-left">
+                <i class="fa-solid fa-bullhorn"></i>
+                Send Notification
             </div>
 
         </a>
@@ -336,6 +353,8 @@ $settings_pages = ['app-settings.php','change-password.php'];
 
             <li><a class="<?= isActive('categories.php') ?>" href="categories.php">Categories</a></li>
 
+            <li><a class="<?= isActive('product-requests.php') ?>" href="product-requests.php">Product Requests</a></li>
+
         </ul>
 
     </li>
@@ -362,6 +381,31 @@ $settings_pages = ['app-settings.php','change-password.php'];
             <li><a class="<?= isActive('all-franchises.php') ?>" href="all-franchises.php">All Sellers</a></li>
 
             <li><a class="<?= isActive('franchise-payouts.php') ?>" href="franchise-payouts.php">Sellers Payouts</a></li>
+
+        </ul>
+
+    </li>
+
+    <!-- Posts -->
+
+    <li class="<?= in_array($current_page,$post_pages) ? 'active' : '' ?>">
+
+        <a href="javascript:void(0)" onclick="toggleSubmenu('postMenu')">
+
+            <div class="menu-left">
+                <i class="fa-solid fa-image"></i>
+                Posts
+            </div>
+
+            <i class="fa-solid fa-angle-down"></i>
+
+        </a>
+
+        <ul class="submenu <?= in_array($current_page,$post_pages) ? 'show' : '' ?>" id="postMenu">
+
+            <li><a class="<?= isActive('addpost.php') ?>" href="addpost.php">Add Post</a></li>
+
+            <li><a class="<?= isActive('allpost.php') ?>" href="allpost.php">All Posts</a></li>
 
         </ul>
 
@@ -495,6 +539,8 @@ $settings_pages = ['app-settings.php','change-password.php'];
         <ul class="submenu <?= in_array($current_page,$payment_pages) ? 'show' : '' ?>" id="paymentMenu">
 
             <li><a class="<?= isActive('razorpay-settings.php') ?>" href="razorpay-settings.php">Razorpay Keys</a></li>
+
+            <li><a class="<?= isActive('smtp-settings.php') ?>" href="smtp-settings.php">SMTP (Email) Settings</a></li>
 
         </ul>
 

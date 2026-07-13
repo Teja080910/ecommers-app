@@ -1,12 +1,4 @@
 <?php
-// Report all PHP errors
-error_reporting(E_ALL);
-
-// Display errors on the screen
-ini_set('display_errors', '1');
-
-// (Optional) Display startup errors
-ini_set('display_startup_errors', '1');
 session_start();
 
 require_once 'db.php';
@@ -114,15 +106,15 @@ $fstmt->execute([$seller_id]);
 
 $franchise = $fstmt->fetch();
 
-/* Total Products */
+/* Total Products (mapping-backed shared listings + own legacy variant products) */
 
 $stmt = $pdo->prepare("
-    SELECT COUNT(*) 
-    FROM products 
-    WHERE seller_id=?
+    SELECT
+        (SELECT COUNT(*) FROM seller_product_mapping WHERE seller_id=?) +
+        (SELECT COUNT(*) FROM products WHERE seller_id=? AND hasvarients='yes')
 ");
 
-$stmt->execute([$seller_id]);
+$stmt->execute([$seller_id, $seller_id]);
 
 $totalProducts = $stmt->fetchColumn();
 
@@ -153,12 +145,8 @@ SUM(order_items.total),
 
 FROM order_items
 
-INNER JOIN products
-ON products.id=
-order_items.product_id
-
 WHERE
-products.seller_id=?
+order_items.seller_id=?
 
 ");
 
@@ -206,12 +194,8 @@ order_items.order_id
 
 FROM order_items
 
-INNER JOIN products
-ON products.id=
-order_items.product_id
-
 WHERE
-products.seller_id=?
+order_items.seller_id=?
 
 ");
 

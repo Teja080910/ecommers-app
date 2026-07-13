@@ -57,6 +57,11 @@ class _ViewProductPageState
 
   bool deliverable = false;
   String? deliveryEstimate;
+  bool isExpressDelivery = false;
+  String? deliveryEstimateText;
+
+  String? appliedCouponCode;
+  double couponDiscount = 0;
 
   final TextEditingController reviewController =
   TextEditingController();
@@ -233,6 +238,8 @@ class _ViewProductPageState
       setState(() {
         deliverable = result["deliverable"] == true;
         deliveryEstimate = result["delivery_estimate"]?.toString();
+        isExpressDelivery = result["is_express"] == true;
+        deliveryEstimateText = result["estimate_text"]?.toString();
       });
     }
   }
@@ -268,9 +275,42 @@ class _ViewProductPageState
     return false;
   }
 
-  Future<void> addToCart({
-    bool buyNow = false,
-  }) async {
+  int get selectedVariantId => variants.isEmpty
+      ? 0
+      : int.parse(
+    variants[selectedVariant]["id"]
+        .toString(),
+  );
+
+  // 🔥 BUY NOW — checkout only this one product, without touching the
+  // user's actual cart (does NOT call add_to_cart at all).
+  void buyNow() {
+
+    if (!requireLogin()) {
+      return;
+    }
+
+    final buyNowItem = {
+      "product_id": widget.productId,
+      "variant_id": selectedVariantId,
+      "name": product["name"] ?? "",
+      "image": product["image"] ?? "",
+      "saleprice": selectedSaleRate.toString(),
+      "quantity": 1,
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutPage(
+          buyNowItem: buyNowItem,
+          couponCode: appliedCouponCode,
+        ),
+      ),
+    );
+  }
+
+  Future<void> addToCart() async {
 
     if (!requireLogin()) {
       return;
@@ -279,39 +319,44 @@ class _ViewProductPageState
     var data = await ApiService.addToCart(
       userId,
       widget.productId,
-
-      variants.isEmpty
-          ? 0
-          : int.parse(
-        variants[selectedVariant]["id"]
-            .toString(),
-      ),
+      selectedVariantId,
     );
 
     if (data["status"] == true) {
 
-
-
-      if (buyNow) {
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-            const CheckoutPage(),
-          ),
-        );
-
-      } else {
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-            const CartPage(),
-          ),
-        );
+      if (!mounted) {
+        return;
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFF1F1F1F),
+          content: Text("Added to cart"),
+        ),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+          const CartPage(),
+        ),
+      );
+
+    } else if (mounted) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+          content: Text(
+            data["auth_error"] == true
+                ? "Session expired. Please log in again."
+                : "Couldn't add to cart. Please try again.",
+          ),
+        ),
+      );
     }
   }
 
@@ -377,20 +422,40 @@ class _ViewProductPageState
                   true
               ){
 
+                final added =
+                res["wishlist"] == true;
+
                 setState(() {
-
-                  isWishlist=
-
-                      res[
-                      "wishlist"
-                      ]
-
-                          ==
-
-                          true;
-
+                  isWishlist = added;
                 });
 
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: const Color(0xFF1F1F1F),
+                      content: Text(
+                        added
+                            ? "Added to wishlist"
+                            : "Removed from wishlist",
+                      ),
+                    ),
+                  );
+                }
+
+              } else if (mounted) {
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.red,
+                    content: Text(
+                      res["auth_error"] == true
+                          ? "Session expired. Please log in again."
+                          : "Couldn't update wishlist. Please try again.",
+                    ),
+                  ),
+                );
               }
 
             },
@@ -412,9 +477,8 @@ class _ViewProductPageState
               SharePlus.instance.share(
                 ShareParams(
                   text:
-                  "${product["name"] ?? "Check this product"} - "
-                  "${AppConstants.imageUrl}${product["image"] ?? ""}\n\n"
-                  "Get the app: ${AppConstants.imageUrl}",
+                  "${product["name"] ?? "Check this product"} on Zipzapcart!\n"
+                  "${AppConstants.imageUrl}product.php?id=${widget.productId}",
                 ),
               );
             },
@@ -481,9 +545,7 @@ class _ViewProductPageState
 
                         (){
 
-                      addToCart(
-                        buyNow:true,
-                      );
+                      buyNow();
 
                     },
 
@@ -629,10 +691,7 @@ class _ViewProductPageState
 
                             child:
                             Image.network(
-                              AppConstants
-                                  .imageUrl +
-                                  images[
-                                  index],
+                              AppConstants.resolveImage(images[index]),
 
                               fit:
                               BoxFit.contain,
@@ -904,7 +963,9 @@ class _ViewProductPageState
                         ),
 
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: isExpressDelivery
+                              ? Colors.green.shade50
+                              : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(30),
                         ),
 
@@ -912,20 +973,26 @@ class _ViewProductPageState
                           mainAxisSize: MainAxisSize.min,
                           children: [
 
-                            const Icon(
-                              Icons.local_shipping_outlined,
+                            Icon(
+                              isExpressDelivery
+                                  ? Icons.bolt
+                                  : Icons.local_shipping_outlined,
                               size: 16,
-                              color: Colors.black87,
+                              color: isExpressDelivery
+                                  ? Colors.green.shade700
+                                  : Colors.black87,
                             ),
 
                             const SizedBox(width: 8),
 
                             Text(
-                              "Delivery by $deliveryEstimate",
+                              deliveryEstimateText ?? "Delivery by $deliveryEstimate",
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color: isExpressDelivery
+                                    ? Colors.green.shade700
+                                    : Colors.black87,
                               ),
                             ),
                           ],
@@ -1157,14 +1224,52 @@ class _ViewProductPageState
                   // 🔥 EXCLUSIVE OFFERS
                   GestureDetector(
 
-                    onTap: () {
+                    onTap: () async {
 
-                      Navigator.push(
+                      final code = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const OffersPage(),
                         ),
                       );
+
+                      if (code == null || !mounted) {
+                        return;
+                      }
+
+                      // 🔥 preview the discount against this product's price
+                      // so selecting a coupon here actually shows something,
+                      // instead of just navigating and doing nothing.
+                      final data = await ApiService.applyCoupon(
+                        code.toString(),
+                        selectedSaleRate,
+                      );
+
+                      if (!mounted) {
+                        return;
+                      }
+
+                      if (data["status"] == true) {
+
+                        setState(() {
+                          appliedCouponCode = code.toString();
+                          couponDiscount = double.parse(
+                            data["discount"].toString(),
+                          );
+                        });
+
+                      } else {
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            content: Text(
+                              data["message"]?.toString() ??
+                                  "Coupon not applicable",
+                            ),
+                          ),
+                        );
+                      }
                     },
 
                     child: Container(
@@ -1224,13 +1329,17 @@ class _ViewProductPageState
                                 const SizedBox(height: 3),
 
                                 Text(
-                                  "Save more on every order",
+                                  appliedCouponCode != null
+                                      ? "$appliedCouponCode applied — you save ${AppConstants.formatPrice(couponDiscount)}"
+                                      : "Save more on every order",
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.grey.shade500,
+                                    color: appliedCouponCode != null
+                                        ? Colors.green.shade600
+                                        : Colors.grey.shade500,
                                   ),
                                 ),
                               ],
@@ -1583,8 +1692,7 @@ class _ViewProductPageState
                                       top: Radius.circular(18),
                                     ),
                                     child: Image.network(
-                                      AppConstants.imageUrl +
-                                          (item["image"] ?? ""),
+                                      AppConstants.resolveImage(item["image"]),
                                       height: 130,
                                       width: 150,
                                       fit: BoxFit.contain,

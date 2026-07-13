@@ -27,6 +27,12 @@ if(isset($_POST['save_settings'])){
     $razorpay_key = trim($_POST['razorpay_key']);
     $razorpay_secret = trim($_POST['razorpay_secret']);
 
+    /* Blank secret means "keep the existing one" once a value is already saved */
+
+    if(empty($razorpay_secret) && $settings){
+        $razorpay_secret = $settings['razorpay_secret'];
+    }
+
     if(empty($razorpay_key) || empty($razorpay_secret)){
 
         $error = "All Fields Required";
@@ -326,12 +332,12 @@ body{
                     Razorpay Secret Key
                 </label>
 
-                <input 
-                    type="text"
+                <input
+                    type="password"
                     name="razorpay_secret"
-                    placeholder="Enter Razorpay Secret"
-                    value="<?php echo htmlspecialchars($settings['razorpay_secret'] ?? ''); ?>"
-                    required
+                    placeholder="<?php echo !empty($settings['razorpay_secret']) ? 'Leave blank to keep existing secret' : 'Enter Razorpay Secret'; ?>"
+                    autocomplete="new-password"
+                    <?php echo empty($settings['razorpay_secret']) ? 'required' : ''; ?>
                 >
 
             </div>
