@@ -1,6 +1,6 @@
 class AppConstants {
-  static const String baseUrl = "https://berrybloomer.com/Backend/app/api.php";
-  static const String imageUrl = "https://berrybloomer.com/Backend/app/";
+  static const String baseUrl = "https://zipzapcart.com/Backend/app/api.php";
+  static const String imageUrl = "https://zipzapcart.com/Backend/app/";
 
   /// Newer uploads are stored on Cloudinary and come back as a full URL
   /// already; older ones are still a relative path served from the backend.
