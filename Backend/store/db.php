@@ -1,15 +1,16 @@
 <?php
 // db.php
 
-$host = "localhost";
-$dbname = "u272105386_zipzapcart";
-$username = "u272105386_zipzapcart";
-$password = "Heritage@3205";
+$host = getenv("DB_HOST") ?: "localhost";
+$dbname = getenv("DB_NAME") ?: "zipzapcart";
+$username = getenv("DB_USER") ?: "zipzapcart_user";
+$password = getenv("DB_PASS") ?: "YourStrongPassword";
+$port = getenv("DB_PORT") ?: 3306;
 
 try{
 
     $pdo = new PDO(
-        "mysql:host=$host;dbname=$dbname;charset=utf8mb4",
+        "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4",
         $username,
         $password
     );

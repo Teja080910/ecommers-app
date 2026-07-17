@@ -1,8 +1,88 @@
 <?php
 header("Content-Type: application/json");
 include("db.php");
+require_once __DIR__ . "/fcm_helper.php";
 
 $action = $_POST['action'] ?? '';
+
+/* ==============================
+   AUTH HELPER
+   Verifies that the caller actually owns the
+   user_id it's acting on, via the per-login
+   random token issued by login_register.
+================================ */
+function requireAuth($conn){
+
+    $user_id = intval($_POST['user_id'] ?? 0);
+    $token = $_POST['token'] ?? '';
+
+    if ($user_id <= 0 || empty($token)) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Unauthorized",
+            "auth_error" => true
+        ]);
+        exit;
+    }
+
+    $stmt = mysqli_prepare($conn,
+        "SELECT id FROM users WHERE id=? AND auth_token=?");
+
+    mysqli_stmt_bind_param($stmt, "is", $user_id, $token);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    if (mysqli_num_rows($result) !== 1) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Unauthorized",
+            "auth_error" => true
+        ]);
+        exit;
+    }
+
+    return $user_id;
+}
+
+/* ==============================
+   COUPON DISCOUNT HELPER
+   Single source of truth for coupon validation/discount math,
+   used by both apply_coupon (preview) and place_order (authoritative)
+   so a stale/tampered client-side discount can never be trusted.
+================================ */
+function calculateCouponDiscount($conn, $code, $amount){
+
+    if (empty($code)) {
+        return ["valid" => true, "discount" => 0, "message" => ""];
+    }
+
+    $stmt = mysqli_prepare($conn,
+        "SELECT * FROM coupons WHERE code=? AND status='active'");
+
+    mysqli_stmt_bind_param($stmt, "s", $code);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    if (mysqli_num_rows($result) == 0) {
+        return ["valid" => false, "discount" => 0, "message" => "Invalid Coupon"];
+    }
+
+    $coupon = mysqli_fetch_assoc($result);
+
+    if ($amount < $coupon['min_amount']) {
+        return ["valid" => false, "discount" => 0, "message" => "Minimum order not matched"];
+    }
+
+    if ($coupon['discount_type'] == "flat") {
+        $discount = floatval($coupon['discount_amount']);
+    } else {
+        $discount = ($amount * floatval($coupon['discount_amount'])) / 100;
+    }
+
+    return ["valid" => true, "discount" => $discount, "message" => ""];
+}
 
 /* ==============================
    LOGIN / REGISTER USER
@@ -20,19 +100,29 @@ if ($action == "login_register") {
         exit;
     }
 
-    $phone = mysqli_real_escape_string($conn, $phone);
-
     // 🔥 CHECK USER BY PHONE
-    $query = "SELECT * FROM users WHERE phone='$phone'";
-    $result = mysqli_query($conn, $query);
+    $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE phone=?");
+    mysqli_stmt_bind_param($stmt, "s", $phone);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    // 🔥 FRESH AUTH TOKEN ISSUED ON EVERY LOGIN
+    $auth_token = bin2hex(random_bytes(32));
 
     if (mysqli_num_rows($result) > 0) {
 
         $user = mysqli_fetch_assoc($result);
 
+        $update = mysqli_prepare($conn, "UPDATE users SET auth_token=? WHERE id=?");
+        mysqli_stmt_bind_param($update, "si", $auth_token, $user['id']);
+        mysqli_stmt_execute($update);
+
+        $user['auth_token'] = $auth_token;
+
         echo json_encode([
             "status" => true,
             "message" => "Login success",
+            "token" => $auth_token,
             "user" => $user
         ]);
 
@@ -44,8 +134,10 @@ if ($action == "login_register") {
             $random_number = rand(10000, 99999);
             $name = "zenvora_user_" . $random_number;
 
-            $check_name = mysqli_query($conn,
-                "SELECT id FROM users WHERE name='$name'");
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE name=?");
+            mysqli_stmt_bind_param($check_stmt, "s", $name);
+            mysqli_stmt_execute($check_stmt);
+            $check_name = mysqli_stmt_get_result($check_stmt);
 
         } while (mysqli_num_rows($check_name) > 0);
 
@@ -56,26 +148,28 @@ if ($action == "login_register") {
             $referral_code =
                 strtoupper(substr(md5(uniqid()), 0, 8));
 
-            $check_code = mysqli_query($conn,
-                "SELECT id FROM users
-                 WHERE referral_code='$referral_code'");
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE referral_code=?");
+            mysqli_stmt_bind_param($check_stmt, "s", $referral_code);
+            mysqli_stmt_execute($check_stmt);
+            $check_code = mysqli_stmt_get_result($check_stmt);
 
         } while (mysqli_num_rows($check_code) > 0);
 
 
         // 🔥 INSERT USER
-        $insert = "INSERT INTO users
-                   (name, phone, referral_code)
-                   VALUES
-                   ('$name', '$phone', '$referral_code')";
+        $insert = mysqli_prepare($conn,
+            "INSERT INTO users (name, phone, referral_code, auth_token, wallet_balance)
+             VALUES (?, ?, ?, ?, 0)");
 
-        mysqli_query($conn, $insert);
+        mysqli_stmt_bind_param($insert, "ssss", $name, $phone, $referral_code, $auth_token);
+        mysqli_stmt_execute($insert);
 
         $user_id = mysqli_insert_id($conn);
 
         echo json_encode([
             "status" => true,
             "message" => "User registered",
+            "token" => $auth_token,
             "user" => [
                 "id" => $user_id,
                 "name" => $name,
@@ -87,13 +181,191 @@ if ($action == "login_register") {
 
     exit;
 }
+/* ==============================
+   SEND EMAIL OTP
+================================ */
+if ($action == "send_email_otp") {
+
+    require_once __DIR__ . '/../includes/mailer.php';
+
+    $email = trim($_POST['email'] ?? '');
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Valid email required"
+        ]);
+        exit;
+    }
+
+    // Basic resend cooldown — block a new code within 60s of the last one
+    $cooldownStmt = mysqli_prepare($conn,
+        "SELECT created_at FROM email_otp_verifications WHERE email=? ORDER BY id DESC LIMIT 1");
+    mysqli_stmt_bind_param($cooldownStmt, "s", $email);
+    mysqli_stmt_execute($cooldownStmt);
+    $cooldownResult = mysqli_stmt_get_result($cooldownStmt);
+
+    if ($lastRow = mysqli_fetch_assoc($cooldownResult)) {
+
+        if (strtotime($lastRow['created_at']) > time() - 60) {
+
+            echo json_encode([
+                "status" => false,
+                "message" => "Please wait before requesting another code"
+            ]);
+            exit;
+        }
+    }
+
+    $otp_code = str_pad(strval(random_int(0, 999999)), 6, "0", STR_PAD_LEFT);
+    $expires_at = date("Y-m-d H:i:s", time() + 600); // 10 minutes
+
+    $insert = mysqli_prepare($conn,
+        "INSERT INTO email_otp_verifications (email, otp_code, expires_at) VALUES (?, ?, ?)");
+    mysqli_stmt_bind_param($insert, "sss", $email, $otp_code, $expires_at);
+    mysqli_stmt_execute($insert);
+
+    $sendResult = sendOtpEmail($conn, $email, $otp_code);
+
+    if ($sendResult !== true) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => $sendResult
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        "status" => true,
+        "message" => "Verification code sent"
+    ]);
+    exit;
+}
+/* ==============================
+   VERIFY EMAIL OTP + LOGIN/REGISTER
+================================ */
+if ($action == "verify_email_otp") {
+
+    $email = trim($_POST['email'] ?? '');
+    $otp = trim($_POST['otp'] ?? '');
+
+    if (empty($email) || empty($otp)) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Email and code required"
+        ]);
+        exit;
+    }
+
+    $otpStmt = mysqli_prepare($conn,
+        "SELECT * FROM email_otp_verifications
+         WHERE email=? AND otp_code=? AND verified=0 AND expires_at >= NOW()
+         ORDER BY id DESC LIMIT 1");
+    mysqli_stmt_bind_param($otpStmt, "ss", $email, $otp);
+    mysqli_stmt_execute($otpStmt);
+    $otpResult = mysqli_stmt_get_result($otpStmt);
+
+    if (mysqli_num_rows($otpResult) === 0) {
+
+        echo json_encode([
+            "status" => false,
+            "message" => "Invalid or expired code"
+        ]);
+        exit;
+    }
+
+    $otpRow = mysqli_fetch_assoc($otpResult);
+
+    $markVerified = mysqli_prepare($conn, "UPDATE email_otp_verifications SET verified=1 WHERE id=?");
+    mysqli_stmt_bind_param($markVerified, "i", $otpRow['id']);
+    mysqli_stmt_execute($markVerified);
+
+    // Same lookup-or-create logic as login_register, keyed by email instead of phone
+
+    $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE email=?");
+    mysqli_stmt_bind_param($stmt, "s", $email);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    $auth_token = bin2hex(random_bytes(32));
+
+    if (mysqli_num_rows($result) > 0) {
+
+        $user = mysqli_fetch_assoc($result);
+
+        $update = mysqli_prepare($conn, "UPDATE users SET auth_token=? WHERE id=?");
+        mysqli_stmt_bind_param($update, "si", $auth_token, $user['id']);
+        mysqli_stmt_execute($update);
+
+        $user['auth_token'] = $auth_token;
+
+        echo json_encode([
+            "status" => true,
+            "message" => "Login success",
+            "token" => $auth_token,
+            "user" => $user
+        ]);
+
+    } else {
+
+        do {
+
+            $random_number = rand(10000, 99999);
+            $name = "zenvora_user_" . $random_number;
+
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE name=?");
+            mysqli_stmt_bind_param($check_stmt, "s", $name);
+            mysqli_stmt_execute($check_stmt);
+            $check_name = mysqli_stmt_get_result($check_stmt);
+
+        } while (mysqli_num_rows($check_name) > 0);
+
+        do {
+
+            $referral_code =
+                strtoupper(substr(md5(uniqid()), 0, 8));
+
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE referral_code=?");
+            mysqli_stmt_bind_param($check_stmt, "s", $referral_code);
+            mysqli_stmt_execute($check_stmt);
+            $check_code = mysqli_stmt_get_result($check_stmt);
+
+        } while (mysqli_num_rows($check_code) > 0);
+
+        $insert = mysqli_prepare($conn,
+            "INSERT INTO users (name, email, referral_code, auth_token, wallet_balance)
+             VALUES (?, ?, ?, ?, 0)");
+
+        mysqli_stmt_bind_param($insert, "ssss", $name, $email, $referral_code, $auth_token);
+        mysqli_stmt_execute($insert);
+
+        $user_id = mysqli_insert_id($conn);
+
+        echo json_encode([
+            "status" => true,
+            "message" => "User registered",
+            "token" => $auth_token,
+            "user" => [
+                "id" => $user_id,
+                "name" => $name,
+                "email" => $email,
+                "referral_code" => $referral_code
+            ]
+        ]);
+    }
+
+    exit;
+}
 if ($action == "save_profile_referral") {
 
-    $user_id = $_POST['user_id'] ?? '';
+    $user_id = requireAuth($conn);
     $name = $_POST['name'] ?? '';
     $sponsor_code = $_POST['sponsor_code'] ?? '';
 
-    if (empty($user_id) || empty($name)) {
+    if (empty($name)) {
 
         echo json_encode([
             "status" => false,
@@ -103,18 +375,17 @@ if ($action == "save_profile_referral") {
         exit;
     }
 
-    $user_id = mysqli_real_escape_string($conn, $user_id);
-    $name = mysqli_real_escape_string($conn, $name);
-    $sponsor_code = mysqli_real_escape_string($conn, $sponsor_code);
-
     // 🔥 CHECK REFERRAL CODE
     if (!empty($sponsor_code)) {
 
-        $check = mysqli_query($conn,
-            "SELECT id FROM users
-             WHERE referral_code='$sponsor_code'");
+        $check = mysqli_prepare($conn,
+            "SELECT id FROM users WHERE referral_code=?");
 
-        if (mysqli_num_rows($check) == 0) {
+        mysqli_stmt_bind_param($check, "s", $sponsor_code);
+        mysqli_stmt_execute($check);
+        $checkResult = mysqli_stmt_get_result($check);
+
+        if (mysqli_num_rows($checkResult) == 0) {
 
             echo json_encode([
                 "status" => false,
@@ -126,11 +397,11 @@ if ($action == "save_profile_referral") {
     }
 
     // 🔥 UPDATE USER
-    mysqli_query($conn,
-        "UPDATE users SET
-         name='$name',
-         sponsor_code='$sponsor_code'
-         WHERE id='$user_id'");
+    $stmt = mysqli_prepare($conn,
+        "UPDATE users SET name=?, sponsor_code=? WHERE id=?");
+
+    mysqli_stmt_bind_param($stmt, "ssi", $name, $sponsor_code, $user_id);
+    mysqli_stmt_execute($stmt);
 
     echo json_encode([
         "status" => true,
@@ -142,22 +413,14 @@ if ($action == "save_profile_referral") {
 
 if ($action == "get_user") {
 
-    $user_id = $_POST['user_id'] ?? '';
+    $user_id = requireAuth($conn);
 
-    if (empty($user_id)) {
+    $stmt = mysqli_prepare($conn,
+        "SELECT * FROM users WHERE id=?");
 
-        echo json_encode([
-            "status" => false,
-            "message" => "user_id required"
-        ]);
-
-        exit;
-    }
-
-    $user_id = mysqli_real_escape_string($conn, $user_id);
-
-    $query = mysqli_query($conn,
-        "SELECT * FROM users WHERE id='$user_id'");
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     if (mysqli_num_rows($query) > 0) {
 
@@ -180,17 +443,29 @@ if ($action == "get_user") {
 }
 if ($action == "update_profile") {
 
-$user_id =
-$_POST["user_id"] ?? "";
+$user_id = requireAuth($conn);
 
 $name =
 trim(
 $_POST["name"] ?? ""
 );
 
+$phone =
+trim(
+$_POST["phone"] ?? ""
+);
+
+$username =
+trim(
+$_POST["username"] ?? ""
+);
+
+$gender =
+trim(
+$_POST["gender"] ?? ""
+);
+
 if(
-empty($user_id)
-||
 empty($name)
 ){
 
@@ -199,7 +474,7 @@ echo json_encode([
 "status"=>false,
 
 "message"=>
-"user_id and name required"
+"name required"
 
 ]);
 
@@ -207,62 +482,67 @@ exit;
 
 }
 
-$user_id =
-mysqli_real_escape_string(
-$conn,
-$user_id
+if(!empty($gender) && !in_array($gender, ["male", "female", "other"])){
+
+    echo json_encode([
+        "status"=>false,
+        "message"=>"Invalid gender value"
+    ]);
+
+    exit;
+}
+
+if(!empty($phone)){
+
+    // phone has a UNIQUE constraint -- check it isn't already taken
+    // by a different account before updating, so a duplicate doesn't
+    // throw an uncaught DB error and corrupt the response
+    $checkStmt = mysqli_prepare($conn,
+        "SELECT id FROM users WHERE phone=? AND id!=?");
+
+    mysqli_stmt_bind_param($checkStmt, "si", $phone, $user_id);
+    mysqli_stmt_execute($checkStmt);
+
+    if(mysqli_num_rows(mysqli_stmt_get_result($checkStmt)) > 0){
+
+        echo json_encode([
+            "status"=>false,
+            "message"=>"This phone number is already in use"
+        ]);
+
+        exit;
+    }
+}
+
+// phone/username/gender are optional -- only overwrite when a
+// non-empty value was actually posted, otherwise keep the existing value
+$stmt = mysqli_prepare($conn,
+    "UPDATE users SET
+        name=?,
+        phone=CASE WHEN ?<>'' THEN ? ELSE phone END,
+        username=CASE WHEN ?<>'' THEN ? ELSE username END,
+        gender=CASE WHEN ?<>'' THEN ? ELSE gender END
+     WHERE id=?");
+
+mysqli_stmt_bind_param(
+    $stmt, "sssssssi",
+    $name,
+    $phone, $phone,
+    $username, $username,
+    $gender, $gender,
+    $user_id
 );
 
-$name =
-mysqli_real_escape_string(
-$conn,
-$name
-);
-
-$update =
-mysqli_query(
-
-$conn,
-
-"
-
-UPDATE users
-
-SET
-
-name='$name'
-
-WHERE id='$user_id'
-
-"
-
-);
+$update = mysqli_stmt_execute($stmt);
 
 if($update){
 
-$user =
+$userStmt = mysqli_prepare($conn,
+    "SELECT * FROM users WHERE id=? LIMIT 1");
 
-mysqli_fetch_assoc(
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT *
-
-FROM users
-
-WHERE id='$user_id'
-
-LIMIT 1
-
-"
-
-)
-
-);
+mysqli_stmt_bind_param($userStmt, "i", $user_id);
+mysqli_stmt_execute($userStmt);
+$user = mysqli_fetch_assoc(mysqli_stmt_get_result($userStmt));
 
 echo json_encode([
 
@@ -295,63 +575,18 @@ exit;
 }
 if($action=="get_notifications"){
 
-$user_id =
-$_POST['user_id']
-?? '';
+$user_id = requireAuth($conn);
 
-if(
-empty(
-$user_id
-)
-){
+$stmt = mysqli_prepare($conn,
 
-echo json_encode([
+"SELECT id, notification_text, created_at
+ FROM user_notifications
+ WHERE user_id=?
+ ORDER BY id DESC");
 
-"status"=>false,
-
-"message"=>
-"user_id required"
-
-]);
-
-exit;
-
-}
-
-$user_id =
-mysqli_real_escape_string(
-
-$conn,
-
-$user_id
-
-);
-
-$q =
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT
-
-id,
-
-notification_text,
-
-created_at
-
-FROM user_notifications
-
-WHERE user_id='$user_id'
-
-ORDER BY id DESC
-
-"
-
-);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$q = mysqli_stmt_get_result($stmt);
 
 $data = [];
 
@@ -451,29 +686,84 @@ if ($action == "get_banners") {
 }
 
 /* =====================================
+   GET PORTRAIT BANNERS
+===================================== */
+if ($action == "get_portrait_banners") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM portrait_banners ORDER BY id ASC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "image" => $row['image']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "banners" => $data
+    ]);
+
+    exit;
+}
+
+/* =====================================
    GET MY ORDERS
 ===================================== */
 if ($action == "get_my_orders") {
 
-    $user_id = $_POST['user_id'];
+    $user_id = requireAuth($conn);
 
     $orders = [];
 
-    $query = mysqli_query($conn,
+    $stmt = mysqli_prepare($conn,
         "SELECT *
          FROM orders
-         WHERE user_id='$user_id'
+         WHERE user_id=?
          ORDER BY id DESC");
+
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     while ($row = mysqli_fetch_assoc($query)) {
 
-        $itemQuery = mysqli_query($conn,
+        $itemStmt = mysqli_prepare($conn,
             "SELECT COUNT(*) as total
              FROM order_items
-             WHERE order_id='".$row['id']."'");
+             WHERE order_id=?");
+
+        mysqli_stmt_bind_param($itemStmt, "i", $row['id']);
+        mysqli_stmt_execute($itemStmt);
 
         $itemData =
-        mysqli_fetch_assoc($itemQuery);
+        mysqli_fetch_assoc(mysqli_stmt_get_result($itemStmt));
+
+        $previewStmt = mysqli_prepare($conn,
+            "SELECT order_items.quantity, products.name, products.image
+             FROM order_items
+             LEFT JOIN products ON products.id = order_items.product_id
+             WHERE order_items.order_id=?
+             ORDER BY order_items.id ASC
+             LIMIT 3");
+
+        mysqli_stmt_bind_param($previewStmt, "i", $row['id']);
+        mysqli_stmt_execute($previewStmt);
+        $previewQuery = mysqli_stmt_get_result($previewStmt);
+
+        $previewItems = [];
+
+        while ($p = mysqli_fetch_assoc($previewQuery)) {
+            $previewItems[] = [
+                "name" => $p['name'],
+                "image" => $p['image'],
+                "quantity" => $p['quantity'],
+            ];
+        }
 
         $orders[] = [
 
@@ -499,6 +789,9 @@ if ($action == "get_my_orders") {
 
             "items_count" =>
             $itemData['total'],
+
+            "preview_items" =>
+            $previewItems,
         ];
     }
 
@@ -514,9 +807,10 @@ if ($action == "get_my_orders") {
 ===================================== */
 if ($action == "view_order") {
 
-    $order_id = $_POST['order_id'];
+    $user_id = requireAuth($conn);
+    $order_id = intval($_POST['order_id']);
 
-    $query = mysqli_query($conn,
+    $stmt = mysqli_prepare($conn,
         "SELECT orders.*,
 
         user_addresses.full_name,
@@ -544,7 +838,11 @@ if ($action == "view_order") {
         ON delivery_boys.id =
         orders.deliveryboy_id
 
-        WHERE orders.id='$order_id'");
+        WHERE orders.id=? AND orders.user_id=?");
+
+    mysqli_stmt_bind_param($stmt, "ii", $order_id, $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     if (mysqli_num_rows($query) == 0) {
 
@@ -560,7 +858,7 @@ if ($action == "view_order") {
 
     $items = [];
 
-    $itemQuery = mysqli_query($conn,
+    $itemStmt = mysqli_prepare($conn,
         "SELECT order_items.*,
 
         products.name,
@@ -572,7 +870,11 @@ if ($action == "view_order") {
         ON products.id =
         order_items.product_id
 
-        WHERE order_items.order_id='$order_id'");
+        WHERE order_items.order_id=?");
+
+    mysqli_stmt_bind_param($itemStmt, "i", $order_id);
+    mysqli_stmt_execute($itemStmt);
+    $itemQuery = mysqli_stmt_get_result($itemStmt);
 
     while ($item =
     mysqli_fetch_assoc($itemQuery)) {
@@ -658,19 +960,112 @@ if ($action == "get_top_deals") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE topdeals='yes'
-         ORDER BY id DESC");
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND topdeals='yes'
+         ORDER BY products.id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
 
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
+            "hasvarients" => $row['hasvarients']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "products" => $data
+    ]);
+
+    exit;
+}
+
+/* =====================================
+   GET BEST SELLER PRODUCTS
+===================================== */
+if ($action == "get_best_sellers") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND bestseller='yes'
+         ORDER BY products.id DESC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "name" => $row['name'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
+            "image" => $row['image'],
+            "stock" => $row['eff_stock'],
+            "hasvarients" => $row['hasvarients']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "products" => $data
+    ]);
+
+    exit;
+}
+
+/* =====================================
+   GET RECOMMENDED PRODUCTS
+===================================== */
+if ($action == "get_recommended") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND recommended='yes'
+         ORDER BY products.id DESC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "name" => $row['name'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
+            "image" => $row['image'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -694,19 +1089,28 @@ if ($action == "get_products") {
     $data = [];
 
     $query = mysqli_query($conn,
-        "SELECT * FROM products
-         WHERE subcat_id='$subcat_id'
-         ORDER BY id DESC");
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved' AND subcat_id='$subcat_id'
+         ORDER BY products.id DESC");
 
     while ($row = mysqli_fetch_assoc($query)) {
 
         $data[] = [
             "id" => $row['id'],
             "name" => $row['name'],
-            "rate" => $row['rate'],
-            "saleprice" => $row['saleprice'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
             "image" => $row['image'],
-            "stock" => $row['stock'],
+            "stock" => $row['eff_stock'],
             "hasvarients" => $row['hasvarients']
         ];
     }
@@ -740,11 +1144,20 @@ $conn,
 
 "
 
-SELECT *
+SELECT products.*,
+    COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+    COALESCE(spm.price, products.rate) AS eff_rate,
+    COALESCE(spm.stock, products.stock) AS eff_stock
 
 FROM products
 
-WHERE id='$product_id'
+LEFT JOIN seller_product_mapping spm ON spm.id = (
+    SELECT id FROM seller_product_mapping
+    WHERE product_id = products.id AND stock > 0
+    ORDER BY saleprice ASC, id ASC LIMIT 1
+)
+
+WHERE products.id='$product_id' AND products.status='approved'
 
 "
 
@@ -775,6 +1188,13 @@ $product =
 mysqli_fetch_assoc(
 $query
 );
+
+// 🔥 USE THE WINNING SELLER'S PRICE/STOCK (mapping-backed products only;
+// hasvarients='yes' products have no mapping, so these just equal the
+// original columns via COALESCE above)
+$product['rate'] = $product['eff_rate'];
+$product['saleprice'] = $product['eff_saleprice'];
+$product['stock'] = $product['eff_stock'];
 
 // 🔥 WISHLIST STATUS
 
@@ -1051,6 +1471,54 @@ exit;
 
 }
 /* =====================================
+   GET SIMILAR PRODUCTS
+===================================== */
+if ($action == "get_similar_products") {
+
+    $subcat_id = $_POST['subcat_id'] ?? '';
+    $exclude_id = $_POST['exclude_id'] ?? '';
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT products.*,
+            COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+            COALESCE(spm.price, products.rate) AS eff_rate,
+            COALESCE(spm.stock, products.stock) AS eff_stock
+         FROM products
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+         WHERE products.status='approved'
+         AND subcat_id='$subcat_id'
+         AND id != '$exclude_id'
+         HAVING eff_stock > 0
+         ORDER BY products.id DESC
+         LIMIT 10");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "name" => $row['name'],
+            "rate" => $row['eff_rate'],
+            "saleprice" => $row['eff_saleprice'],
+            "image" => $row['image'],
+            "stock" => $row['eff_stock'],
+            "hasvarients" => $row['hasvarients']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "products" => $data
+    ]);
+
+    exit;
+}
+/* =====================================
    HOME CATEGORY PRODUCTS
 ===================================== */
 if ($action == "home_category_products") {
@@ -1067,9 +1535,18 @@ if ($action == "home_category_products") {
         $products = [];
 
         $productQuery = mysqli_query($conn,
-            "SELECT * FROM products
-             WHERE cat_id='".$cat['id']."'
-             ORDER BY id DESC");
+            "SELECT products.*,
+                COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+                COALESCE(spm.price, products.rate) AS eff_rate,
+                COALESCE(spm.stock, products.stock) AS eff_stock
+             FROM products
+             LEFT JOIN seller_product_mapping spm ON spm.id = (
+                SELECT id FROM seller_product_mapping
+                WHERE product_id = products.id AND stock > 0
+                ORDER BY saleprice ASC, id ASC LIMIT 1
+             )
+             WHERE products.status='approved' AND cat_id='".$cat['id']."'
+             ORDER BY products.id DESC");
 
         while ($p = mysqli_fetch_assoc($productQuery)) {
 
@@ -1077,9 +1554,9 @@ if ($action == "home_category_products") {
                 "id" => $p['id'],
                 "name" => $p['name'],
                 "image" => $p['image'],
-                "rate" => $p['rate'],
-                "saleprice" => $p['saleprice'],
-                "stock" => $p['stock']
+                "rate" => $p['eff_rate'],
+                "saleprice" => $p['eff_saleprice'],
+                "stock" => $p['eff_stock']
             ];
         }
 
@@ -1102,20 +1579,23 @@ if ($action == "home_category_products") {
 ===================================== */
 if ($action == "toggle_wishlist") {
 
-    $user_id = $_POST['user_id'];
-    $product_id = $_POST['product_id'];
+    $user_id = requireAuth($conn);
+    $product_id = intval($_POST['product_id']);
 
-    $check = mysqli_query($conn,
-        "SELECT * FROM wishlist
-         WHERE user_id='$user_id'
-         AND product_id='$product_id'");
+    $check = mysqli_prepare($conn,
+        "SELECT id FROM wishlist WHERE user_id=? AND product_id=?");
 
-    if (mysqli_num_rows($check) > 0) {
+    mysqli_stmt_bind_param($check, "ii", $user_id, $product_id);
+    mysqli_stmt_execute($check);
+    $checkResult = mysqli_stmt_get_result($check);
 
-        mysqli_query($conn,
-            "DELETE FROM wishlist
-             WHERE user_id='$user_id'
-             AND product_id='$product_id'");
+    if (mysqli_num_rows($checkResult) > 0) {
+
+        $del = mysqli_prepare($conn,
+            "DELETE FROM wishlist WHERE user_id=? AND product_id=?");
+
+        mysqli_stmt_bind_param($del, "ii", $user_id, $product_id);
+        mysqli_stmt_execute($del);
 
         echo json_encode([
             "status" => true,
@@ -1124,11 +1604,11 @@ if ($action == "toggle_wishlist") {
 
     } else {
 
-        mysqli_query($conn,
-            "INSERT INTO wishlist
-            (user_id, product_id)
-            VALUES
-            ('$user_id','$product_id')");
+        $insert = mysqli_prepare($conn,
+            "INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)");
+
+        mysqli_stmt_bind_param($insert, "ii", $user_id, $product_id);
+        mysqli_stmt_execute($insert);
 
         echo json_encode([
             "status" => true,
@@ -1145,21 +1625,17 @@ if ($action == "toggle_wishlist") {
 ===================================== */
 if ($action == "add_review") {
 
-    $user_id = $_POST['user_id'];
-    $product_id = $_POST['product_id'];
-    $rating = $_POST['rating'];
+    $user_id = requireAuth($conn);
+    $product_id = intval($_POST['product_id']);
+    $rating = intval($_POST['rating']);
     $review = $_POST['review'];
 
-    mysqli_query($conn,
-        "INSERT INTO product_reviews
-        (user_id, product_id, rating, review)
-        VALUES
-        (
-            '$user_id',
-            '$product_id',
-            '$rating',
-            '$review'
-        )");
+    $stmt = mysqli_prepare($conn,
+        "INSERT INTO product_reviews (user_id, product_id, rating, review)
+         VALUES (?, ?, ?, ?)");
+
+    mysqli_stmt_bind_param($stmt, "iiis", $user_id, $product_id, $rating, $review);
+    mysqli_stmt_execute($stmt);
 
     echo json_encode([
         "status" => true,
@@ -1175,32 +1651,36 @@ if ($action == "add_review") {
 ===================================== */
 if ($action == "add_to_cart") {
 
-    $user_id = $_POST['user_id'];
-    $product_id = $_POST['product_id'];
-    $variant_id = $_POST['variant_id'] ?? 0;
+    $user_id = requireAuth($conn);
 
-    $check = mysqli_query($conn,
-        "SELECT * FROM cart
-         WHERE user_id='$user_id'
-         AND product_id='$product_id'
-         AND variant_id='$variant_id'");
+    $product_id = intval($_POST['product_id']);
+    $variant_id = intval($_POST['variant_id'] ?? 0);
 
-    if (mysqli_num_rows($check) > 0) {
+    $check = mysqli_prepare($conn,
+        "SELECT id FROM cart
+         WHERE user_id=? AND product_id=? AND variant_id=?");
 
-        mysqli_query($conn,
-            "UPDATE cart
-             SET quantity=quantity+1
-             WHERE user_id='$user_id'
-             AND product_id='$product_id'
-             AND variant_id='$variant_id'");
+    mysqli_stmt_bind_param($check, "iii", $user_id, $product_id, $variant_id);
+    mysqli_stmt_execute($check);
+    $checkResult = mysqli_stmt_get_result($check);
+
+    if (mysqli_num_rows($checkResult) > 0) {
+
+        $update = mysqli_prepare($conn,
+            "UPDATE cart SET quantity=quantity+1
+             WHERE user_id=? AND product_id=? AND variant_id=?");
+
+        mysqli_stmt_bind_param($update, "iii", $user_id, $product_id, $variant_id);
+        mysqli_stmt_execute($update);
 
     } else {
 
-        mysqli_query($conn,
-            "INSERT INTO cart
-            (user_id, product_id, variant_id, quantity)
-            VALUES
-            ('$user_id','$product_id','$variant_id','1')");
+        $insert = mysqli_prepare($conn,
+            "INSERT INTO cart (user_id, product_id, variant_id, quantity)
+             VALUES (?, ?, ?, 1)");
+
+        mysqli_stmt_bind_param($insert, "iii", $user_id, $product_id, $variant_id);
+        mysqli_stmt_execute($insert);
     }
 
     echo json_encode([
@@ -1218,18 +1698,18 @@ if ($action == "add_to_cart") {
 ===================================== */
 if ($action == "get_cart") {
 
-    $user_id = $_POST['user_id'];
+    $user_id = requireAuth($conn);
 
     $items = [];
 
-    $query = mysqli_query($conn,
+    $stmt = mysqli_prepare($conn,
         "SELECT
             cart.*,
 
             products.name,
             products.image,
-            products.saleprice,
-            products.rate,
+            COALESCE(spm.saleprice, products.saleprice) AS saleprice,
+            COALESCE(spm.price, products.rate) AS rate,
 
             product_varients.varient_name,
             product_varients.salerate,
@@ -1240,12 +1720,22 @@ if ($action == "get_cart") {
          LEFT JOIN products
          ON products.id = cart.product_id
 
+         LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+         )
+
          LEFT JOIN product_varients
          ON product_varients.id = cart.variant_id
 
-         WHERE cart.user_id='$user_id'
+         WHERE cart.user_id=?
 
          ORDER BY cart.id DESC");
+
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     while ($row = mysqli_fetch_assoc($query)) {
 
@@ -1296,8 +1786,7 @@ if ($action == "get_cart") {
 ===================================== */
 if($action=="save_address"){
 
-$user_id=
-$_POST["user_id"];
+$user_id = requireAuth($conn);
 
 $full_name=
 $_POST["full_name"];
@@ -1323,29 +1812,16 @@ $_POST["latitude"];
 $lng=
 $_POST["longitude"];
 
-$check=
+$check = mysqli_prepare($conn,
+    "SELECT id FROM service_pincodes WHERE pincode=? LIMIT 1");
 
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT id
-
-FROM service_pincodes
-
-WHERE pincode='$pincode'
-
-LIMIT 1
-
-"
-
-);
+mysqli_stmt_bind_param($check, "s", $pincode);
+mysqli_stmt_execute($check);
+$checkResult = mysqli_stmt_get_result($check);
 
 if(
 mysqli_num_rows(
-$check
+$checkResult
 )==0
 ){
 
@@ -1363,83 +1839,21 @@ exit;
 
 }
 
-mysqli_query(
+$resetDefault = mysqli_prepare($conn,
+    "UPDATE user_addresses SET is_default='no' WHERE user_id=?");
 
-$conn,
+mysqli_stmt_bind_param($resetDefault, "i", $user_id);
+mysqli_stmt_execute($resetDefault);
 
-"
+$insert = mysqli_prepare($conn,
+    "INSERT INTO user_addresses
+    (user_id, full_name, mobile, address, city, state, pincode, latitude, longitude, is_default)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'yes')");
 
-UPDATE user_addresses
+mysqli_stmt_bind_param($insert, "i" . str_repeat("s", 8),
+    $user_id, $full_name, $mobile, $address, $city, $state, $pincode, $lat, $lng);
 
-SET is_default='no'
-
-WHERE user_id='$user_id'
-
-"
-
-);
-
-mysqli_query(
-
-$conn,
-
-"
-
-INSERT INTO user_addresses
-
-(
-
-user_id,
-
-full_name,
-
-mobile,
-
-address,
-
-city,
-
-state,
-
-pincode,
-
-latitude,
-
-longitude,
-
-is_default
-
-)
-
-VALUES
-
-(
-
-'$user_id',
-
-'$full_name',
-
-'$mobile',
-
-'$address',
-
-'$city',
-
-'$state',
-
-'$pincode',
-
-'$lat',
-
-'$lng',
-
-'yes'
-
-)
-
-"
-
-);
+mysqli_stmt_execute($insert);
 
 echo json_encode([
 
@@ -1455,54 +1869,121 @@ exit;
 ===================================== */
 if ($action == "apply_coupon") {
 
-    $code = $_POST['code'];
-    $amount = $_POST['amount'];
+    $code = $_POST['code'] ?? '';
+    $amount = floatval($_POST['amount'] ?? 0);
 
-    $query = mysqli_query($conn,
-        "SELECT * FROM coupons
-         WHERE code='$code'
-         AND status='active'");
+    $result = calculateCouponDiscount($conn, $code, $amount);
 
-    if (mysqli_num_rows($query) == 0) {
+    if (!$result['valid']) {
 
         echo json_encode([
             "status" => false,
-            "message" => "Invalid Coupon"
+            "message" => $result['message']
         ]);
 
         exit;
-    }
-
-    $coupon = mysqli_fetch_assoc($query);
-
-    if ($amount < $coupon['min_amount']) {
-
-        echo json_encode([
-            "status" => false,
-            "message" =>
-            "Minimum order not matched"
-        ]);
-
-        exit;
-    }
-
-    $discount = 0;
-
-    if ($coupon['discount_type'] == "flat") {
-
-        $discount =
-            $coupon['discount_amount'];
-
-    } else {
-
-        $discount =
-            ($amount *
-                $coupon['discount_amount']) / 100;
     }
 
     echo json_encode([
         "status" => true,
-        "discount" => $discount
+        "discount" => $result['discount']
+    ]);
+
+    exit;
+}
+/* =====================================
+   GET OFFERS
+===================================== */
+if ($action == "get_offers") {
+
+    $data = [];
+
+    $query = mysqli_query($conn,
+        "SELECT * FROM coupons
+         WHERE status='active'
+         ORDER BY id DESC");
+
+    while ($row = mysqli_fetch_assoc($query)) {
+
+        $data[] = [
+            "id" => $row['id'],
+            "code" => $row['code'],
+            "discount_type" => $row['discount_type'],
+            "discount_amount" => $row['discount_amount'],
+            "min_amount" => $row['min_amount']
+        ];
+    }
+
+    echo json_encode([
+        "status" => true,
+        "offers" => $data
+    ]);
+
+    exit;
+}
+/* =====================================
+   CHECK DELIVERY
+===================================== */
+if ($action == "check_delivery") {
+
+    $pincode = $_POST['pincode'] ?? '';
+
+    $deliverable = false;
+    $is_express = false;
+    $city = null;
+    $estimate = null;
+    $estimate_text = null;
+
+    if (!empty($pincode)) {
+
+        $check = mysqli_prepare($conn,
+            "SELECT city, is_express FROM service_pincodes
+             WHERE pincode=?
+             LIMIT 1");
+
+        mysqli_stmt_bind_param($check, "s", $pincode);
+        mysqli_stmt_execute($check);
+        $result = mysqli_stmt_get_result($check);
+
+        // Two fixed states only, no computed date: local/express pincodes
+        // always say "within 24 hours", everything else always says
+        // "within 7 days" -- static and predictable rather than a date
+        // that can be wrong relative to when the order actually ships.
+        if ($row = mysqli_fetch_assoc($result)) {
+
+            $deliverable = true;
+            $is_express = !empty($row['is_express']);
+            $city = $row['city'];
+
+            if ($is_express) {
+
+                $estimate = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                $estimate_text = "Delivery within 24 hours";
+
+            } else {
+
+                $estimate = date('Y-m-d', strtotime('+7 days'));
+                $estimate_text = "Delivery within 7 days";
+            }
+
+        } else {
+
+            // Pincode isn't in our local service area -- still deliverable,
+            // just slower.
+            $deliverable = true;
+            $is_express = false;
+            $estimate = date('Y-m-d', strtotime('+7 days'));
+            $estimate_text = "Delivery within 7 days";
+        }
+    }
+
+    echo json_encode([
+        "status" => true,
+        "deliverable" => $deliverable,
+        "is_express" => $is_express,
+        "city" => $city,
+        "delivery_estimate" => $estimate,
+        "estimate_text" => $estimate_text
     ]);
 
     exit;
@@ -1512,14 +1993,16 @@ if ($action == "apply_coupon") {
 ===================================== */
 if ($action == "get_default_address") {
 
-    $user_id = $_POST['user_id'];
+    $user_id = requireAuth($conn);
 
-    $query = mysqli_query($conn,
+    $stmt = mysqli_prepare($conn,
         "SELECT * FROM user_addresses
-         WHERE user_id='$user_id'
-        
-         ORDER BY id DESC
-        ");
+         WHERE user_id=?
+         ORDER BY id DESC");
+
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     if (mysqli_num_rows($query) > 0) {
 
@@ -1553,67 +2036,43 @@ if ($action == "get_default_address") {
 ===================================== */
 if ($action == "place_order") {
 
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-
-    // 🔥 DEBUG REQUEST
-    file_put_contents(
-        "request.txt",
-        print_r($_POST, true)
-    );
-
-    $user_id = $_POST['user_id'] ?? '';
-    $address_id = $_POST['address_id'] ?? '';
+    $user_id = requireAuth($conn);
+    $address_id = intval($_POST['address_id'] ?? 0);
 
     $coupon_code =
         $_POST['coupon_code'] ?? '';
 
     $discount_amount =
-        $_POST['discount_amount'] ?? 0;
+        floatval($_POST['discount_amount'] ?? 0);
 
     $subtotal =
-        $_POST['subtotal'] ?? 0;
+        floatval($_POST['subtotal'] ?? 0);
 
     $total_amount =
-        $_POST['total_amount'] ?? 0;
+        floatval($_POST['total_amount'] ?? 0);
 
     $payment_method =
         $_POST['payment_method'] ?? 'cod';
 
-    // 🔥 DEBUG VALUES
-    file_put_contents(
-        "errorlog.txt",
-        "START PLACE ORDER\n",
-        FILE_APPEND
-    );
+    // 🔥 SERVER-SIDE COUPON REVALIDATION
+    // Never trust the client-sent discount_amount/total_amount for the coupon
+    // portion -- recompute from the coupons table and re-derive total_amount
+    // so a stale/tampered client value can't under- or over-discount an order.
+    $couponResult = calculateCouponDiscount($conn, $coupon_code, $subtotal);
 
-    file_put_contents(
-        "errorlog.txt",
-        "USER ID: ".$user_id."\n",
-        FILE_APPEND
-    );
+    $verifiedDiscount = (!empty($coupon_code) && $couponResult['valid'])
+        ? $couponResult['discount']
+        : 0;
 
-    file_put_contents(
-        "errorlog.txt",
-        "ADDRESS ID: ".$address_id."\n",
-        FILE_APPEND
-    );
+    $total_amount = $total_amount - $discount_amount + $verifiedDiscount;
+    $discount_amount = $verifiedDiscount;
 
-    file_put_contents(
-        "errorlog.txt",
-        "PAYMENT: ".$payment_method."\n",
-        FILE_APPEND
-    );
+    if (!empty($coupon_code) && !$couponResult['valid']) {
+        $coupon_code = '';
+    }
 
     // 🔥 VALIDATION
-    if (empty($user_id) ||
-        empty($address_id)) {
-
-        file_put_contents(
-            "errorlog.txt",
-            "VALIDATION FAILED\n",
-            FILE_APPEND
-        );
+    if (empty($address_id)) {
 
         echo json_encode([
             "status" => false,
@@ -1624,19 +2083,16 @@ if ($action == "place_order") {
         exit;
     }
 
-    // 🔥 CHECK ADDRESS
-    $addressQuery = mysqli_query($conn,
-        "SELECT * FROM user_addresses
-         WHERE id='$address_id'
-         AND user_id='$user_id'");
+    // 🔥 CHECK ADDRESS (must belong to this authenticated user)
+    $addressStmt = mysqli_prepare($conn,
+        "SELECT id FROM user_addresses
+         WHERE id=? AND user_id=?");
+
+    mysqli_stmt_bind_param($addressStmt, "ii", $address_id, $user_id);
+    mysqli_stmt_execute($addressStmt);
+    $addressQuery = mysqli_stmt_get_result($addressStmt);
 
     if (mysqli_num_rows($addressQuery) == 0) {
-
-        file_put_contents(
-            "errorlog.txt",
-            "INVALID ADDRESS\n",
-            FILE_APPEND
-        );
 
         echo json_encode([
             "status" => false,
@@ -1647,43 +2103,42 @@ if ($action == "place_order") {
         exit;
     }
 
-    // 🔥 GET CART
-    $cartQuery = mysqli_query($conn,
-        "SELECT * FROM cart
-         WHERE user_id='$user_id'");
+    // 🔥 GET CART (or a single Buy Now item that bypasses the cart entirely)
+    $buyNowProductId = intval($_POST['buy_now_product_id'] ?? 0);
 
-    if (!$cartQuery) {
+    if ($buyNowProductId > 0) {
 
-        file_put_contents(
-            "errorlog.txt",
-            mysqli_error($conn)."\n",
-            FILE_APPEND
-        );
+        $cartItems = [[
+            'product_id' => $buyNowProductId,
+            'variant_id' => intval($_POST['buy_now_variant_id'] ?? 0),
+            'quantity' => max(1, intval($_POST['buy_now_quantity'] ?? 1)),
+        ]];
 
-        echo json_encode([
-            "status" => false,
-            "message" =>
-            mysqli_error($conn)
-        ]);
+    } else {
 
-        exit;
-    }
+        $cartStmt = mysqli_prepare($conn,
+            "SELECT * FROM cart WHERE user_id=?");
 
-    if (mysqli_num_rows($cartQuery) == 0) {
+        mysqli_stmt_bind_param($cartStmt, "i", $user_id);
+        mysqli_stmt_execute($cartStmt);
+        $cartQuery = mysqli_stmt_get_result($cartStmt);
 
-        file_put_contents(
-            "errorlog.txt",
-            "CART EMPTY\n",
-            FILE_APPEND
-        );
+        if (mysqli_num_rows($cartQuery) == 0) {
 
-        echo json_encode([
-            "status" => false,
-            "message" =>
-            "Cart Empty"
-        ]);
+            echo json_encode([
+                "status" => false,
+                "message" =>
+                "Cart Empty"
+            ]);
 
-        exit;
+            exit;
+        }
+
+        $cartItems = [];
+
+        while ($row = mysqli_fetch_assoc($cartQuery)) {
+            $cartItems[] = $row;
+        }
     }
 
     // 🔥 ORDER NUMBER
@@ -1724,31 +2179,12 @@ $payment_method
 
 ){
 
-$user=
+$walletStmt = mysqli_prepare($conn,
+    "SELECT wallet_balance FROM users WHERE id=? LIMIT 1");
 
-mysqli_fetch_assoc(
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT
-
-wallet_balance
-
-FROM users
-
-WHERE id='$user_id'
-
-LIMIT 1
-
-"
-
-)
-
-);
+mysqli_stmt_bind_param($walletStmt, "i", $user_id);
+mysqli_stmt_execute($walletStmt);
+$user = mysqli_fetch_assoc(mysqli_stmt_get_result($walletStmt));
 
 $current=
 
@@ -1792,23 +2228,11 @@ $current
 -
 $total_amount;
 
-mysqli_query(
+$walletUpdate = mysqli_prepare($conn,
+    "UPDATE users SET wallet_balance=? WHERE id=?");
 
-$conn,
-
-"
-
-UPDATE users
-
-SET
-
-wallet_balance='$remaining'
-
-WHERE id='$user_id'
-
-"
-
-);
+mysqli_stmt_bind_param($walletUpdate, "di", $remaining, $user_id);
+mysqli_stmt_execute($walletUpdate);
 
 }
 // 🔥 DELIVERY OTP
@@ -1817,8 +2241,8 @@ rand(
 1000,
 9999
 );
- 
-$insertOrder = mysqli_query($conn,
+
+$orderStmt = mysqli_prepare($conn,
 "INSERT INTO orders
 (
 order_no,
@@ -1836,34 +2260,17 @@ delivery_otp
 
 VALUES
 
-(
-'$order_no',
-'$user_id',
-'$address_id',
-'$coupon_code',
-'$discount_amount',
-'$subtotal',
-'$total_amount',
-'$payment_method',
-'$payment_status',
-'Placed',
-'$delivery_otp'
-)"
+(?, ?, ?, ?, ?, ?, ?, ?, ?, 'Placed', ?)"
 );
 
+mysqli_stmt_bind_param($orderStmt, "siisdddsss",
+    $order_no, $user_id, $address_id, $coupon_code,
+    $discount_amount, $subtotal, $total_amount,
+    $payment_method, $payment_status, $delivery_otp);
+
+$insertOrder = mysqli_stmt_execute($orderStmt);
+
     if (!$insertOrder) {
-
-        file_put_contents(
-            "errorlog.txt",
-            "ORDER INSERT FAILED\n",
-            FILE_APPEND
-        );
-
-        file_put_contents(
-            "errorlog.txt",
-            mysqli_error($conn)."\n",
-            FILE_APPEND
-        );
 
         echo json_encode([
             "status" => false,
@@ -1877,15 +2284,8 @@ VALUES
     $order_id =
         mysqli_insert_id($conn);
 
-    file_put_contents(
-        "errorlog.txt",
-        "ORDER ID: ".$order_id."\n",
-        FILE_APPEND
-    );
-
     // 🔥 INSERT ITEMS
-    while ($cart =
-    mysqli_fetch_assoc($cartQuery)) {
+    foreach ($cartItems as $cart) {
 
         $product_id =
             intval($cart['product_id']);
@@ -1897,18 +2297,36 @@ VALUES
             intval($cart['quantity']);
 
         $price = 0;
+        $item_seller_id = null;
 
-        $productQuery =
-        mysqli_query($conn,
-            "SELECT saleprice
+        // 🔥 price/seller off the same "winning mapping" logic used for
+        // customer-facing display, so what they're charged matches what
+        // they were shown -- falls back to products.seller_id for
+        // hasvarients='yes' products, which never have a mapping row
+        $productStmt = mysqli_prepare($conn,
+            "SELECT products.seller_id,
+                COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+                COALESCE(spm.seller_id, products.seller_id) AS eff_seller_id
              FROM products
-             WHERE id='$product_id'");
+             LEFT JOIN seller_product_mapping spm ON spm.id = (
+                SELECT id FROM seller_product_mapping
+                WHERE product_id = products.id AND stock > 0
+                ORDER BY saleprice ASC, id ASC LIMIT 1
+             )
+             WHERE products.id=?");
+
+        mysqli_stmt_bind_param($productStmt, "i", $product_id);
+        mysqli_stmt_execute($productStmt);
+        $productQuery = mysqli_stmt_get_result($productStmt);
 
         if ($product =
         mysqli_fetch_assoc($productQuery)) {
 
             $price =
-            $product['saleprice'];
+            $product['eff_saleprice'];
+
+            $item_seller_id =
+            $product['eff_seller_id'];
         }
 
         if ($variant_id != 0) {
@@ -1925,31 +2343,35 @@ VALUES
                 $price =
                 $variant['salerate'];
             }
+
+            // variants are excluded from the mapping system -- always
+            // the product's own seller
+            $item_seller_id =
+            $product['seller_id'] ?? null;
         }
 
         $total =
             $price * $quantity;
 
         $insertItem =
-        mysqli_query($conn,
+        mysqli_prepare($conn,
             "INSERT INTO order_items
             (
                 order_id,
                 product_id,
                 variant_id,
+                seller_id,
                 quantity,
                 price,
                 total
             )
-            VALUES
-            (
-                '$order_id',
-                '$product_id',
-                '$variant_id',
-                '$quantity',
-                '$price',
-                '$total'
-            )");
+            VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+        mysqli_stmt_bind_param($insertItem, "iiiiidd",
+            $order_id, $product_id, $variant_id, $item_seller_id,
+            $quantity, $price, $total);
+
+        $insertItem = mysqli_stmt_execute($insertItem);
 
         if (!$insertItem) {
 
@@ -1975,40 +2397,30 @@ VALUES
         }
     }
 
-    // 🔥 CLEAR CART
-    mysqli_query($conn,
-        "DELETE FROM cart
-         WHERE user_id='$user_id'");
+    // 🔥 CLEAR CART (a Buy Now order never touched the cart, so leave it alone)
+    if ($buyNowProductId == 0) {
+
+        $clearCartStmt = mysqli_prepare($conn,
+            "DELETE FROM cart WHERE user_id=?");
+
+        mysqli_stmt_bind_param($clearCartStmt, "i", $user_id);
+        mysqli_stmt_execute($clearCartStmt);
+    }
+
+    // 🔥 IN-APP NOTIFICATION (independent of whether push delivery succeeds)
+    $notifText = "Your order #$order_no placed successfully";
+    $notifStmt = mysqli_prepare($conn,
+        "INSERT INTO user_notifications (user_id, notification_text) VALUES (?, ?)");
+    mysqli_stmt_bind_param($notifStmt, "is", $user_id, $notifText);
+    mysqli_stmt_execute($notifStmt);
 // 🔥 SEND FCM AFTER ORDER
 
-// 🔥 SEND FCM AFTER ORDER
-// 🔥 SEND FCM AFTER ORDER
+$fcmStmt = mysqli_prepare($conn,
+    "SELECT fcm_token FROM users WHERE id=? LIMIT 1");
 
-$user=
-
-mysqli_fetch_assoc(
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT
-
-fcm_token
-
-FROM users
-
-WHERE id='$user_id'
-
-LIMIT 1
-
-"
-
-)
-
-);
+mysqli_stmt_bind_param($fcmStmt, "i", $user_id);
+mysqli_stmt_execute($fcmStmt);
+$user = mysqli_fetch_assoc(mysqli_stmt_get_result($fcmStmt));
 
 $token=
 
@@ -2020,16 +2432,6 @@ $user[
 
 "";
 
-file_put_contents(
-
-"errorlog.txt",
-
-"\nFCM TOKEN=".$token,
-
-FILE_APPEND
-
-);
-
 if(
 
 !empty(
@@ -2038,21 +2440,11 @@ $token
 
 ){
 
-$access=
-
-trim(
-
-file_get_contents(
-
-"https://zipzapcart.com/app/addaccess_token.php"
-
-)
-
-);
+$access= getFcmAccessToken();
 
 $project=
 
-"ftnews-79e5c";
+"zipzapcart-app";
 
 $payload=[
 
@@ -2218,12 +2610,17 @@ curl_close($ch);
 ===================================== */
 if ($action == "update_cart_quantity") {
 
-    $cart_id = $_POST['cart_id'];
+    $user_id = requireAuth($conn);
+
+    $cart_id = intval($_POST['cart_id']);
     $type = $_POST['type'];
 
-    $query = mysqli_query($conn,
-        "SELECT * FROM cart
-         WHERE id='$cart_id'");
+    $stmt = mysqli_prepare($conn,
+        "SELECT * FROM cart WHERE id=? AND user_id=?");
+
+    mysqli_stmt_bind_param($stmt, "ii", $cart_id, $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     if (mysqli_num_rows($query) == 0) {
 
@@ -2249,16 +2646,19 @@ if ($action == "update_cart_quantity") {
 
     if ($qty <= 0) {
 
-        mysqli_query($conn,
-            "DELETE FROM cart
-             WHERE id='$cart_id'");
+        $del = mysqli_prepare($conn,
+            "DELETE FROM cart WHERE id=? AND user_id=?");
+
+        mysqli_stmt_bind_param($del, "ii", $cart_id, $user_id);
+        mysqli_stmt_execute($del);
 
     } else {
 
-        mysqli_query($conn,
-            "UPDATE cart
-             SET quantity='$qty'
-             WHERE id='$cart_id'");
+        $upd = mysqli_prepare($conn,
+            "UPDATE cart SET quantity=? WHERE id=? AND user_id=?");
+
+        mysqli_stmt_bind_param($upd, "iii", $qty, $cart_id, $user_id);
+        mysqli_stmt_execute($upd);
     }
 
     echo json_encode([
@@ -2291,11 +2691,24 @@ $conn,
 
 "
 
-SELECT *
+SELECT products.*,
+    COALESCE(spm.saleprice, products.saleprice) AS eff_saleprice,
+    COALESCE(spm.price, products.rate) AS eff_rate,
+    COALESCE(spm.stock, products.stock) AS eff_stock
 
 FROM products
 
+LEFT JOIN seller_product_mapping spm ON spm.id = (
+    SELECT id FROM seller_product_mapping
+    WHERE product_id = products.id AND stock > 0
+    ORDER BY saleprice ASC, id ASC LIMIT 1
+)
+
 WHERE
+
+products.status='approved'
+
+AND (
 
 name
 
@@ -2311,7 +2724,9 @@ LIKE
 
 '%$search%'
 
-ORDER BY id DESC
+)
+
+ORDER BY products.id DESC
 
 LIMIT 100
 
@@ -2328,6 +2743,10 @@ $q
 )
 
 ){
+
+$r['rate'] = $r['eff_rate'];
+$r['saleprice'] = $r['eff_saleprice'];
+$r['stock'] = $r['eff_stock'];
 
 $data[]=
 $r;
@@ -2351,17 +2770,13 @@ SAVE FCM TOKEN
 
 if($action=="save_fcm_token"){
 
-$user_id=
-$_POST["user_id"]
-?? "";
+$user_id = requireAuth($conn);
 
 $fcm_token=
 $_POST["fcm_token"]
 ?? "";
 
 if(
-empty($user_id)
-||
 empty($fcm_token)
 ){
 
@@ -2370,7 +2785,7 @@ echo json_encode([
 "status"=>false,
 
 "message"=>
-"user_id or token missing"
+"token missing"
 
 ]);
 
@@ -2378,37 +2793,11 @@ exit;
 
 }
 
-$user_id=
+$stmt = mysqli_prepare($conn,
+    "UPDATE users SET fcm_token=? WHERE id=?");
 
-mysqli_real_escape_string(
-$conn,
-$user_id
-);
-
-$fcm_token=
-
-mysqli_real_escape_string(
-$conn,
-$fcm_token
-);
-
-mysqli_query(
-
-$conn,
-
-"
-
-UPDATE users
-
-SET
-
-fcm_token='$fcm_token'
-
-WHERE id='$user_id'
-
-"
-
-);
+mysqli_stmt_bind_param($stmt, "si", $fcm_token, $user_id);
+mysqli_stmt_execute($stmt);
 
 echo json_encode([
 
@@ -2437,8 +2826,7 @@ if ($action == "get_razorpay_settings") {
 
         echo json_encode([
             "status" => true,
-            "key_id" => $row['razorpay_key'],
-            "key_secret" => $row['razorpay_secret']
+            "key_id" => $row['razorpay_key']
         ]);
 
     } else {
@@ -2456,18 +2844,18 @@ if ($action == "get_razorpay_settings") {
 ===================================== */
 if ($action == "get_wishlist") {
 
-    $user_id = $_POST['user_id'];
+    $user_id = requireAuth($conn);
 
     $products = [];
 
-    $query = mysqli_query($conn,
+    $stmt = mysqli_prepare($conn,
         "SELECT wishlist.*,
 
         products.name,
         products.image,
-        products.saleprice,
-        products.rate,
-        products.stock
+        COALESCE(spm.saleprice, products.saleprice) AS saleprice,
+        COALESCE(spm.price, products.rate) AS rate,
+        COALESCE(spm.stock, products.stock) AS stock
 
         FROM wishlist
 
@@ -2475,9 +2863,19 @@ if ($action == "get_wishlist") {
         ON products.id =
         wishlist.product_id
 
-        WHERE wishlist.user_id='$user_id'
+        LEFT JOIN seller_product_mapping spm ON spm.id = (
+            SELECT id FROM seller_product_mapping
+            WHERE product_id = products.id AND stock > 0
+            ORDER BY saleprice ASC, id ASC LIMIT 1
+        )
+
+        WHERE wishlist.user_id=?
 
         ORDER BY wishlist.id DESC");
+
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     while ($row = mysqli_fetch_assoc($query)) {
 
@@ -3402,8 +3800,9 @@ if($action == "get_watch_history") {
 
 if ($action == "remove_cart_item") {
 
-    $cart_id =
-    $_POST['cart_id'] ?? '';
+    $user_id = requireAuth($conn);
+
+    $cart_id = intval($_POST['cart_id'] ?? 0);
 
     if (empty($cart_id)) {
 
@@ -3419,27 +3818,14 @@ if ($action == "remove_cart_item") {
         exit;
     }
 
-    $cart_id =
-    mysqli_real_escape_string(
-        $conn,
-        $cart_id
-    );
+    $check = mysqli_prepare($conn,
+        "SELECT id FROM cart WHERE id=? AND user_id=?");
 
-    $check =
-    mysqli_query(
+    mysqli_stmt_bind_param($check, "ii", $cart_id, $user_id);
+    mysqli_stmt_execute($check);
+    $checkResult = mysqli_stmt_get_result($check);
 
-        $conn,
-
-        "SELECT id
-         FROM cart
-         WHERE id='$cart_id'"
-    );
-
-    if (
-        mysqli_num_rows(
-            $check
-        ) == 0
-    ) {
+    if (mysqli_num_rows($checkResult) == 0) {
 
         echo json_encode([
 
@@ -3453,13 +3839,11 @@ if ($action == "remove_cart_item") {
         exit;
     }
 
-    mysqli_query(
+    $del = mysqli_prepare($conn,
+        "DELETE FROM cart WHERE id=? AND user_id=?");
 
-        $conn,
-
-        "DELETE FROM cart
-         WHERE id='$cart_id'"
-    );
+    mysqli_stmt_bind_param($del, "ii", $cart_id, $user_id);
+    mysqli_stmt_execute($del);
 
     echo json_encode([
 
@@ -3876,85 +4260,30 @@ exit;
 }
 if($action=="get_wallet"){
 
-$user_id=
-$_POST["user_id"]
-?? 0;
+$user_id = requireAuth($conn);
 
-$user=
+$walletStmt = mysqli_prepare($conn,
+    "SELECT wallet_balance FROM users WHERE id=? LIMIT 1");
 
-mysqli_fetch_assoc(
+mysqli_stmt_bind_param($walletStmt, "i", $user_id);
+mysqli_stmt_execute($walletStmt);
+$user = mysqli_fetch_assoc(mysqli_stmt_get_result($walletStmt));
 
-mysqli_query(
+$cashbackStmt = mysqli_prepare($conn,
+    "SELECT SUM(cashback_amount) AS total FROM user_cashback WHERE user_id=?");
 
-$conn,
-
-"
-
-SELECT
-
-wallet_balance
-
-FROM users
-
-WHERE id='$user_id'
-
-LIMIT 1
-
-"
-
-)
-
-);
-
-$cashback=
-
-mysqli_fetch_assoc(
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT
-
-SUM(
-cashback_amount
-)
-
-AS total
-
-FROM user_cashback
-
-WHERE user_id='$user_id'
-
-"
-
-)
-
-);
+mysqli_stmt_bind_param($cashbackStmt, "i", $user_id);
+mysqli_stmt_execute($cashbackStmt);
+$cashback = mysqli_fetch_assoc(mysqli_stmt_get_result($cashbackStmt));
 
 $refund=[];
 
-$q=
+$refundStmt = mysqli_prepare($conn,
+    "SELECT * FROM user_refund WHERE user_id=? ORDER BY id DESC");
 
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT *
-
-FROM user_refund
-
-WHERE user_id='$user_id'
-
-ORDER BY id DESC
-
-"
-
-);
+mysqli_stmt_bind_param($refundStmt, "i", $user_id);
+mysqli_stmt_execute($refundStmt);
+$q = mysqli_stmt_get_result($refundStmt);
 
 while(
 
@@ -4014,8 +4343,10 @@ exit;
 
 if ($action == "cancel_order") {
 
+    $user_id = requireAuth($conn);
+
     $order_id =
-    $_POST["order_id"] ?? "";
+    intval($_POST["order_id"] ?? 0);
 
     if (empty($order_id)) {
 
@@ -4031,34 +4362,19 @@ if ($action == "cancel_order") {
         exit;
     }
 
-    $order_id =
-    mysqli_real_escape_string(
-        $conn,
-        $order_id
-    );
+    // GET ORDER (must belong to this authenticated user)
+    $stmt = mysqli_prepare($conn,
 
-    // GET ORDER
-    $query =
-    mysqli_query(
-
-        $conn,
-
-        "
-
-        SELECT
-
-        id,
-        order_status
-
-        FROM orders
-
-        WHERE id='$order_id'
-
-        LIMIT 1
-
-        "
+        "SELECT id, order_status
+         FROM orders
+         WHERE id=? AND user_id=?
+         LIMIT 1"
 
     );
+
+    mysqli_stmt_bind_param($stmt, "ii", $order_id, $user_id);
+    mysqli_stmt_execute($stmt);
+    $query = mysqli_stmt_get_result($stmt);
 
     if (
         mysqli_num_rows(
@@ -4128,24 +4444,16 @@ if ($action == "cancel_order") {
         exit;
     }
 
-    $update =
-    mysqli_query(
+    $updateStmt = mysqli_prepare($conn,
 
-        $conn,
-
-        "
-
-        UPDATE orders
-
-        SET
-
-        order_status='Cancelled'
-
-        WHERE id='$order_id'
-
-        "
+        "UPDATE orders
+         SET order_status='Cancelled'
+         WHERE id=? AND user_id=?"
 
     );
+
+    mysqli_stmt_bind_param($updateStmt, "ii", $order_id, $user_id);
+    $update = mysqli_stmt_execute($updateStmt);
 
     if (!$update) {
 
@@ -4177,68 +4485,25 @@ if ($action == "cancel_order") {
 
 if($action=="get_cashback"){
 
-$user_id=
-$_POST["user_id"];
+$user_id = requireAuth($conn);
 
-$total=
+$totalStmt = mysqli_prepare($conn,
+    "SELECT SUM(cashback_amount) AS total
+     FROM user_cashback
+     WHERE user_id=? AND transferred=0");
 
-mysqli_fetch_assoc(
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT
-
-SUM(
-cashback_amount
-)
-
-AS total
-
-FROM user_cashback
-
-WHERE
-
-user_id='$user_id'
-
-AND
-
-transferred=0
-
-"
-
-)
-
-);
+mysqli_stmt_bind_param($totalStmt, "i", $user_id);
+mysqli_stmt_execute($totalStmt);
+$total = mysqli_fetch_assoc(mysqli_stmt_get_result($totalStmt));
 
 $data=[];
 
-$q=
+$listStmt = mysqli_prepare($conn,
+    "SELECT * FROM user_cashback WHERE user_id=? ORDER BY id DESC");
 
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT *
-
-FROM user_cashback
-
-WHERE
-
-user_id='$user_id'
-
-
-
-ORDER BY id DESC
-
-"
-
-);
+mysqli_stmt_bind_param($listStmt, "i", $user_id);
+mysqli_stmt_execute($listStmt);
+$q = mysqli_stmt_get_result($listStmt);
 
 while(
 
@@ -4298,42 +4563,16 @@ exit;
 }
 if($action=="move_cashback"){
 
-$user_id=
-$_POST["user_id"];
+$user_id = requireAuth($conn);
 
-$get=
+$getStmt = mysqli_prepare($conn,
+    "SELECT SUM(cashback_amount) AS total
+     FROM user_cashback
+     WHERE user_id=? AND transferred=0");
 
-mysqli_fetch_assoc(
-
-mysqli_query(
-
-$conn,
-
-"
-
-SELECT
-
-SUM(
-cashback_amount
-)
-
-AS total
-
-FROM user_cashback
-
-WHERE
-
-user_id='$user_id'
-
-AND
-
-transferred=0
-
-"
-
-)
-
-);
+mysqli_stmt_bind_param($getStmt, "i", $user_id);
+mysqli_stmt_execute($getStmt);
+$get = mysqli_fetch_assoc(mysqli_stmt_get_result($getStmt));
 
 $amount=
 
@@ -4366,51 +4605,18 @@ exit;
 
 }
 
-mysqli_query(
+$walletUpdateStmt = mysqli_prepare($conn,
+    "UPDATE users SET wallet_balance=wallet_balance+? WHERE id=?");
 
-$conn,
+mysqli_stmt_bind_param($walletUpdateStmt, "di", $amount, $user_id);
+mysqli_stmt_execute($walletUpdateStmt);
 
-"
+$cashbackUpdateStmt = mysqli_prepare($conn,
+    "UPDATE user_cashback SET transferred=1
+     WHERE user_id=? AND transferred=0");
 
-UPDATE users
-
-SET
-
-wallet_balance=
-
-wallet_balance+
-
-$amount
-
-WHERE id='$user_id'
-
-"
-
-);
-
-mysqli_query(
-
-$conn,
-
-"
-
-UPDATE user_cashback
-
-SET
-
-transferred=1
-
-WHERE
-
-user_id='$user_id'
-
-AND
-
-transferred=0
-
-"
-
-);
+mysqli_stmt_bind_param($cashbackUpdateStmt, "i", $user_id);
+mysqli_stmt_execute($cashbackUpdateStmt);
 
 echo json_encode([
 

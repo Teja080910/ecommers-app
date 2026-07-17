@@ -28,7 +28,7 @@ class _ViewOrderPageState
   List items = [];
 
   final Color primaryColor =
-  const Color(0xFFDF6907);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -460,9 +460,11 @@ class _ViewOrderPageState
 
       body: loading
 
-          ? const Center(
+          ? Center(
         child:
-        CircularProgressIndicator(),
+        CircularProgressIndicator(
+          color: primaryColor,
+        ),
       )
 
           : SingleChildScrollView(
@@ -553,7 +555,7 @@ class _ViewOrderPageState
                       ),
 
                       Text(
-                        "₹${order["total_amount"]}",
+                        AppConstants.formatPrice(order["total_amount"]),
 
                         style:
                         GoogleFonts.poppins(
@@ -841,19 +843,8 @@ class _ViewOrderPageState
             ),
 // 🔥 DELIVERY OTP
             // 🔥 DELIVERY OTP PROFESSIONAL
-
-            if(
-            order["delivery_otp"] != null &&
-                order["delivery_otp"]
-                    .toString()
-                    .isNotEmpty &&
-                order["order_status"]
-                    .toString()
-                    .toLowerCase()
-                    .trim()
-                    !=
-                    "delivered"
-            )
+            // Hidden from the customer — this OTP is for the delivery partner only.
+            if(false)
 
               Column(
 
@@ -1562,13 +1553,17 @@ class _ViewOrderPageState
 
                                 child:
                                 Image.network(
-                                  AppConstants
-                                      .imageUrl +
-                                      item[
-                                      "image"],
+                                  AppConstants.resolveImage(item["image"]),
 
                                   fit:
                                   BoxFit.contain,
+
+                                  errorBuilder:
+                                      (_, e, s) => Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: Colors.grey.shade400,
+                                    size: 28,
+                                  ),
                                 ),
                               ),
 
@@ -1609,10 +1604,11 @@ class _ViewOrderPageState
                                     ),
 
                                     Text(
-                                      "Qty : ${item["quantity"]}",
+                                      "Qty : ${item["quantity"]}  •  ${AppConstants.formatPrice(item["price"])} each",
 
                                       style:
                                       GoogleFonts.poppins(
+                                        fontSize: 12,
                                         color:
                                         Colors.grey,
                                       ),
@@ -1622,7 +1618,7 @@ class _ViewOrderPageState
                               ),
 
                               Text(
-                                "₹${item["total"]}",
+                                AppConstants.formatPrice(item["total"]),
 
                                 style:
                                 GoogleFonts.poppins(

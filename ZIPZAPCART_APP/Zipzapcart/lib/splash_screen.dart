@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api_service.dart';
 import 'home.dart';
+import 'notification_service.dart';
 import 'onboarding.dart';
+import 'translator_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({
@@ -15,13 +18,35 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState
-    extends State<SplashScreen> {
+    extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
 
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+
+    _fadeController.forward();
+
     goNext();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> goNext() async {
@@ -40,6 +65,9 @@ class _SplashScreenState
     await SharedPreferences
         .getInstance();
 
+    // 🔥 pick up any previously-selected language before Home renders
+    await TranslatorService().init();
+
     bool isLoggedIn =
         prefs.getBool(
           "isLoggedIn",
@@ -53,6 +81,21 @@ class _SplashScreenState
       nextPage =
       const HomePage();
 
+      // 🔥 refresh the saved FCM token on every startup, not just at login --
+      // otherwise a token that changes after login (reinstall, OS-level
+      // rotation) never reaches the server and push silently stops working
+      final userId = prefs.getInt("user_id") ?? 0;
+
+      if (userId != 0) {
+
+        NotificationService.getToken().then((token) {
+
+          if (token.isNotEmpty) {
+            ApiService.saveFcmToken(userId, token);
+          }
+        });
+      }
+
     } else {
 
       nextPage =
@@ -63,9 +106,18 @@ class _SplashScreenState
 
       context,
 
-      MaterialPageRoute(
-        builder:
-            (_) => nextPage,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 550),
+
+        pageBuilder: (_, animation, __) => nextPage,
+
+        transitionsBuilder: (_, animation, __, child) {
+
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
       ),
     );
   }
@@ -78,54 +130,20 @@ class _SplashScreenState
     return Scaffold(
 
       backgroundColor:
-      Colors.white,
+      Colors.black,
 
-      body:
+      body: FadeTransition(
 
-      Center(
+        opacity: _fadeAnimation,
 
-        child:
+        child: SizedBox.expand(
 
-        Column(
+          child: Image.asset(
 
-          mainAxisAlignment:
-          MainAxisAlignment.center,
+            "assets/images/intro.jpeg",
 
-          children: [
-
-            Image.asset(
-
-              "assets/logo.png",
-
-              width: 220,
-
-            ),
-
-            const SizedBox(
-              height: 40,
-            ),
-
-            const SizedBox(
-
-              width: 34,
-              height: 34,
-
-              child:
-              CircularProgressIndicator(
-
-                color:
-                Color(
-                  0xFFEF4138,
-                ),
-
-                strokeWidth:
-                3,
-
-              ),
-
-            ),
-
-          ],
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );

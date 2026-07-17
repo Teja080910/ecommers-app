@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* Login Check */
 
@@ -46,63 +47,23 @@ if(isset($_POST['add_product'])){
 
     /* Image Upload */
 
-    if(isset($_FILES['image']) && $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $filename = $_FILES['image']['name'];
+    $imageFile = handleCroppedOrRawUpload(
+        'cropped_image',
+        'image',
+        "../app/uploads",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        /* Block Dangerous Files */
+    if($uploadError != ""){
 
-        if(preg_match('/\.(php|phtml|phar|cgi|pl|py|sh|exe)/i',$filename)){
+        $error = $uploadError;
 
-            $error = "Invalid File";
+    }else if($imageFile){
 
-        }else{
-
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-            $allowed = ['jpg','jpeg','png','webp'];
-
-            if(in_array($ext,$allowed)){
-
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-
-                $mime = finfo_file($finfo, $_FILES['image']['tmp_name']);
-
-                $allowed_mimes = [
-                    'image/jpeg',
-                    'image/png',
-                    'image/webp'
-                ];
-
-                if(in_array($mime,$allowed_mimes)){
-
-                    $imageName = time().'_'.rand(1111,9999).'.'.$ext;
-
-                    $uploadPath = "../app/uploads/".$imageName;
-
-                    if(move_uploaded_file($_FILES['image']['tmp_name'],$uploadPath)){
-
-                        $image = "uploads/".$imageName;
-
-                    }else{
-
-                        $error = "Image Upload Failed";
-
-                    }
-
-                }else{
-
-                    $error = "Fake Image Blocked";
-
-                }
-
-            }else{
-
-                $error = "Invalid Image Format";
-
-            }
-
-        }
+        $image = "uploads/".$imageFile;
 
     }else{
 
@@ -153,6 +114,16 @@ if(isset($_POST['add_product'])){
 <title>Add Food Product</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -419,17 +390,22 @@ body{
 
                 <label>Product Image</label>
 
-                <input 
+                <input
                     type="file"
                     name="image"
+                    id="mainImageInput"
+                    accept="image/*"
+                    onchange="ImageCrop.open(this,'croppedImageData')"
                     required
                 >
+
+                <input type="hidden" name="cropped_image" id="croppedImageData">
 
             </div>
 
             <!-- Submit -->
 
-            <button 
+            <button
                 type="submit"
                 name="add_product"
                 class="submit-btn"
@@ -441,6 +417,24 @@ body{
             </button>
 
         </form>
+
+    </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
 
     </div>
 

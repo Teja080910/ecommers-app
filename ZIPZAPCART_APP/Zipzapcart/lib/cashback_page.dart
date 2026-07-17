@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'constants.dart';
 
 class CashbackPage
     extends StatefulWidget{
@@ -131,7 +132,9 @@ class _CashbackPageState
 
       const Center(
         child:
-        CircularProgressIndicator(),
+        CircularProgressIndicator(
+          color: Color(0xFFEF4138),
+        ),
       )
 
           :
@@ -211,7 +214,7 @@ class _CashbackPageState
 
                 Text(
 
-                  "₹${total.toStringAsFixed(0)}",
+                  AppConstants.formatPrice(total),
 
                   style:
 
@@ -367,7 +370,7 @@ class _CashbackPageState
 
                           Text(
 
-                            "₹${c["cashback_amount"]}",
+                            AppConstants.formatPrice(c["cashback_amount"]),
 
                             style:
 
@@ -465,7 +468,7 @@ class _CashbackPageState
 
                       Text(
 
-                        "Order ₹${c["order_amount"]}",
+                        "Order ${AppConstants.formatPrice(c["order_amount"])}",
 
                       ),
 

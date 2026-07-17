@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 if(!isset($_SESSION['admin_id'])){
 
@@ -40,23 +41,27 @@ if(isset($_POST['add_casting'])){
 
     $image = "";
 
-    if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $file_name =
-        time().'_'.
-        $_FILES['image']['name'];
+    $imageFile = handleCroppedOrRawUpload(
+        'cropped_image',
+        'image',
+        "../app/uploads/casting",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($uploadError != ""){
 
-            $_FILES['image']['tmp_name'],
+        $error = $uploadError;
 
-            "../app/uploads/casting/".$file_name
-        );
+    }else if($imageFile){
 
         $image =
-        "uploads/casting/".$file_name;
+        "uploads/casting/".$imageFile;
     }
+
+    if(empty($error)){
 
     $stmt =
     $pdo->prepare(
@@ -106,6 +111,8 @@ if(isset($_POST['add_casting'])){
         $error =
         "Failed";
     }
+
+    }
 }
 ?>
 
@@ -114,6 +121,14 @@ if(isset($_POST['add_casting'])){
 <head>
 
 <title>Add Casting</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -227,7 +242,12 @@ placeholder="Amount">
 <input
 type="file"
 name="image"
+id="imageInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedImageData')"
 required>
+
+<input type="hidden" name="cropped_image" id="croppedImageData">
 
 <textarea
 name="description"
@@ -244,6 +264,24 @@ Add Casting
 </form>
 
 </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
+    </div>
 
 </div>
 

@@ -1,11 +1,12 @@
 <?php
 
-$host = "localhost";        // your server (usually localhost)
-$user = "u272105386_zipzapcart";     // DB username
-$pass = "Heritage@3205"; // DB password
-$db   = "u272105386_zipzapcart";     // DB name
+$host = getenv("DB_HOST") ?: "localhost";
+$user = getenv("DB_USER") ?: "zipzapcart_user";
+$pass = getenv("DB_PASS") ?: "YourStrongPassword";
+$db   = getenv("DB_NAME") ?: "zipzapcart";
+$port = getenv("DB_PORT") ?: 3306;
 
-$conn = mysqli_connect($host, $user, $pass, $db);
+$conn = mysqli_connect($host, $user, $pass, $db, $port);
 
 // ❌ Connection failed
 if (!$conn) {

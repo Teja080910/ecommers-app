@@ -56,8 +56,8 @@ if(isset($_POST['add_pincode'])){
         /* Franchise Pincodes */
 
         $fstmt = $pdo->prepare("
-            SELECT service_pincodes 
-            FROM seller_id 
+            SELECT service_pincodes
+            FROM seller
             WHERE id=?
         ");
 

@@ -1,0 +1,60 @@
+.crop-modal{
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.75);
+    z-index:999;
+    align-items:center;
+    justify-content:center;
+}
+
+.crop-modal.active{
+    display:flex;
+}
+
+.crop-box{
+    background:#0c0e1c;
+    border-radius:20px;
+    padding:24px;
+    width:90%;
+    max-width:500px;
+}
+
+.crop-image-wrap{
+    max-height:400px;
+    margin-bottom:18px;
+}
+
+.crop-image-wrap img{
+    max-width:100%;
+    display:block;
+}
+
+.crop-actions{
+    display:flex;
+    gap:12px;
+    margin-top:16px;
+}
+
+.crop-actions button{
+    flex:1;
+    height:46px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+}
+
+.crop-use-btn{
+    background:linear-gradient(135deg,#06b6d4,#7c3aed);
+    color:#fff;
+}
+
+.crop-skip-btn{
+    background:#1e293b;
+    color:#cbd5e1;
+}

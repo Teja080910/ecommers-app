@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 if(!isset($_SESSION['admin_id'])){
     header("Location:index.php");
@@ -34,22 +35,19 @@ if(isset($_POST['add_category'])){
 
     $image = "";
 
-    if(isset($_FILES['image']) &&
-       $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $file =
-        time().'_'.
-        $_FILES['image']['name'];
+    $imageFile = handleCroppedOrRawUpload(
+        'cropped_image',
+        'image',
+        "../app/uploads/category",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($imageFile){
 
-            $_FILES['image']['tmp_name'],
-
-            "../app/uploads/category/".$file
-        );
-
-        $image =
-        "uploads/category/".$file;
+        $image = "uploads/category/".$imageFile;
     }
 
     $stmt = $pdo->prepare(
@@ -93,22 +91,19 @@ if(isset($_POST['edit_category'])){
     $image =
     $_POST['old_image'];
 
-    if(isset($_FILES['edit_image']) &&
-       $_FILES['edit_image']['error'] == 0){
+    $uploadError = "";
 
-        $file =
-        time().'_'.
-        $_FILES['edit_image']['name'];
+    $editImageFile = handleCroppedOrRawUpload(
+        'cropped_edit_image',
+        'edit_image',
+        "../app/uploads/category",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($editImageFile){
 
-            $_FILES['edit_image']['tmp_name'],
-
-            "../app/uploads/category/".$file
-        );
-
-        $image =
-        "uploads/category/".$file;
+        $image = "uploads/category/".$editImageFile;
     }
 
     $stmt = $pdo->prepare(
@@ -148,22 +143,19 @@ if(isset($_POST['add_subcategory'])){
 
     $image = "";
 
-    if(isset($_FILES['sub_image']) &&
-       $_FILES['sub_image']['error'] == 0){
+    $uploadError = "";
 
-        $file =
-        time().'_'.
-        $_FILES['sub_image']['name'];
+    $subImageFile = handleCroppedOrRawUpload(
+        'cropped_sub_image',
+        'sub_image',
+        "../app/uploads/subcategory",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($subImageFile){
 
-            $_FILES['sub_image']['tmp_name'],
-
-            "../app/uploads/subcategory/".$file
-        );
-
-        $image =
-        "uploads/subcategory/".$file;
+        $image = "uploads/subcategory/".$subImageFile;
     }
 
     $stmt = $pdo->prepare(
@@ -208,22 +200,19 @@ if(isset($_POST['edit_subcategory'])){
     $image =
     $_POST['sub_old_image'];
 
-    if(isset($_FILES['edit_sub_image']) &&
-       $_FILES['edit_sub_image']['error'] == 0){
+    $uploadError = "";
 
-        $file =
-        time().'_'.
-        $_FILES['edit_sub_image']['name'];
+    $editSubImageFile = handleCroppedOrRawUpload(
+        'cropped_edit_sub_image',
+        'edit_sub_image',
+        "../app/uploads/subcategory",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        move_uploaded_file(
+    if($editSubImageFile){
 
-            $_FILES['edit_sub_image']['tmp_name'],
-
-            "../app/uploads/subcategory/".$file
-        );
-
-        $image =
-        "uploads/subcategory/".$file;
+        $image = "uploads/subcategory/".$editSubImageFile;
     }
 
     $stmt = $pdo->prepare(
@@ -333,6 +322,16 @@ Categories
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -666,7 +665,7 @@ body{
 
                     "<?php echo $cat['id']; ?>",
 
-                    "<?php echo htmlspecialchars($cat['name']); ?>",
+                    "<?php echo htmlspecialchars($cat['name'], ENT_QUOTES); ?>",
 
                     "<?php echo $cat['image']; ?>",
 
@@ -747,7 +746,7 @@ onclick='openEditSub(
 
 "<?php echo $sub["category_id"]; ?>",
 
-"<?php echo htmlspecialchars($sub["name"]); ?>",
+"<?php echo htmlspecialchars($sub["name"], ENT_QUOTES); ?>",
 
 "<?php echo $sub["image"]; ?>"
 
@@ -840,7 +839,12 @@ id="catModal">
                 <input
                 type="file"
                 name="image"
+                id="catImageInput"
+                accept="image/*"
+                onchange="ImageCrop.open(this,'croppedImageData')"
                 required>
+
+                <input type="hidden" name="cropped_image" id="croppedImageData">
 
             </div>
 
@@ -942,7 +946,12 @@ id="editCatModal">
 
                 <input
                 type="file"
-                name="edit_image">
+                name="edit_image"
+                id="editImageInput"
+                accept="image/*"
+                onchange="ImageCrop.open(this,'croppedEditImageData')">
+
+                <input type="hidden" name="cropped_edit_image" id="croppedEditImageData">
 
                 <img
                 id="edit_preview"
@@ -1052,7 +1061,12 @@ Subcategory Image
 <input
 type="file"
 name="sub_image"
+id="subImageInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedSubImageData')"
 required>
+
+<input type="hidden" name="cropped_sub_image" id="croppedSubImageData">
 
 </div>
 
@@ -1160,7 +1174,12 @@ Image
 
 <input
 type="file"
-name="edit_sub_image">
+name="edit_sub_image"
+id="editSubImageInput"
+accept="image/*"
+onchange="ImageCrop.open(this,'croppedEditSubImageData')">
+
+<input type="hidden" name="cropped_edit_sub_image" id="croppedEditSubImageData">
 
 <img
 id="edit_sub_preview"
@@ -1199,6 +1218,25 @@ Close
 </div>
 
 </div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
+    </div>
+
+</div>
+
 <script>
 
 function openModal(id){

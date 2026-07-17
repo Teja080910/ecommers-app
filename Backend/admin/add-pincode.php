@@ -24,6 +24,12 @@ if(isset($_POST['add_pincode'])){
     $delivery_charge =
     trim($_POST['delivery_charge']);
 
+    $city =
+    trim($_POST['city']);
+
+    $is_express =
+    isset($_POST['is_express']) ? 1 : 0;
+
     /* VALIDATION */
 
     if($pincode == "" ||
@@ -65,12 +71,16 @@ if(isset($_POST['add_pincode'])){
 
             (
             pincode,
-            delivery_charge
+            delivery_charge,
+            city,
+            is_express
             )
 
             VALUES
 
             (
+            ?,
+            ?,
             ?,
             ?
             )"
@@ -81,7 +91,9 @@ if(isset($_POST['add_pincode'])){
             $stmt->execute([
 
                 $pincode,
-                $delivery_charge
+                $delivery_charge,
+                $city,
+                $is_express
             ]);
 
             if($insert){
@@ -336,6 +348,44 @@ body{
                 placeholder="Enter delivery charge"
 
                 required>
+
+            </div>
+
+            <!-- CITY -->
+
+            <div class="input-box">
+
+                <label>
+                    City
+                </label>
+
+                <input
+
+                type="text"
+
+                name="city"
+
+                placeholder="Enter city name">
+
+            </div>
+
+            <!-- EXPRESS -->
+
+            <div class="input-box" style="display:flex;align-items:center;gap:12px;">
+
+                <input
+
+                type="checkbox"
+
+                name="is_express"
+
+                id="is_express"
+
+                style="width:20px;height:20px;">
+
+                <label for="is_express" style="margin:0;">
+                    Enable 24-Hour Express Delivery
+                </label>
 
             </div>
 

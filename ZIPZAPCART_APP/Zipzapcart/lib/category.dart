@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api_service.dart';
@@ -319,11 +319,7 @@ class _CategoryPageState
 
                           Image.network(
 
-                            AppConstants
-                                .imageUrl +
-
-                                item[
-                                "image"],
+                            AppConstants.resolveImage(item["image"]),
 
                             fit:
                             BoxFit.contain,
@@ -577,16 +573,33 @@ class _CategoryPageState
 
                             child:
 
-                            Image.network(
+                            (item["image"] == null ||
+                                item["image"]
+                                    .toString()
+                                    .isEmpty)
 
-                              AppConstants
-                                  .imageUrl +
+                                ? Icon(
+                              Icons
+                                  .category_rounded,
+                              color: themeRed
+                                  .withOpacity(0.5),
+                            )
 
-                                  item[
-                                  "image"],
+                                : Image.network(
+
+                              AppConstants.resolveImage(item["image"]),
 
                               fit:
                               BoxFit.contain,
+
+                              errorBuilder:
+                                  (_, _, _) =>
+                                  Icon(
+                                    Icons
+                                        .category_rounded,
+                                    color: themeRed
+                                        .withOpacity(0.5),
+                                  ),
                             ),
                           ),
                         ),

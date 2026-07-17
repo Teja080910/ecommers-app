@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,7 +24,7 @@ class _CartPageState
   double total = 0;
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -97,109 +97,160 @@ class _CartPageState
           ? null
           : Container(
         padding:
-        const EdgeInsets.all(18),
+        const EdgeInsets.fromLTRB(
+          14, 12, 14, 12,
+        ),
 
-        decoration:
-        const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black
+                  .withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
 
         child: SafeArea(
+          top: false,
           child: Row(
             children: [
 
               Expanded(
-                child: Column(
-                  mainAxisSize:
-                  MainAxisSize.min,
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
 
-                  crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      0xFFFDECEB,
+                    ),
 
-                  children: [
+                    borderRadius:
+                    BorderRadius.circular(16),
+                  ),
 
-                    Text(
-                      "Total Amount",
+                  child: Column(
+                    mainAxisSize:
+                    MainAxisSize.min,
 
-                      style:
-                      GoogleFonts.poppins(
-                        fontSize: 13,
-                        color:
-                        Colors.grey,
+                    crossAxisAlignment:
+                    CrossAxisAlignment
+                        .start,
+
+                    children: [
+
+                      Text(
+                        "Total Amount",
+
+                        style:
+                        GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color:
+                          Colors.grey.shade600,
+                          fontWeight:
+                          FontWeight.w500,
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(
-                      height: 4,
-                    ),
-
-                    Text(
-                      "₹$total",
-
-                      style:
-                      GoogleFonts.poppins(
-                        fontSize: 28,
-
-                        fontWeight:
-                        FontWeight.w700,
-
-                        color:
-                        primaryColor,
+                      const SizedBox(
+                        height: 2,
                       ),
-                    ),
-                  ],
+
+                      Text(
+                        AppConstants.formatPrice(total),
+
+                        style:
+                        GoogleFonts.poppins(
+                          fontSize: 19,
+
+                          fontWeight:
+                          FontWeight.w800,
+
+                          color:
+                          primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              Expanded(
-                child: SizedBox(
-                  height: 58,
+              const SizedBox(width: 12),
 
-                  child:
-                  ElevatedButton(
+              SizedBox(
+                height: 48,
 
-                    onPressed: () {
+                child:
+                ElevatedButton(
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                          const CheckoutPage(),
-                        ),
-                      );
-                    },
+                  onPressed: () {
 
-                    style:
-                    ElevatedButton.styleFrom(
-                      backgroundColor:
-                      primaryColor,
-
-                      elevation: 0,
-
-                      shape:
-                      RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(
-                          18,
-                        ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                        const CheckoutPage(),
                       ),
+                    );
+                  },
+
+                  style:
+                  ElevatedButton.styleFrom(
+                    backgroundColor:
+                    primaryColor,
+
+                    elevation: 0,
+
+                    padding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 22,
                     ),
 
-                    child: Text(
-                      "Checkout",
-
-                      style:
-                      GoogleFonts.poppins(
-                        color:
-                        Colors.white,
-
-                        fontSize: 15,
-
-                        fontWeight:
-                        FontWeight.w700,
+                    shape:
+                    RoundedRectangleBorder(
+                      borderRadius:
+                      BorderRadius.circular(
+                        14,
                       ),
                     ),
+                  ),
+
+                  child: Row(
+                    mainAxisSize:
+                    MainAxisSize.min,
+
+                    children: [
+
+                      Text(
+                        "Checkout",
+
+                        style:
+                        GoogleFonts.poppins(
+                          color:
+                          Colors.white,
+
+                          fontSize: 14,
+
+                          fontWeight:
+                          FontWeight.w700,
+                        ),
+                      ),
+
+                      const SizedBox(width: 6),
+
+                      const Icon(
+                        Icons
+                            .arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -251,7 +302,7 @@ class _CartPageState
             ),
 
             Text(
-              "Looks like you haven’t\nadded anything yet.",
+              "Looks like you haven't\nadded anything yet.",
 
               textAlign:
               TextAlign.center,
@@ -336,12 +387,12 @@ class _CartPageState
 
             margin:
             const EdgeInsets.only(
-              bottom: 14,
+              bottom: 12,
             ),
 
             padding:
             const EdgeInsets.all(
-              14,
+              12,
             ),
 
             decoration:
@@ -351,7 +402,11 @@ class _CartPageState
 
               borderRadius:
               BorderRadius.circular(
-                22,
+                18,
+              ),
+
+              border: Border.all(
+                color: const Color(0xFFF1F1F1),
               ),
 
               boxShadow: [
@@ -361,12 +416,12 @@ class _CartPageState
                     0.03,
                   ),
 
-                  blurRadius: 12,
+                  blurRadius: 10,
 
                   offset:
                   const Offset(
                     0,
-                    4,
+                    3,
                   ),
                 ),
               ],
@@ -380,12 +435,12 @@ class _CartPageState
               children: [
 
                 Container(
-                  height: 110,
-                  width: 110,
+                  height: 78,
+                  width: 78,
 
                   padding:
                   const EdgeInsets.all(
-                    12,
+                    8,
                   ),
 
                   decoration:
@@ -397,15 +452,13 @@ class _CartPageState
 
                     borderRadius:
                     BorderRadius.circular(
-                      18,
+                      14,
                     ),
                   ),
 
                   child:
                   Image.network(
-                    AppConstants
-                        .imageUrl +
-                        item["image"],
+                    AppConstants.resolveImage(item["image"]),
 
                     fit:
                     BoxFit.contain,
@@ -413,7 +466,7 @@ class _CartPageState
                 ),
 
                 const SizedBox(
-                  width: 14,
+                  width: 12,
                 ),
 
                 Expanded(
@@ -424,37 +477,102 @@ class _CartPageState
 
                     children: [
 
-                      Text(
-                        item["name"],
+                      Row(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
 
-                        maxLines: 2,
+                        children: [
 
-                        overflow:
-                        TextOverflow
-                            .ellipsis,
+                          Expanded(
+                            child: Text(
+                              item["name"],
 
-                        style:
-                        GoogleFonts.poppins(
-                          fontSize:
-                          15,
+                              maxLines: 1,
 
-                          fontWeight:
-                          FontWeight
-                              .w600,
-                        ),
+                              overflow:
+                              TextOverflow
+                                  .ellipsis,
+
+                              style:
+                              GoogleFonts.poppins(
+                                fontSize:
+                                12.5,
+
+                                fontWeight:
+                                FontWeight
+                                    .w600,
+                              ),
+                            ),
+                          ),
+
+                          // 🔥 DELETE
+                          GestureDetector(
+
+                            onTap:
+                                () async {
+
+                              final res = await ApiService
+                                  .removeCartItem(
+                                int.parse(
+                                  item["id"]
+                                      .toString(),
+                                ),
+                              );
+
+                              await loadCart();
+
+                              if (!mounted) {
+                                return;
+                              }
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: res["status"] == true
+                                      ? const Color(0xFF1F1F1F)
+                                      : Colors.red,
+                                  content: Text(
+                                    res["status"] == true
+                                        ? "Item removed from cart"
+                                        : "Couldn't remove item. Please try again.",
+                                  ),
+                                ),
+                              );
+                            },
+
+                            child:
+                            Padding(
+                              padding:
+                              const EdgeInsets.only(
+                                left: 8,
+                              ),
+
+                              child:
+                              Icon(
+                                Icons
+                                    .delete_outline_rounded,
+
+                                size: 18,
+
+                                color:
+                                Colors.grey.shade400,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(
-                        height: 10,
+                        height: 6,
                       ),
 
                       Text(
-                        "₹${item["saleprice"]}",
+                        AppConstants.formatPrice(item["saleprice"]),
 
                         style:
                         GoogleFonts.poppins(
                           fontSize:
-                          22,
+                          16,
 
                           fontWeight:
                           FontWeight
@@ -466,186 +584,138 @@ class _CartPageState
                       ),
 
                       const SizedBox(
-                        height: 14,
+                        height: 8,
                       ),
 
-                      Row(
-                        children: [
+                      // 🔥 QUANTITY STEPPER
+                      Container(
+                        height: 30,
 
-                          // 🔥 MINUS
-                          GestureDetector(
+                        decoration:
+                        BoxDecoration(
+                          color: const Color(
+                            0xFFF6F6F6,
+                          ),
 
-                            onTap:
-                                () async {
+                          borderRadius:
+                          BorderRadius.circular(
+                            9,
+                          ),
+                        ),
 
-                              await ApiService
-                                  .updateCartQuantity(
-                                int.parse(
-                                  item["id"]
-                                      .toString(),
-                                ),
-                                "minus",
-                              );
+                        child: Row(
+                          mainAxisSize:
+                          MainAxisSize.min,
 
-                              loadCart();
-                            },
+                          children: [
 
-                            child:
-                            Container(
-                              height:
-                              36,
+                            GestureDetector(
 
-                              width:
-                              36,
+                              onTap:
+                                  () async {
 
-                              decoration:
-                              BoxDecoration(
-                                color:
-                                const Color(
-                                  0xFFF3F3F3,
-                                ),
+                                await ApiService
+                                    .updateCartQuantity(
+                                  int.parse(
+                                    item["id"]
+                                        .toString(),
+                                  ),
+                                  "minus",
+                                );
 
-                                borderRadius:
-                                BorderRadius.circular(
-                                  12,
-                                ),
-                              ),
+                                loadCart();
+                              },
 
                               child:
-                              const Icon(
-                                Icons
-                                    .remove,
-                                size:
-                                18,
-                              ),
-                            ),
-                          ),
+                              const SizedBox(
+                                height: 30,
+                                width: 32,
 
-                          Container(
-                            margin:
-                            const EdgeInsets.symmetric(
-                              horizontal:
-                              14,
-                            ),
-
-                            child:
-                            Text(
-                              item[
-                              "quantity"]
-                                  .toString(),
-
-                              style:
-                              GoogleFonts.poppins(
-                                fontSize:
-                                16,
-
-                                fontWeight:
-                                FontWeight
-                                    .w700,
-                              ),
-                            ),
-                          ),
-
-                          // 🔥 PLUS
-                          GestureDetector(
-
-                            onTap:
-                                () async {
-
-                              await ApiService
-                                  .updateCartQuantity(
-                                int.parse(
-                                  item["id"]
-                                      .toString(),
-                                ),
-                                "plus",
-                              );
-
-                              loadCart();
-                            },
-
-                            child:
-                            Container(
-                              height:
-                              36,
-
-                              width:
-                              36,
-
-                              decoration:
-                              BoxDecoration(
-                                color:
-                                primaryColor,
-
-                                borderRadius:
-                                BorderRadius.circular(
-                                  12,
+                                child: Icon(
+                                  Icons
+                                      .remove,
+                                  size:
+                                  15,
                                 ),
                               ),
+                            ),
+
+                            SizedBox(
+                              width: 26,
 
                               child:
-                              const Icon(
-                                Icons.add,
-                                size:
-                                18,
+                              Text(
+                                item[
+                                "quantity"]
+                                    .toString(),
 
-                                color: Colors
-                                    .white,
+                                textAlign:
+                                TextAlign.center,
+
+                                style:
+                                GoogleFonts.poppins(
+                                  fontSize:
+                                  13,
+
+                                  fontWeight:
+                                  FontWeight
+                                      .w700,
+                                ),
                               ),
                             ),
-                          ),
 
-                          const Spacer(),
+                            GestureDetector(
 
-                          // 🔥 DELETE
-                          GestureDetector(
+                              onTap:
+                                  () async {
 
-                            onTap:
-                                () async {
+                                await ApiService
+                                    .updateCartQuantity(
+                                  int.parse(
+                                    item["id"]
+                                        .toString(),
+                                  ),
+                                  "plus",
+                                );
 
-                              await ApiService
-                                  .removeCartItem(
-                                int.parse(
-                                  item["id"]
-                                      .toString(),
-                                ),
-                              );
-
-                              loadCart();
-                            },
-
-                            child:
-                            Container(
-                              padding:
-                              const EdgeInsets.all(
-                                10,
-                              ),
-
-                              decoration:
-                              BoxDecoration(
-                                color: Colors
-                                    .red
-                                    .withOpacity(
-                                  0.10,
-                                ),
-
-                                borderRadius:
-                                BorderRadius.circular(
-                                  12,
-                                ),
-                              ),
+                                loadCart();
+                              },
 
                               child:
-                              const Icon(
-                                Icons
-                                    .delete_outline,
+                              Container(
+                                height:
+                                30,
 
-                                color:
-                                Colors.red,
+                                width:
+                                32,
+
+                                alignment:
+                                Alignment.center,
+
+                                decoration:
+                                BoxDecoration(
+                                  color:
+                                  primaryColor,
+
+                                  borderRadius:
+                                  const BorderRadius.horizontal(
+                                    right: Radius.circular(9),
+                                  ),
+                                ),
+
+                                child:
+                                const Icon(
+                                  Icons.add,
+                                  size:
+                                  15,
+
+                                  color: Colors
+                                      .white,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),

@@ -43,6 +43,11 @@ $stmt->execute();
 $orders =
 $stmt->fetchAll();
 
+/* helper: never pass null into a string function (PHP 8.1+ deprecation) */
+function s($value){
+    return (string)($value ?? '');
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -102,84 +107,83 @@ body{
     color:#94a3b8;
 }
 
-/* TABLE */
+/* ORDER LIST */
 
-.orders-table{
+.order-list{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+/* CARD */
+
+.order-card{
     background:#111827;
-    border-radius:24px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,0.06);
     overflow:hidden;
 }
 
-/* HEAD */
-
-.table-head{
-    display:grid;
-
-    grid-template-columns:
-
-    120px
-    1.5fr
-    1.6fr
-    130px
-    130px
-    140px
-    150px
-    170px;
-
+.order-card-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
     gap:14px;
-
-    padding:18px 20px;
-
-    background:#1e293b;
-
-    font-size:13px;
-    font-weight:600;
+    padding:18px 22px;
+    background:rgba(255,255,255,0.02);
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    flex-wrap:wrap;
 }
-
-/* ROW */
-
-.table-row{
-    display:grid;
-
-    grid-template-columns:
-
-    120px
-    1.5fr
-    1.6fr
-    130px
-    130px
-    140px
-    150px
-    170px;
-
-    gap:14px;
-
-    align-items:center;
-
-    padding:18px 20px;
-
-    border-bottom:
-    1px solid rgba(255,255,255,0.05);
-
-    transition:.3s;
-}
-
-.table-row:hover{
-    background:#18212f;
-}
-
-/* TEXT */
 
 .order-id{
-    font-size:10px;
+    font-size:15px;
     font-weight:700;
     color:#22d3ee;
 }
 
+.order-date{
+    font-size:12px;
+    color:#94a3b8;
+    margin-top:3px;
+}
+
+/* BODY */
+
+.order-card-body{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:22px;
+    padding:20px 22px;
+}
+
+@media(max-width:800px){
+    .order-card-body{
+        grid-template-columns:1fr;
+    }
+}
+
+.section-label{
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:#64748b;
+    margin-bottom:10px;
+}
+
+/* CUSTOMER + PAYMENT */
+
+.info-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
 .user-name{
-    font-size:14px;
-    font-weight:600;
-    margin-bottom:4px;
+    font-size:15px;
+    font-weight:700;
 }
 
 .small-text{
@@ -188,9 +192,17 @@ body{
 }
 
 .amount{
-    font-size:15px;
+    font-size:20px;
     font-weight:700;
     color:#4ade80;
+    white-space:nowrap;
+}
+
+.badge-row{
+    display:flex;
+    gap:8px;
+    margin-top:12px;
+    flex-wrap:wrap;
 }
 
 /* BADGES */
@@ -202,45 +214,58 @@ body{
     font-size:11px;
     font-weight:600;
     text-transform:uppercase;
+    white-space:nowrap;
 }
 
-.placed{
-    background:#2563eb20;
-    color:#60a5fa;
-}
+.placed{ background:#2563eb20; color:#60a5fa; }
+.pending{ background:#eab30820; color:#facc15; }
+.paid{ background:#16a34a20; color:#4ade80; }
+.cod{ background:#7c3aed20; color:#c084fc; }
+.online{ background:#06b6d420; color:#22d3ee; }
+.shipped{ background:#7c3aed20; color:#c084fc; }
+.on-the-way{ background:#eab30820; color:#facc15; }
+.delivered{ background:#16a34a20; color:#4ade80; }
+.cancelled{ background:#dc262620; color:#f87171; }
 
-.pending{
-    background:#eab30820;
-    color:#facc15;
-}
-
-.paid{
-    background:#16a34a20;
-    color:#4ade80;
-}
-
-.cod{
-    background:#7c3aed20;
-    color:#c084fc;
-}
-
-.online{
-    background:#06b6d420;
-    color:#22d3ee;
-}
-
-/* ITEMS */
+/* PRODUCTS */
 
 .order-items{
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:10px;
 }
 
 .item{
-    font-size:12px;
-    color:#cbd5e1;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    font-size:13px;
     line-height:1.5;
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+}
+
+.item:last-child{
+    border-bottom:none;
+    padding-bottom:0;
+}
+
+.item-name{
+    color:#e2e8f0;
+    word-break:break-word;
+}
+
+.item-name .variant{
+    color:#94a3b8;
+    font-size:12px;
+}
+
+.item-qty{
+    color:#64748b;
+    font-size:12px;
+    white-space:nowrap;
+    flex-shrink:0;
 }
 
 /* EMPTY */
@@ -268,18 +293,6 @@ body{
 }
 
 /* RESPONSIVE */
-
-@media(max-width:1400px){
-
-    .orders-table{
-        overflow-x:auto;
-    }
-
-    .table-head,
-    .table-row{
-        min-width:1400px;
-    }
-}
 
 @media(max-width:900px){
 
@@ -314,47 +327,7 @@ body{
 
     <?php if(count($orders) > 0){ ?>
 
-    <div class="orders-table">
-
-        <!-- HEAD -->
-
-        <div class="table-head">
-
-            <div>
-                Order No
-            </div>
-
-            <div>
-                User
-            </div>
-
-            <div>
-                Products
-            </div>
-
-            <div>
-                Amount
-            </div>
-
-            <div>
-                Payment
-            </div>
-
-            <div>
-                Payment Status
-            </div>
-
-            <div>
-                Order Status
-            </div>
-
-            <div>
-                Date
-            </div>
-
-        </div>
-
-        <!-- ROWS -->
+    <div class="order-list">
 
         <?php foreach($orders as $order){ ?>
 
@@ -400,133 +373,91 @@ body{
 
         ?>
 
-        <div class="table-row">
+        <div class="order-card">
 
-            <!-- ORDER -->
+            <!-- CARD HEADER: order no / date / status -->
 
-            <div>
+            <div class="order-card-header">
 
-                <div class="order-id">
-
-                    <?php echo $order['order_no']; ?>
-
+                <div>
+                    <div class="order-id">
+                        <?php echo htmlspecialchars(s($order['order_no'])); ?>
+                    </div>
+                    <div class="order-date">
+                        <?php echo date("d M Y, h:i A", strtotime($order['created_at'])); ?>
+                    </div>
                 </div>
 
-            </div>
-
-            <!-- USER -->
-
-            <div>
-
-                <div class="user-name">
-
-                    <?php echo htmlspecialchars($order['user_name']); ?>
-
-                </div>
-
-                <div class="small-text">
-
-                    <?php echo htmlspecialchars($order['user_phone']); ?>
-
-                </div>
-
-            </div>
-
-            <!-- PRODUCTS -->
-
-            <div class="order-items">
-
-                <?php foreach($items as $item){ ?>
-
-                <div class="item">
-
-                    <?php echo htmlspecialchars($item['product_name']); ?>
-
-                    <?php if($item['varient_name'] != ""){ ?>
-
-                    (
-                    <?php echo htmlspecialchars($item['varient_name']); ?>
-                    )
-
-                    <?php } ?>
-
-                    × <?php echo $item['quantity']; ?>
-
-                </div>
-
-                <?php } ?>
-
-            </div>
-
-            <!-- AMOUNT -->
-
-            <div class="amount">
-
-                ₹<?php echo $order['total_amount']; ?>
-
-            </div>
-
-            <!-- PAYMENT -->
-
-            <div>
-
-                <span class="badge <?php echo strtolower($order['payment_method']); ?>">
-
-                    <?php echo $order['payment_method']; ?>
-
+                <span class="badge <?php echo strtolower(str_replace(' ', '-', s($order['order_status']))); ?>">
+                    <?php echo htmlspecialchars(s($order['order_status'])); ?>
                 </span>
 
             </div>
 
-            <!-- PAYMENT STATUS -->
+            <div class="order-card-body">
 
-            <div>
+                <!-- CUSTOMER + PAYMENT -->
 
-                <span class="badge <?php echo strtolower($order['payment_status']); ?>">
+                <div>
 
-                    <?php echo $order['payment_status']; ?>
+                    <div class="section-label">Customer</div>
 
-                </span>
+                    <div class="info-row">
+                        <div>
+                            <div class="user-name">
+                                <?php echo htmlspecialchars(s($order['user_name'])); ?>
+                            </div>
+                            <div class="small-text">
+                                <?php echo htmlspecialchars(s($order['user_phone'])); ?>
+                            </div>
+                        </div>
 
-            </div>
+                        <div class="amount">
+                            ₹<?php echo number_format((float)$order['total_amount'], 2); ?>
+                        </div>
+                    </div>
 
-            <!-- ORDER STATUS -->
+                    <div class="badge-row">
+                        <span class="badge <?php echo strtolower(s($order['payment_method'])); ?>">
+                            <?php echo htmlspecialchars(s($order['payment_method'])); ?>
+                        </span>
+                        <span class="badge <?php echo strtolower(s($order['payment_status'])); ?>">
+                            <?php echo htmlspecialchars(s($order['payment_status'])); ?>
+                        </span>
+                    </div>
 
-            <div>
+                </div>
 
-                <span class="badge placed">
+                <!-- PRODUCTS -->
 
-                    <?php echo $order['order_status']; ?>
+                <div>
 
-                </span>
+                    <div class="section-label">Products</div>
 
-            </div>
+                    <div class="order-items">
 
-            <!-- DATE -->
+                        <?php foreach($items as $item){ ?>
 
-            <div class="small-text">
+                        <div class="item">
 
-                <?php echo date(
+                            <div class="item-name">
+                                <?php echo htmlspecialchars(s($item['product_name'])); ?>
+                                <?php if(!empty($item['varient_name'])){ ?>
+                                    <span class="variant">(<?php echo htmlspecialchars(s($item['varient_name'])); ?>)</span>
+                                <?php } ?>
+                            </div>
 
-                "d M Y",
+                            <div class="item-qty">
+                                × <?php echo intval($item['quantity']); ?>
+                            </div>
 
-                strtotime(
-                $order['created_at']
-                )
+                        </div>
 
-                ); ?>
+                        <?php } ?>
 
-                <br>
+                    </div>
 
-                <?php echo date(
-
-                "h:i A",
-
-                strtotime(
-                $order['created_at']
-                )
-
-                ); ?>
+                </div>
 
             </div>
 

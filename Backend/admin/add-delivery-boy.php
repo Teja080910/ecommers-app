@@ -1,9 +1,8 @@
-<!-- add-delivery-boy.php -->
-
 <?php
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 if(!isset($_SESSION['admin_id'])){
     header("Location:index.php");
@@ -28,42 +27,13 @@ if(isset($_POST['add_delivery_boy'])){
 
     /* Uploads */
 
-    $profile_photo = "";
-    $aadhaar_photo = "";
-    $pan_photo = "";
+    $uploadError = "";
+    $uploadDir = "../app/uploads/deliveryboys";
+    $allowedExts = ['jpg','jpeg','png','webp'];
 
-    if(!empty($_FILES['profile_photo']['name'])){
-
-        $profile_photo = time().'_'.$_FILES['profile_photo']['name'];
-
-        move_uploaded_file(
-            $_FILES['profile_photo']['tmp_name'],
-            "../app/uploads/deliveryboys/".$profile_photo
-        );
-
-    }
-
-    if(!empty($_FILES['aadhaar_photo']['name'])){
-
-        $aadhaar_photo = time().'_'.$_FILES['aadhaar_photo']['name'];
-
-        move_uploaded_file(
-            $_FILES['aadhaar_photo']['tmp_name'],
-            "../app/uploads/deliveryboys/".$aadhaar_photo
-        );
-
-    }
-
-    if(!empty($_FILES['pan_photo']['name'])){
-
-        $pan_photo = time().'_'.$_FILES['pan_photo']['name'];
-
-        move_uploaded_file(
-            $_FILES['pan_photo']['tmp_name'],
-            "../app/uploads/deliveryboys/".$pan_photo
-        );
-
-    }
+    $profile_photo = handleCroppedOrRawUpload('cropped_profile_photo', 'profile_photo', $uploadDir, $allowedExts, $uploadError) ?? "";
+    $aadhaar_photo = handleCroppedOrRawUpload('cropped_aadhaar_photo', 'aadhaar_photo', $uploadDir, $allowedExts, $uploadError) ?? "";
+    $pan_photo = handleCroppedOrRawUpload('cropped_pan_photo', 'pan_photo', $uploadDir, $allowedExts, $uploadError) ?? "";
 
     $stmt = $pdo->prepare("
         INSERT INTO delivery_boys
@@ -128,6 +98,11 @@ $franchises = $pdo->query("
 <title>Add Delivery Boy</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="../assets/js/image-crop.js"></script>
 
 <style>
 
@@ -259,15 +234,18 @@ body{
                 </div>
 
                 <div class="input-box">
-                    <input type="file" name="profile_photo">
+                    <input type="file" name="profile_photo" id="profilePhotoInput" accept="image/*" onchange="ImageCrop.open(this,'croppedProfilePhotoData')">
+                    <input type="hidden" name="cropped_profile_photo" id="croppedProfilePhotoData">
                 </div>
 
                 <div class="input-box">
-                    <input type="file" name="aadhaar_photo">
+                    <input type="file" name="aadhaar_photo" id="aadhaarPhotoInput" accept="image/*" onchange="ImageCrop.open(this,'croppedAadhaarPhotoData')">
+                    <input type="hidden" name="cropped_aadhaar_photo" id="croppedAadhaarPhotoData">
                 </div>
 
                 <div class="input-box">
-                    <input type="file" name="pan_photo">
+                    <input type="file" name="pan_photo" id="panPhotoInput" accept="image/*" onchange="ImageCrop.open(this,'croppedPanPhotoData')">
+                    <input type="hidden" name="cropped_pan_photo" id="croppedPanPhotoData">
                 </div>
 
                 <div class="input-box" style="grid-column:span 2;">
@@ -286,6 +264,16 @@ body{
 
     </div>
 
+</div>
+
+<div class="crop-modal" id="cropModal">
+    <div class="crop-box">
+        <div class="crop-image-wrap"><img id="cropperImage"></div>
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+    </div>
 </div>
 
 </body>

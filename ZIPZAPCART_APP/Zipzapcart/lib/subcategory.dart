@@ -1,4 +1,4 @@
-// 🔥 CREATE subcategory.dart
+﻿// 🔥 CREATE subcategory.dart
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,7 +31,7 @@ class _SubCategoryPageState
   bool loading = true;
 
   final Color primaryColor =
-  const Color(0xFFECA202);
+  const Color(0xFFEF4138);
 
   @override
   void initState() {
@@ -89,9 +89,9 @@ class _SubCategoryPageState
         gridDelegate:
         const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          mainAxisSpacing: 18,
-          crossAxisSpacing: 18,
-          childAspectRatio: 0.78,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 0.68,
         ),
 
         itemBuilder: (_, index) {
@@ -150,8 +150,8 @@ class _SubCategoryPageState
                   children: [
 
                     Container(
-                      height: 90,
-                      width: 90,
+                      height: 74,
+                      width: 74,
 
                       decoration:
                       BoxDecoration(
@@ -166,12 +166,34 @@ class _SubCategoryPageState
                         borderRadius:
                         BorderRadius.circular(22),
 
-                        child: Image.network(
-                          AppConstants
-                              .imageUrl +
-                              item["image"],
+                        child: (item["image"] == null ||
+                            item["image"]
+                                .toString()
+                                .isEmpty)
+
+                            ? Icon(
+                          Icons
+                              .category_rounded,
+                          color:
+                          Colors.grey.shade400,
+                          size: 34,
+                        )
+
+                            : Image.network(
+                          AppConstants.resolveImage(item["image"]),
 
                           fit: BoxFit.contain,
+
+                          errorBuilder:
+                              (_, _, _) =>
+                              Icon(
+                                Icons
+                                    .category_rounded,
+                                color: Colors
+                                    .grey
+                                    .shade400,
+                                size: 34,
+                              ),
                         ),
                       ),
                     ),

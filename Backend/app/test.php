@@ -1,16 +1,8 @@
 <?php
 
-$token=
+require_once __DIR__ . "/fcm_helper.php";
 
-trim(
-
-file_get_contents(
-
-"https://zipzapcart.com/app/addaccess_token.php"
-
-)
-
-);
+$token= getFcmAccessToken();
 
 $fcm=
 
@@ -18,7 +10,7 @@ $fcm=
 
 $project=
 
-"ftnews-79e5c";
+"zipzapcart-app";
 
 $payload=[
 

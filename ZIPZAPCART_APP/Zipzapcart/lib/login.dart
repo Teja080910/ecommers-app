@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
-import 'referral.dart';
 import 'api_service.dart';
 import 'home.dart';
 class LoginPage extends StatefulWidget {
@@ -13,155 +11,80 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   static const Color themeRed =
   Color(0xFFEF4138);
-  String verificationId = "";
   bool isLoading = false;
 
-  // 🔥 SEND OTP
+  // 🔥 SEND EMAIL OTP
   Future<void> sendOtp() async {
     setState(() => isLoading = true);
 
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: "+91${phoneController.text}",
+    final res = await ApiService.sendEmailOtp(emailController.text.trim());
 
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        final userCred =
-        await FirebaseAuth.instance.signInWithCredential(credential);
+    setState(() => isLoading = false);
 
-        await ApiService.loginOrRegister({
-          "phone": phoneController.text,
-          "firebase_uid": userCred.user!.uid,
-        });
-
-        await _saveLogin();
-      },
-
-      verificationFailed: (FirebaseAuthException e) {
-        setState(() => isLoading = false);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(e.message ?? "OTP Failed"),
-          ),
-        );
-      },
-
-      codeSent: (String verId, int? resendToken) {
-        verificationId = verId;
-
-        setState(() => isLoading = false);
-
-        _showOtpSheet();
-      },
-
-      codeAutoRetrievalTimeout: (String verId) {},
-    );
-  }
-
-  // 🔥 VERIFY OTP
-  Future<void> verifyOtp(String otp) async {
-
-    setState(() => isLoading = true);
-
-    try {
-
-      PhoneAuthCredential credential =
-      PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: otp,
-      );
-
-      await FirebaseAuth.instance
-          .signInWithCredential(credential);
-
-      var res=
-
-      await ApiService
-          .loginOrRegister({
-
-        "phone":
-        phoneController.text,
-
-      });
-
-      final token=
-
-      await NotificationService
-          .getToken();
-
-      await ApiService
-          .saveFcmToken(
-
-        int.parse(
-
-          res["user"]["id"]
-              .toString(),
-
-        ),
-
-        token,
-
-      );
-
-      final prefs = await SharedPreferences.getInstance();
-
-      prefs.setInt(
-        "user_id",
-        int.parse(res["user"]["id"].toString()),
-      );
-
-      prefs.setBool("isLoggedIn", true);
-
-      setState(() => isLoading = false);
-
-      // 🔥 CHECK SPONSOR CODE
-      if (res["user"]["sponsor_code"] == null ||
-          res["user"]["sponsor_code"].toString().isEmpty) {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReferralPage(
-              userId: int.parse(
-                res["user"]["id"].toString(),
-              ),
-            ),
-          ),
-        );
-
-      } else {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HomePage(),
-          ),
-        );
-      }
-
-    } catch (e) {
-
-      setState(() => isLoading = false);
+    if (res["status"] == true) {
+      _showOtpSheet();
+    } else {
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           backgroundColor: Colors.red,
-          content: Text("Invalid OTP"),
+          content: Text(res["message"]?.toString() ?? "Could not send code"),
         ),
       );
     }
   }
 
-  // 🔥 SAVE LOGIN
-  Future<void> _saveLogin() async {
+  // 🔥 VERIFY EMAIL OTP
+  Future<void> verifyOtp(
+      String otp, {
+        required VoidCallback onInvalidOtp,
+      }) async {
+
+    setState(() => isLoading = true);
+
+    final res = await ApiService.verifyEmailOtp(
+      emailController.text.trim(),
+      otp,
+    );
+
+    if (res["status"] != true) {
+
+      setState(() => isLoading = false);
+
+      onInvalidOtp();
+
+      return;
+    }
+
+    await _saveLogin(res);
+  }
+
+  // 🔥 SAVE SESSION + NAVIGATE HOME
+  Future<void> _saveLogin(Map<String, dynamic> res) async {
     final prefs = await SharedPreferences.getInstance();
+
+    final userId = int.parse(res["user"]["id"].toString());
+
+    prefs.setInt("user_id", userId);
+
+    prefs.setString(
+      "auth_token",
+      res["token"]?.toString() ?? "",
+    );
 
     await prefs.setBool("isLoggedIn", true);
 
+    final token = await NotificationService.getToken();
+
+    await ApiService.saveFcmToken(userId, token);
+
     setState(() => isLoading = false);
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
@@ -185,6 +108,9 @@ class _LoginPageState extends State<LoginPage> {
       6,
           (_) => FocusNode(),
     );
+
+    String? otpError;
+    bool sheetMounted = true;
 
     showModalBottomSheet(
 
@@ -211,6 +137,9 @@ class _LoginPageState extends State<LoginPage> {
       ),
 
       builder: (context) {
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
 
         return SafeArea(
 
@@ -313,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   Text(
 
-                    "Enter the 6-digit code sent to +91 ${phoneController.text}",
+                    "Enter the 6-digit code sent to ${emailController.text}",
 
                     textAlign:
                     TextAlign.center,
@@ -408,7 +337,9 @@ class _LoginPageState extends State<LoginPage> {
                                 BorderSide(
 
                                   color:
-                                  Colors
+                                  otpError != null
+                                      ? Colors.red
+                                      : Colors
                                       .grey
                                       .shade300,
 
@@ -441,6 +372,16 @@ class _LoginPageState extends State<LoginPage> {
 
                             onChanged:
                                 (value) {
+
+                              if(
+                              otpError != null &&
+                              sheetMounted
+                              ){
+
+                                setModalState(() {
+                                  otpError = null;
+                                });
+                              }
 
                               if(
                               value
@@ -490,6 +431,28 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
+                  if(otpError != null) ...[
+
+                    const SizedBox(
+                      height: 12,
+                    ),
+
+                    Text(
+                      otpError!,
+
+                      textAlign:
+                      TextAlign.center,
+
+                      style:
+                      const TextStyle(
+                        color: Colors.red,
+                        fontSize: 13,
+                        fontWeight:
+                        FontWeight.w600,
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(
                     height: 30,
                   ),
@@ -528,25 +491,39 @@ class _LoginPageState extends State<LoginPage> {
 
                           verifyOtp(
                             otp,
+                            onInvalidOtp: () {
+
+                              if (!sheetMounted) {
+                                return;
+                              }
+
+                              setModalState(() {
+
+                                otpError =
+                                "Incorrect OTP. Please try again.";
+
+                                for(
+                                final c
+                                in otpControllers
+                                ){
+                                  c.clear();
+                                }
+                              });
+
+                              FocusScope.of(
+                                context,
+                              ).requestFocus(
+                                focusNodes[0],
+                              );
+                            },
                           );
 
                         }else{
 
-                          ScaffoldMessenger.of(
-                            context,
-                          )
-                              .showSnackBar(
-
-                            const SnackBar(
-
-                              content:
-                              Text(
-
-                                "Enter complete OTP",
-
-                              ),
-                            ),
-                          );
+                          setModalState(() {
+                            otpError =
+                            "Please enter the complete 6-digit OTP";
+                          });
                         }
                       },
 
@@ -602,11 +579,15 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         );
+          },
+        );
       },
-    );
+    ).then((_) {
+      sheetMounted = false;
+    });
   }
-  // 🔥 PHONE FIELD
-  Widget _phoneInputField() {
+  // 🔥 EMAIL FIELD
+  Widget _emailInputField() {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -645,13 +626,10 @@ class _LoginPageState extends State<LoginPage> {
               ),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Text(
-              "+91",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            child: const Icon(
+              Icons.email_rounded,
+              color: Colors.white,
+              size: 20,
             ),
           ),
 
@@ -667,18 +645,16 @@ class _LoginPageState extends State<LoginPage> {
 
           Expanded(
             child: TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.number,
-              maxLength: 10,
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
               decoration: const InputDecoration(
-                counterText: "",
                 border: InputBorder.none,
-                hintText: "Enter mobile number",
+                hintText: "Enter your email",
                 hintStyle: TextStyle(
                   color: Colors.white70,
                   fontWeight: FontWeight.w500,
@@ -691,10 +667,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  bool _isValidEmail(String value) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
 
       body: Stack(
         children: [
@@ -723,8 +703,15 @@ class _LoginPageState extends State<LoginPage> {
           ),
 
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(22),
+            child: AnimatedPadding(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.fromLTRB(
+                22,
+                22,
+                22,
+                22 + MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -763,7 +750,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 10),
 
                         Text(
-                          "India’s Smart Shopping Experience",
+                          "India's Smart Shopping Experience",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.78),
                             fontSize: 12,
@@ -773,7 +760,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 30),
 
-                        _phoneInputField(),
+                        _emailInputField(),
 
                         const SizedBox(height: 24),
 
@@ -783,13 +770,13 @@ class _LoginPageState extends State<LoginPage> {
                           height: 60,
                           child: ElevatedButton(
                             onPressed: () {
-                              if (phoneController.text.length == 10) {
+                              if (_isValidEmail(emailController.text.trim())) {
                                 sendOtp();
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                      "Enter valid mobile number",
+                                      "Enter a valid email address",
                                     ),
                                   ),
                                 );
@@ -816,10 +803,10 @@ class _LoginPageState extends State<LoginPage> {
                               mainAxisAlignment:
                               MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.phone_rounded, size: 22),
+                                Icon(Icons.email_rounded, size: 22),
                                 SizedBox(width: 10),
                                 Text(
-                                  "Continue with Phone",
+                                  "Continue with Email",
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

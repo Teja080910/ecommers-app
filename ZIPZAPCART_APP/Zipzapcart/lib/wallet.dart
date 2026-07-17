@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'api_service.dart';
 import 'cashback_page.dart';
+import 'constants.dart';
 
 class WalletPage
     extends StatefulWidget{
@@ -23,7 +24,7 @@ class _WalletPageState
 
   final Color primaryColor=
   const Color(
-    0xFFECA202,
+    0xFFEF4138,
   );
 
   double wallet=0;
@@ -162,7 +163,7 @@ class _WalletPageState
 
           ?
 
-      const Center(
+      Center(
 
         child:
 
@@ -174,7 +175,9 @@ class _WalletPageState
 
           child:
 
-          CircularProgressIndicator(),
+          CircularProgressIndicator(
+            color: primaryColor,
+          ),
 
         ),
 
@@ -222,7 +225,7 @@ class _WalletPageState
                       "Wallet Balance",
 
                       amount:
-                      "₹${wallet.toStringAsFixed(0)}",
+                      AppConstants.formatPrice(wallet),
 
                       icon:
                       Icons.account_balance_wallet,
@@ -247,7 +250,7 @@ class _WalletPageState
                       "Cashback Received",
 
                       amount:
-                      "₹${cashback.toStringAsFixed(0)}",
+                      AppConstants.formatPrice(cashback),
 
                       icon:
                       Icons.local_offer,
@@ -550,7 +553,7 @@ class _WalletPageState
 
                                   Text(
 
-                                    "₹${r["refund_amount"]}",
+                                    AppConstants.formatPrice(r["refund_amount"]),
 
                                     style:
 

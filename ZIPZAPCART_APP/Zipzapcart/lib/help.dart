@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api_service.dart';
 
@@ -94,6 +95,24 @@ class _HelpPageState
 
   }
 
+  Future<void> _callSupport() async {
+
+    final uri = Uri(scheme: 'tel', path: supportNumber);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _emailSupport() async {
+
+    final uri = Uri(scheme: 'mailto', path: supportEmail);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
   @override
   Widget build(
       BuildContext context,
@@ -152,7 +171,9 @@ class _HelpPageState
 
         child:
 
-        CircularProgressIndicator(),
+        CircularProgressIndicator(
+          color: Color(0xFFEF4138),
+        ),
 
       )
 
@@ -198,6 +219,9 @@ class _HelpPageState
                     subtitle:
                     supportNumber,
 
+                    onTap:
+                    _callSupport,
+
                   ),
 
                   const Divider(),
@@ -212,6 +236,9 @@ class _HelpPageState
 
                     subtitle:
                     supportEmail,
+
+                    onTap:
+                    _emailSupport,
 
                   ),
 
@@ -293,7 +320,7 @@ class _HelpPageState
 
               ElevatedButton(
 
-                onPressed:(){},
+                onPressed:_callSupport,
 
                 style:
 
@@ -409,9 +436,15 @@ class _HelpPageState
 
     required String subtitle,
 
+    VoidCallback? onTap,
+
   }){
 
-    return Padding(
+    return InkWell(
+
+      onTap: onTap,
+
+      child: Padding(
 
       padding:
 
@@ -531,6 +564,7 @@ class _HelpPageState
 
         ],
 
+      ),
       ),
 
     );

@@ -1,0 +1,4 @@
+# Firebase service account credential -- this is a live private key.
+# The repo is public; this must never be committed. In production, upload
+# it via Render's "Secret Files" feature instead (see Backend/app/fcm_helper.php).
+Backend/app/firebase-service-account.json

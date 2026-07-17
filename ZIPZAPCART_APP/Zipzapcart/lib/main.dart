@@ -1,14 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:app_links/app_links.dart';
 
 import 'notification_service.dart';
+import 'view_product.dart';
 
 import 'splash_screen.dart';
 import 'myorder.dart';
 
 final navigatorKey=
 GlobalKey<NavigatorState>();
+
+// 🔥 DEEP LINK: zipzapcart://product/<id> opens the shared product directly
+void _handleIncomingLink(Uri uri) {
+
+  if (uri.host != "product") {
+    return;
+  }
+
+  final segments = uri.pathSegments;
+
+  if (segments.isEmpty) {
+    return;
+  }
+
+  final productId = int.tryParse(segments.first);
+
+  if (productId == null) {
+    return;
+  }
+
+  navigatorKey.currentState?.push(
+    MaterialPageRoute(
+      builder: (_) => ViewProductPage(productId: productId),
+    ),
+  );
+}
+
+void _initDeepLinks() {
+
+  final appLinks = AppLinks();
+
+  appLinks.getInitialLink().then((uri) {
+    if (uri != null) {
+      _handleIncomingLink(uri);
+    }
+  });
+
+  appLinks.uriLinkStream.listen(_handleIncomingLink);
+}
 
 void main() async {
 
@@ -48,6 +90,8 @@ void main() async {
   );
   await NotificationService
       .init();
+
+  _initDeepLinks();
 }
 
 class MyApp
@@ -69,6 +113,11 @@ class MyApp
 
       debugShowCheckedModeBanner:
       false,
+
+      theme: ThemeData(
+        textTheme: GoogleFonts.poppinsTextTheme(),
+        primaryTextTheme: GoogleFonts.poppinsTextTheme(),
+      ),
 
       routes:{
 

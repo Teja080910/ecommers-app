@@ -2,13 +2,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'about.dart';
+import 'address.dart';
 import 'api_service.dart';
 import 'cart.dart';
 import 'category.dart';
 import 'constants.dart';
+import 'help.dart';
+import 'language.dart';
+import 'login.dart';
 import 'myorder.dart';
+import 'notification.dart';
 import 'posts.dart';
 import 'profile.dart';
 import 'subcategory.dart';
@@ -16,6 +22,8 @@ import 'view_product.dart';
 import 'search.dart';
 import 'topdeals.dart';
 import 'translator_service.dart';
+import 'widgets/shimmer_card.dart';
+import 'wishlist.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -27,18 +35,45 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   static const Color themeRed =
   Color(0xFFEF4138);
-  final PageController _bannerController =
-  PageController(viewportFraction: 0.93);
+  final ScrollController _portraitScroll = ScrollController();
+  final ScrollController _landscapeScroll = ScrollController();
 
-  int currentBanner = 0;
+  static const double _heroSectionHeight = 260;
+  static const double _portraitCardWidth = 150;
+  static const double _landscapeCardHeight = 122;
+  static const double _landscapeCardWidth = 250;
+  static const double _bannerCardGap = 12;
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   int selectedBottom = 0;
 
   bool loading = true;
 
+  int userId = 0;
+  int cartCount = 0;
+  Map? deliveryAddress;
+  String userName = "";
+
+  final Set<String> wishlistedIds = {};
+
   List banners = [];
+  List portraitBanners = [];
   List categories = [];
   List topDeals = [];
+  List bestSellers = [];
+  List recommended = [];
   List homeCategories = [];
+  List wishlistProducts = [];
+
+  static const List<Color> _categoryTileColors = [
+    Color(0xFFF3E8FF),
+    Color(0xFFFFE1E9),
+    Color(0xFFFFF4D6),
+    Color(0xFFE3F2FD),
+    Color(0xFFE8F5E9),
+    Color(0xFFFFE9DC),
+  ];
 
   final List<String> bottomIcons = [
     "assets/icons/home.svg",
@@ -112,38 +147,70 @@ class _HomePageState extends State<HomePage> {
   static const Color primaryColor =
       themeRed;
 
+  Timer? _bannerTimer;
+
   @override
   void initState() {
     super.initState();
 
     loadData();
 
-    Timer.periodic(
+    _bannerTimer = Timer.periodic(
       const Duration(seconds: 3),
           (timer) {
 
-        if (!_bannerController.hasClients ||
-            banners.isEmpty) {
+        if (!mounted) {
           return;
         }
 
-        currentBanner++;
-
-        if (currentBanner >= banners.length) {
-          currentBanner = 0;
-        }
-
-        _bannerController.animateToPage(
-          currentBanner,
-          duration:
-          const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
+        _autoScrollBannerRow(
+          _portraitScroll,
+          portraitBanners.length,
+          _portraitCardWidth + _bannerCardGap,
         );
 
-        setState(() {});
+        _autoScrollBannerRow(
+          _landscapeScroll,
+          banners.length,
+          _landscapeCardWidth + _bannerCardGap,
+        );
       },
     );
   }
+
+  void _autoScrollBannerRow(
+      ScrollController controller,
+      int itemCount,
+      double cardExtent,
+      ) {
+
+    if (!controller.hasClients || itemCount == 0) {
+      return;
+    }
+
+    final maxScroll = controller.position.maxScrollExtent;
+
+    double next = controller.offset + cardExtent;
+
+    if (next > maxScroll) {
+      next = 0;
+    }
+
+    controller.animateTo(
+      next,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    _portraitScroll.dispose();
+    _landscapeScroll.dispose();
+    super.dispose();
+  }
+
   Widget navItem({
     required int index,
     required String icon,
@@ -248,9 +315,375 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  // 🔥 SECTION HEADER (title + optional "View All" pill)
+  Widget sectionHeader(
+      String title, {
+        VoidCallback? onViewAll,
+      }) {
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+        children: [
+
+          Row(
+            children: [
+              Container(
+                height: 18,
+                width: 4,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              t(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+
+          if (onViewAll != null)
+            GestureDetector(
+              onTap: onViewAll,
+
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    t(
+                      "View All",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 10,
+                      color: primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _drawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+
+    return ListTile(
+      onTap: onTap,
+
+      leading: Container(
+        height: 38,
+        width: 38,
+
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+
+        child: Icon(icon, size: 18, color: primaryColor),
+      ),
+
+      title: t(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 12,
+        color: Colors.black26,
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+
+    return Drawer(
+      backgroundColor: Colors.white,
+
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+
+          children: [
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [primaryColor, primaryColor.withOpacity(0.85)],
+                ),
+              ),
+
+              child: GestureDetector(
+
+                onTap: () {
+
+                  Navigator.pop(context);
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => userId == 0
+                          ? const LoginPage()
+                          : const ProfilePage(),
+                    ),
+                  );
+                },
+
+                child: Row(
+                  children: [
+
+                    Container(
+                      height: 54,
+                      width: 54,
+
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+
+                      child: Icon(
+                        Icons.person,
+                        size: 28,
+                        color: primaryColor,
+                      ),
+                    ),
+
+                    const SizedBox(width: 14),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          t(
+                            userId == 0
+                                ? "Login / Sign up"
+                                : (userName.isNotEmpty
+                                    ? userName
+                                    : "My Account"),
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          t(
+                            userId == 0
+                                ? "Tap to access your account"
+                                : "View & edit profile",
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            _drawerItem(
+              icon: Icons.shopping_bag_outlined,
+              title: "My Orders",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyOrderPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.favorite_border,
+              title: "Wishlist",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WishlistPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.notifications_none_rounded,
+              title: "Notifications",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.language_rounded,
+              title: "Language",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LanguagePage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.support_agent_rounded,
+              title: "Help & Support",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HelpPage()),
+                );
+              },
+            ),
+
+            _drawerItem(
+              icon: Icons.info_outline_rounded,
+              title: "About Us",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AboutPage()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 10),
+
+            if (userId != 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+
+                child: GestureDetector(
+
+                  onTap: () async {
+
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear();
+
+                    if (!mounted) return;
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                    );
+                  },
+
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F0),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFFD8D4)),
+                    ),
+
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          size: 16,
+                          color: Color(0xFFE53935),
+                        ),
+                        const SizedBox(width: 8),
+                        t(
+                          "Logout",
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE53935),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> loadData() async {
 
+    final prefs = await SharedPreferences.getInstance();
+
+    userId = prefs.getInt("user_id") ?? 0;
+    userName = prefs.getString("name") ?? "";
+
     banners = await ApiService.getBanners();
+
+    portraitBanners = await ApiService.getPortraitBanners();
 
     categories =
     await ApiService.getCategories();
@@ -258,15 +691,247 @@ class _HomePageState extends State<HomePage> {
     topDeals =
     await ApiService.getTopDeals();
 
+    bestSellers =
+    await ApiService.getBestSellers();
+
+    recommended =
+    await ApiService.getRecommended();
+
     homeCategories =
     await ApiService.getHomeCategoryProducts();
+
+    await loadDeliveryAddress();
+
+    await loadCartCount();
+
+    await loadWishlist();
 
     setState(() {
       loading = false;
     });
   }
 
-  Widget productCard(Map item) {
+  bool requireLogin() {
+
+    if (userId != 0) {
+      return true;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F1F1F),
+        content: const Text(
+          "Please login to continue",
+        ),
+        action: SnackBarAction(
+          label: "LOGIN",
+          textColor: Colors.orangeAccent,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const LoginPage(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    return false;
+  }
+
+  Future<void> loadWishlist() async {
+
+    if (userId == 0) {
+      return;
+    }
+
+    wishlistProducts = await ApiService.getWishlist(userId);
+
+    wishlistedIds
+      ..clear()
+      ..addAll(
+        wishlistProducts.map((e) => e["id"].toString()),
+      );
+  }
+
+  Future<void> loadCartCount() async {
+
+    if (userId == 0) {
+      return;
+    }
+
+    final items = await ApiService.getCart(userId);
+
+    cartCount = items.length;
+  }
+
+  Future<void> openCart() async {
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CartPage(),
+      ),
+    );
+
+    await loadCartCount();
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> loadDeliveryAddress() async {
+
+    if (userId == 0) {
+      return;
+    }
+
+    final data = await ApiService.getDefaultAddress(userId);
+
+    if (data["status"] == true && data["address"] != null) {
+
+      deliveryAddress = data["address"];
+    }
+  }
+
+  Future<void> openLocationPicker() async {
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddressPage(),
+      ),
+    );
+
+    await loadDeliveryAddress();
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  // 🔥 PORTRAIT HERO CAROUSEL (top section, local bundled assets)
+  Widget _portraitCarousel() {
+
+    if (portraitBanners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: _heroSectionHeight,
+
+      child: ListView.builder(
+        controller: _portraitScroll,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+
+        itemCount: portraitBanners.length,
+
+        itemBuilder: (_, i) {
+
+          return Container(
+            width: _portraitCardWidth,
+            margin: EdgeInsets.only(
+              right: i == portraitBanners.length - 1
+                  ? 0
+                  : _bannerCardGap,
+            ),
+
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+
+              child: Image.network(
+                AppConstants.resolveImage(portraitBanners[i]["image"]),
+                width: _portraitCardWidth,
+                height: _heroSectionHeight,
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // 🔥 LANDSCAPE AD CAROUSEL (right column)
+  Widget _landscapeCarousel() {
+
+    if (banners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: _landscapeCardHeight,
+
+      child: ListView.builder(
+        controller: _landscapeScroll,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+
+        itemCount: banners.length,
+
+        itemBuilder: (_, i) {
+
+          return Container(
+            width: _landscapeCardWidth,
+            margin: EdgeInsets.only(
+              right: i == banners.length - 1 ? 0 : _bannerCardGap,
+            ),
+
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+
+              child: Image.network(
+                AppConstants.resolveImage(banners[i]["image"]),
+                width: _landscapeCardWidth,
+                height: _landscapeCardHeight,
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget topDealLandscapeCard(Map item) {
+
+    final rate = double.tryParse(item["rate"].toString()) ?? 0;
+    final saleprice = double.tryParse(item["saleprice"].toString()) ?? 0;
+    final hasDiscount = rate > saleprice && rate > 0;
+
+    final discountPercent = hasDiscount
+        ? (((rate - saleprice) / rate) * 100).round()
+        : 0;
+
+    final stock = int.tryParse(item["stock"]?.toString() ?? "");
+    final lowStock = stock != null && stock > 0 && stock <= 5;
 
     return GestureDetector(
 
@@ -285,23 +950,259 @@ class _HomePageState extends State<HomePage> {
       },
 
       child: Container(
-        width: 175,
-        margin: const EdgeInsets.only(right: 16),
+        width: 225,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(10),
+
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF0F0F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+
+                Container(
+                  height: 78,
+                  width: 78,
+                  padding: const EdgeInsets.all(8),
+
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFF9F9F9), Color(0xFFEFEFEF)],
+                    ),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+
+                  child: Image.network(
+                    AppConstants.resolveImage(item["image"]),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                if (hasDiscount)
+                  Positioned(
+                    top: -4,
+                    left: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(7),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+
+                      child: Text(
+                        "$discountPercent% OFF",
+                        style: GoogleFonts.poppins(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(width: 10),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.local_fire_department,
+                        size: 11,
+                        color: primaryColor,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        "TOP DEAL",
+                        style: GoogleFonts.poppins(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    item["name"] ?? "",
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      height: 1.25,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    spacing: 5,
+                    runSpacing: 2,
+                    children: [
+
+                      Text(
+                        AppConstants.formatPrice(saleprice),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: primaryColor,
+                        ),
+                      ),
+
+                      if (hasDiscount) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            AppConstants.formatPrice(rate),
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              decoration: TextDecoration.lineThrough,
+                              decorationColor: Colors.grey.shade400,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            "$discountPercent% off",
+                            style: GoogleFonts.poppins(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  if (lowStock) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          "Only $stock left",
+                          style: GoogleFonts.poppins(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget productCard(Map item) {
+
+    final id = item["id"].toString();
+
+    final rate = double.tryParse(item["rate"].toString()) ?? 0;
+    final saleprice = double.tryParse(item["saleprice"].toString()) ?? 0;
+    final hasDiscount = rate > saleprice && rate > 0;
+
+    final discountPercent = hasDiscount
+        ? (((rate - saleprice) / rate) * 100).round()
+        : 0;
+
+    final isWishlisted = wishlistedIds.contains(id);
+    final hasVariants = item["hasvarients"] == "yes";
+
+    final stock = int.tryParse(item["stock"]?.toString() ?? "");
+    final lowStock = stock != null && stock > 0 && stock <= 5;
+
+    return GestureDetector(
+
+      onTap: () {
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ViewProductPage(
+              productId: int.parse(
+                item["id"].toString(),
+              ),
+            ),
+          ),
+        );
+      },
+
+      child: Container(
+        width: 152,
+        margin: const EdgeInsets.only(right: 12),
 
         decoration: BoxDecoration(
           color: Colors.white,
 
           borderRadius:
-          BorderRadius.circular(26),
+          BorderRadius.circular(18),
+
+          border: Border.all(color: const Color(0xFFF0F0F0)),
 
           boxShadow: [
             BoxShadow(
               color:
-              Colors.black.withOpacity(0.05),
+              Colors.black.withOpacity(0.06),
 
-              blurRadius: 14,
+              blurRadius: 20,
 
-              offset: const Offset(0, 6),
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -312,32 +1213,199 @@ class _HomePageState extends State<HomePage> {
 
           children: [
 
-            Container(
-              height: 150,
-              width: double.infinity,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
 
-              padding:
-              const EdgeInsets.all(16),
+                Container(
+                  height: 118,
+                  width: double.infinity,
 
-              decoration: BoxDecoration(
-                color:
-                const Color(0xFFF7F7F7),
+                  padding:
+                  const EdgeInsets.all(12),
 
-                borderRadius:
-                BorderRadius.circular(26),
-              ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFF9F9F9), Color(0xFFEFEFEF)],
+                    ),
 
-              child: Image.network(
-                AppConstants.imageUrl +
-                    item["image"],
+                    borderRadius:
+                    const BorderRadius.vertical(
+                      top: Radius.circular(18),
+                    ),
+                  ),
 
-                fit: BoxFit.contain,
-              ),
+                  child: Image.network(
+                    AppConstants.resolveImage(item["image"]),
+
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                if (hasDiscount)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(7),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+
+                      child: Text(
+                        "$discountPercent% OFF",
+                        style: GoogleFonts.poppins(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+
+                    onTap: () async {
+
+                      if (!requireLogin()) {
+                        return;
+                      }
+
+                      setState(() {
+                        if (isWishlisted) {
+                          wishlistedIds.remove(id);
+                          wishlistProducts.removeWhere(
+                                (e) => e["id"].toString() == id,
+                          );
+                        } else {
+                          wishlistedIds.add(id);
+                          wishlistProducts.add(item);
+                        }
+                      });
+
+                      await ApiService.toggleWishlist(
+                        userId,
+                        int.parse(id),
+                      );
+                    },
+
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.10),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+
+                      child: Icon(
+                        isWishlisted
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+
+                        size: 12,
+
+                        color: isWishlisted
+                            ? primaryColor
+                            : Colors.grey.shade400,
+                      ),
+                    ),
+                  ),
+                ),
+
+                Positioned(
+                  bottom: -12,
+                  right: 8,
+                  child: GestureDetector(
+
+                    onTap: () async {
+
+                      if (hasVariants) {
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ViewProductPage(
+                              productId: int.parse(id),
+                            ),
+                          ),
+                        );
+
+                        return;
+                      }
+
+                      if (!requireLogin()) {
+                        return;
+                      }
+
+                      await ApiService.addToCart(
+                        userId,
+                        int.parse(id),
+                        0,
+                      );
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Color(0xFF1F1F1F),
+                            content: Text("Added to cart"),
+                          ),
+                        );
+                      }
+                    },
+
+                    child: Container(
+                      padding: const EdgeInsets.all(6.5),
+
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+
+                      child: const Icon(
+                        Icons.add,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             Padding(
               padding:
-              const EdgeInsets.all(14),
+              const EdgeInsets.fromLTRB(12, 14, 12, 12),
 
               child: Column(
                 crossAxisAlignment:
@@ -355,71 +1423,56 @@ class _HomePageState extends State<HomePage> {
 
                     style:
                     GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: 11.5,
                       fontWeight:
                       FontWeight.w600,
+                      color: Colors.black87,
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
 
-                  Row(
+                  Wrap(
 
                     crossAxisAlignment:
-                    CrossAxisAlignment.center,
+                    WrapCrossAlignment.end,
+
+                    spacing: 5,
+                    runSpacing: 2,
 
                     children:[
 
-                      Flexible(
+                      t(
 
-                        flex:2,
+                        AppConstants.formatPrice(saleprice),
 
-                        child:
+                        maxLines:1,
 
-                        t(
+                        overflow:
+                        TextOverflow.ellipsis,
 
-                          "₹${item["saleprice"]}",
+                        style:
+                        GoogleFonts.poppins(
 
-                          maxLines:1,
+                          fontSize:13.5,
 
-                          overflow:
-                          TextOverflow.ellipsis,
+                          fontWeight:
+                          FontWeight.w800,
 
-                          style:
-                          GoogleFonts.poppins(
-
-                            fontSize:16,
-
-                            fontWeight:
-                            FontWeight.w700,
-
-                            color:
-                            primaryColor,
-
-                          ),
+                          color:
+                          primaryColor,
 
                         ),
 
                       ),
 
-                      const SizedBox(
-                        width:8,
-                      ),
+                      if (hasDiscount) ...[
 
-                      Expanded(
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 1.5),
+                          child: t(
 
-                        child:
-
-                        Align(
-
-                          alignment:
-                          Alignment.centerRight,
-
-                          child:
-
-                          t(
-
-                            "₹${item["rate"]}",
+                            AppConstants.formatPrice(rate),
 
                             maxLines:1,
 
@@ -429,25 +1482,62 @@ class _HomePageState extends State<HomePage> {
                             style:
                             GoogleFonts.poppins(
 
-                              fontSize:12,
+                              fontSize:10,
 
                               decoration:
                               TextDecoration.lineThrough,
 
+                              decorationColor: Colors.grey.shade400,
+
                               color:
-                              Colors.grey,
+                              Colors.grey.shade400,
 
                             ),
 
                           ),
-
                         ),
 
-                      ),
+                        t(
+                          "$discountPercent% off",
+
+                          maxLines: 1,
+
+                          style: GoogleFonts.poppins(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ],
 
                     ],
 
                   ),
+
+                  if (lowStock) ...[
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        t(
+                          "Only $stock left",
+                          style: GoogleFonts.poppins(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -462,9 +1552,13 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
 
+      key: _scaffoldKey,
+
+      drawer: _buildDrawer(),
+
       backgroundColor:
       const Color(
-        0xFFFFFFFF,
+        0xFFF8F8FA,
       ),
       bottomNavigationBar: Container(
         height: 82,
@@ -524,14 +1618,60 @@ class _HomePageState extends State<HomePage> {
       ),
       body: loading
 
-          ? Center(
-        child:
-        CircularProgressIndicator(
-          color: primaryColor,
+          ? SafeArea(
+        child: SingleChildScrollView(
+
+          physics: const NeverScrollableScrollPhysics(),
+
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              const ShimmerBlock(width: double.infinity, height: 44, radius: 16),
+
+              const SizedBox(height: 16),
+
+              const ShimmerBlock(width: double.infinity, height: 58, radius: 22),
+
+              const SizedBox(height: 22),
+
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 6,
+                  itemBuilder: (_, i) => const ShimmerBlock(width: 74, height: 100, radius: 20),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              const ShimmerBlock(width: double.infinity, height: 220, radius: 20),
+
+              const SizedBox(height: 10),
+
+              SizedBox(
+                height: 250,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 3,
+                  itemBuilder: (_, i) => const ShimmerProductCard(),
+                ),
+              ),
+            ],
+          ),
         ),
       )
           : SafeArea(
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+
+          color: primaryColor,
+
+          onRefresh: loadData,
+
+          child: SingleChildScrollView(
 
           physics:
           const BouncingScrollPhysics(),
@@ -549,15 +1689,47 @@ class _HomePageState extends State<HomePage> {
                 ),
 
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+
                   children: [
 
-                    const SizedBox(width: 42),
+                    GestureDetector(
+
+                      onTap: () {
+                        _scaffoldKey.currentState?.openDrawer();
+                      },
+
+                      child: Container(
+                        height: 44,
+                        width: 44,
+
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F7F7),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFF0F0F0),
+                          ),
+                        ),
+
+                        child: const Icon(
+                          Icons.menu_rounded,
+                          size: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
 
                     Expanded(
-                      child: Center(
-                        child: Image.asset(
-                          "assets/images/logo.png",
-                          height: 42,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: Image.asset(
+                            "assets/images/logo.png",
+                            height: 32,
+                          ),
                         ),
                       ),
                     ),
@@ -565,33 +1737,116 @@ class _HomePageState extends State<HomePage> {
                     GestureDetector(
 
                       onTap: () {
-
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                CartPage(),
+                            builder: (_) => const NotificationPage(),
                           ),
                         );
                       },
 
-                      child: SvgPicture.asset(
-                        "assets/icons/cart.svg",
+                      child: Container(
+                        height: 44,
+                        width: 44,
 
-                        height: 26,
-                        width: 26,
-
-                        colorFilter:
-                        ColorFilter.mode(
-                          primaryColor,
-                          BlendMode.srcIn,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F7F7),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFF0F0F0),
+                          ),
                         ),
+
+                        child: const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    GestureDetector(
+
+                      onTap: openCart,
+
+                      child: Stack(
+                        clipBehavior: Clip.none,
+
+                        children: [
+
+                          Container(
+                            height: 46,
+                            width: 46,
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7F7F7),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFF0F0F0),
+                              ),
+                            ),
+
+                            child: Center(
+                              child: SvgPicture.asset(
+                                "assets/icons/cart.svg",
+
+                                height: 20,
+                                width: 20,
+
+                                colorFilter:
+                                ColorFilter.mode(
+                                  primaryColor,
+                                  BlendMode.srcIn,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          if (cartCount > 0)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+
+                                constraints: const BoxConstraints(
+                                  minWidth: 20,
+                                  minHeight: 20,
+                                ),
+
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+
+                                child: Center(
+                                  child: Text(
+                                    cartCount > 9 ? "9+" : "$cartCount",
+
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
 
+              // 🔥 SEARCH BAR
               Padding(
                 padding:
                 const EdgeInsets.symmetric(
@@ -661,6 +1916,7 @@ class _HomePageState extends State<HomePage> {
 
                       Icon(
                         Icons.search,
+                        size: 20,
                         color:
                         Colors.grey.shade500,
                       ),
@@ -688,35 +1944,89 @@ class _HomePageState extends State<HomePage> {
                   ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+
+              // 🔥 SELECT LOCATION
               Padding(
                 padding:
-                const EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
+                const EdgeInsets.fromLTRB(18, 0, 18, 12),
 
-                child: Row(
-                  children: [
+                child: GestureDetector(
 
-                    t(
-                      "Shop By Category",
+                  onTap: openLocationPicker,
 
-                      style:
-                      GoogleFonts.poppins(
-                        fontSize: 15,
-
-                        fontWeight:
-                        FontWeight.w700,
-                      ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                  ],
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF0F0F0)),
+                    ),
+
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+
+                        Icon(
+                          Icons.location_on,
+                          size: 15,
+                          color: primaryColor,
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Flexible(
+                          child: t(
+                            deliveryAddress != null
+                                ? "Deliver to: ${deliveryAddress!["city"] ?? ""} ${deliveryAddress!["pincode"] ?? ""}"
+                                : "Select Location",
+
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 4),
+
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
+
+              sectionHeader(
+                "Shop By Category",
+                onViewAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CategoryPage(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
 
               SizedBox(
-                height: 122,
+                height: 104,
 
                 child: ListView.builder(
                   scrollDirection:
@@ -735,6 +2045,9 @@ class _HomePageState extends State<HomePage> {
 
                     final item =
                     categories[index];
+
+                    final tileColor = _categoryTileColors[
+                        index % _categoryTileColors.length];
 
                     return GestureDetector(
 
@@ -759,7 +2072,7 @@ class _HomePageState extends State<HomePage> {
                       },
 
                       child: Container(
-                        width: 92,
+                        width: 72,
 
                         margin:
                         const EdgeInsets.only(
@@ -770,57 +2083,31 @@ class _HomePageState extends State<HomePage> {
                           children: [
 
                             Container(
-                              height: 78,
-                              width: 78,
+                              height: 60,
+                              width: 60,
+
+                              padding: const EdgeInsets.all(12),
 
                               decoration:
                               BoxDecoration(
+                                color: tileColor,
                                 borderRadius:
                                 BorderRadius.circular(
-                                  24,
+                                  18,
                                 ),
-
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                    Colors.black
-                                        .withOpacity(
-                                      0.05,
-                                    ),
-
-                                    blurRadius:
-                                    12,
-
-                                    offset:
-                                    const Offset(
-                                      0,
-                                      5,
-                                    ),
-                                  ),
-                                ],
                               ),
 
-                              child: ClipRRect(
-                                borderRadius:
-                                BorderRadius.circular(
-                                  24,
-                                ),
+                              child:
+                              Image.network(
+                                AppConstants.resolveImage(item["image"]),
 
-                                child:
-                                Image.network(
-                                  AppConstants
-                                      .imageUrl +
-                                      item[
-                                      "image"],
-
-                                  fit:
-                                  BoxFit.cover,
-                                ),
+                                fit:
+                                BoxFit.contain,
                               ),
                             ),
 
                             const SizedBox(
-                              height: 10,
+                              height: 8,
                             ),
 
                             t(
@@ -837,11 +2124,12 @@ class _HomePageState extends State<HomePage> {
 
                               style:
                               GoogleFonts.poppins(
-                                fontSize: 13,
+                                fontSize: 11.5,
 
                                 fontWeight:
                                 FontWeight
                                     .w600,
+                                color: Colors.black87,
                               ),
                             ),
                           ],
@@ -852,178 +2140,38 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              SizedBox(
-                height: 180,
-
-                child: PageView.builder(
-                  controller:
-                  _bannerController,
-
-                  itemCount:
-                  banners.length,
-
-                  onPageChanged: (i) {
-
-                    setState(() {
-                      currentBanner = i;
-                    });
-                  },
-
-                  itemBuilder: (_, i) {
-
-                    return Padding(
-                      padding:
-                      const EdgeInsets.only(
-                        right: 8,
-                      ),
-
-                      child: ClipRRect(
-                        borderRadius:
-                        BorderRadius.circular(
-                          28,
-                        ),
-
-                        child: Image.network(
-                          AppConstants
-                              .imageUrl +
-                              banners[i]
-                              ["image"],
-
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    );
-                  },
-                ),
+              // 🔥 PORTRAIT CAROUSEL (top)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: _portraitCarousel(),
               ),
 
               const SizedBox(height: 14),
 
-              Row(
-                mainAxisAlignment:
-                MainAxisAlignment.center,
-
-                children: List.generate(
-                  banners.length,
-
-                      (i) => AnimatedContainer(
-                    duration:
-                    const Duration(
-                      milliseconds: 300,
-                    ),
-
-                    margin:
-                    const EdgeInsets.symmetric(
-                      horizontal: 4,
-                    ),
-
-                    height: 8,
-
-                    width:
-                    currentBanner == i
-                        ? 22
-                        : 8,
-
-                    decoration: BoxDecoration(
-                      color:
-                      currentBanner ==
-                          i
-                          ? primaryColor
-                          : Colors.grey
-                          .shade300,
-
-                      borderRadius:
-                      BorderRadius.circular(
-                        20,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-
-
-              const SizedBox(height: 24),
-
-
-
+              // 🔥 LANDSCAPE CAROUSEL (below)
               Padding(
-                padding:
-                const EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
-
-                child: Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment
-                      .spaceBetween,
-
-                  children: [
-
-                    t(
-                      "Top Deals",
-
-                      style:
-                      GoogleFonts.poppins(
-                        fontSize: 15,
-
-                        fontWeight:
-                        FontWeight.w700,
-                      ),
-                    ),
-
-                    GestureDetector(
-
-                      onTap:(){
-
-                        Navigator.push(
-
-                          context,
-
-                          MaterialPageRoute(
-
-                            builder:
-                                (_)=>
-
-                            const TopDealsPage(),
-
-                          ),
-
-                        );
-
-                      },
-
-                      child:
-
-                      t(
-
-                        "View All",
-
-                        style:
-
-                        GoogleFonts.poppins(
-
-                          fontSize:13,
-
-                          fontWeight:
-                          FontWeight.w600,
-
-                          color:
-                          primaryColor,
-
-                        ),
-
-                      ),
-
-                    ),
-                  ],
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: _landscapeCarousel(),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 26),
+
+              sectionHeader(
+                "Top Deals",
+                onViewAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TopDealsPage(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
 
               SizedBox(
-                height: 265,
+                height: 122,
 
                 child: ListView.builder(
                   scrollDirection:
@@ -1040,12 +2188,116 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder:
                       (_, index) {
 
-                    return productCard(
+                    return topDealLandscapeCard(
                       topDeals[index],
                     );
                   },
                 ),
               ),
+
+              // 🔥 BEST SELLERS
+              if (bestSellers.isNotEmpty) ...[
+
+                const SizedBox(height: 26),
+
+                sectionHeader(
+                  "Best Sellers",
+                  onViewAll: null,
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 122,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+
+                    itemCount: bestSellers.length,
+
+                    itemBuilder: (_, index) {
+
+                      return topDealLandscapeCard(
+                        bestSellers[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // 🔥 RECOMMENDED FOR YOU
+              if (recommended.isNotEmpty) ...[
+
+                const SizedBox(height: 26),
+
+                sectionHeader(
+                  "Recommended For You",
+                  onViewAll: null,
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 122,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                    ),
+
+                    itemCount: recommended.length,
+
+                    itemBuilder: (_, index) {
+
+                      return topDealLandscapeCard(
+                        recommended[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // 🔥 FROM YOUR WISHLIST
+              if (wishlistProducts.isNotEmpty) ...[
+
+                const SizedBox(height: 28),
+
+                sectionHeader(
+                  "From Your Wishlist",
+                  onViewAll: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const WishlistPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  height: 225,
+
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+
+                    itemCount: wishlistProducts.length,
+
+                    itemBuilder: (_, index) {
+                      return productCard(wishlistProducts[index]);
+                    },
+                  ),
+                ),
+              ],
 
               ...List.generate(
                 homeCategories.length,
@@ -1069,30 +2321,25 @@ class _HomePageState extends State<HomePage> {
                         height: 28,
                       ),
 
-                      Padding(
-                        padding:
-                        const EdgeInsets.symmetric(
-                          horizontal:
-                          18,
-                        ),
-
-                        child: t(
-                          category["name"],
-
-                          style:
-                          GoogleFonts.poppins(
-                            fontSize:
-                            15,
-
-                            fontWeight:
-                            FontWeight
-                                .w700,
-                          ),
-                        ),
+                      sectionHeader(
+                        category["name"],
+                        onViewAll: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SubCategoryPage(
+                                categoryId: int.parse(
+                                  category["id"].toString(),
+                                ),
+                                categoryName: category["name"],
+                              ),
+                            ),
+                          );
+                        },
                       ),
 
                       const SizedBox(
-                        height: 18,
+                        height: 16,
                       ),
 
                       products.isEmpty
@@ -1120,7 +2367,7 @@ class _HomePageState extends State<HomePage> {
                       )
 
                           : SizedBox(
-                        height: 265,
+                        height: 240,
 
                         child:
                         ListView.builder(
@@ -1305,6 +2552,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -338,6 +338,20 @@ $settings_pages = ['app-settings.php','change-password.php'];
         </ul>
 
     </li>
+
+    <!-- Subscription -->
+    <li class="<?= ($current_page == 'subscription-plans.php') ? 'active' : '' ?>">
+
+        <a href="subscription-plans.php">
+
+            <div class="menu-left">
+                <i class="fa-solid fa-crown"></i>
+                Subscription
+            </div>
+
+        </a>
+
+    </li>
 <?php
 $food_product_pages = [
     'add-food-product.php',
@@ -412,88 +426,6 @@ $food_product_pages = [
     <!-- Users -->
 
     <!-- Service Areas -->
-
-  <?php
-
-$post_pages = [
-
-"addpost.php",
-
-"allposts.php"
-
-];
-
-?>
-
-<li class="<?= in_array($current_page,$post_pages) ? 'active' : '' ?>">
-
-<a
-href="javascript:void(0)"
-onclick="toggleSubmenu('postMenu')">
-
-<div class="menu-left">
-
-<i class="fa-solid fa-square-share-nodes"></i>
-
-Posts
-
-</div>
-
-<i class="fa-solid fa-angle-down"></i>
-
-</a>
-
-<ul
-
-class="submenu
-
-<?= in_array($current_page,$post_pages)
-
-? 'show'
-
-: ''
-
-?>"
-
-id="postMenu"
-
->
-
-<li>
-
-<a
-
-class="<?= isActive('addpost.php') ?>"
-
-href="addpost.php"
-
->
-
-Add Post
-
-</a>
-
-</li>
-
-<li>
-
-<a
-
-class="<?= isActive('allpost.php') ?>"
-
-href="allpost.php"
-
->
-
-All Posts
-
-</a>
-
-</li>
-
-</ul>
-
-</li>
 
     <!-- Razorpay -->
 

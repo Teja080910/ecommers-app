@@ -3,6 +3,7 @@
 session_start();
 
 require_once 'db.php';
+require_once __DIR__ . '/../app/fcm_helper.php';
 
 /* LOGIN */
 
@@ -80,19 +81,13 @@ COUNT(*)
 FROM
 order_items
 
-INNER JOIN products
-
-ON
-products.id=
-order_items.product_id
-
 WHERE
 
 order_items.order_id=?
 
 AND
 
-products.seller_id=?
+order_items.seller_id=?
 
 "
 
@@ -188,21 +183,11 @@ $user["fcm_token"]
 
 ){
 
-$access=
-
-trim(
-
-file_get_contents(
-
-"https://zipzapcart.com/app/addaccess_token.php"
-
-)
-
-);
+$access= getFcmAccessToken();
 
 $project=
 
-"ftnews-79e5c";
+"zipzapcart-app";
 
 $title=
 
@@ -396,12 +381,6 @@ ON
 order_items.order_id=
 orders.id
 
-INNER JOIN products
-
-ON
-products.id=
-order_items.product_id
-
 LEFT JOIN users
 
 ON
@@ -416,7 +395,7 @@ orders.deliveryboy_id
 
 WHERE
 
-products.seller_id=?
+order_items.seller_id=?
 
 ORDER BY
 orders.id DESC
@@ -982,7 +961,7 @@ order_items.order_id=?
 
 AND
 
-products.seller_id=?
+order_items.seller_id=?
 
 "
 

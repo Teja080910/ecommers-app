@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'translator_service.dart';
 
 class LanguagePage extends StatefulWidget {
   const LanguagePage({super.key});
@@ -179,37 +181,63 @@ class _LanguagePageState
       selectedLang,
     );
 
-    if(
-    selectedLang!="en"
-    ){
+    try{
 
-      final model=
-      OnDeviceTranslatorModelManager();
+      if(
+      selectedLang!="en"
+      ){
 
-      await model
-          .downloadModel(
+        final model=
+        OnDeviceTranslatorModelManager();
 
-        getLang(
-          selectedLang,
-        ),
+        await model
+            .downloadModel(
 
-      );
+          getLang(
+            selectedLang,
+          ),
 
-    }
+        )
+        // 🔥 without a timeout, a stalled/failed download (no network,
+        // Play Services unavailable, etc.) leaves the button spinning
+        // forever since nothing ever completes the Future
+            .timeout(
+          const Duration(seconds: 30),
+        );
 
-    setState(() {
-      loading=false;
-    });
+      }
 
-    if(
-    mounted
-    ){
+      // 🔥 actually switch the active translator so `t()` calls translate
+      await TranslatorService().reload();
 
-      Navigator.pop(
-        context,
-        true,
-      );
+      if(mounted){
 
+        setState(() {
+          loading=false;
+        });
+
+        Navigator.pop(
+          context,
+          true,
+        );
+      }
+
+    }catch(e){
+
+      if(mounted){
+
+        setState(() {
+          loading=false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Couldn't download the language pack. Check your internet connection and try again.",
+            ),
+          ),
+        );
+      }
     }
 
   }

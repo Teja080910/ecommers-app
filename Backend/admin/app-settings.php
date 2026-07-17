@@ -2,6 +2,7 @@
 session_start();
 
 require_once 'db.php';
+require_once '../includes/image_upload.php';
 
 /* Login Check */
 
@@ -18,49 +19,35 @@ $error = "";
 
 if(isset($_POST['add_banner'])){
 
-    if(isset($_FILES['image']) && $_FILES['image']['error'] == 0){
+    $uploadError = "";
 
-        $allowed = ['jpg','jpeg','png','webp'];
+    $imageFile = handleCroppedOrRawUpload(
+        'cropped_image',
+        'image',
+        "../app/uploads",
+        ['jpg','jpeg','png','webp'],
+        $uploadError
+    );
 
-        $file_name = $_FILES['image']['name'];
+    if($uploadError != ""){
 
-        $tmp_name = $_FILES['image']['tmp_name'];
+        $error = $uploadError;
 
-        $ext = strtolower(pathinfo($file_name,PATHINFO_EXTENSION));
+    }else if($imageFile){
 
-        if(!in_array($ext,$allowed)){
+        $db_image = "uploads/".$imageFile;
 
-            $error = "Only JPG, PNG and WEBP Allowed";
+        $insert = $pdo->prepare("INSERT INTO banners(image) VALUES(?)");
+
+        $run = $insert->execute([$db_image]);
+
+        if($run){
+
+            $success = "Banner Uploaded Successfully";
 
         }else{
 
-            $new_name = time().'_'.rand(1000,9999).'.'.$ext;
-
-            $upload_path = "../app/uploads/".$new_name;
-
-            if(move_uploaded_file($tmp_name,$upload_path)){
-
-                $insert = $pdo->prepare("INSERT INTO banners(image) VALUES(?)");
-
-               $db_image = "uploads/".$new_name;
-
-$run = $insert->execute([$db_image]);
-
-                if($run){
-
-                    $success = "Banner Uploaded Successfully";
-
-                }else{
-
-                    $error = "Database Insert Failed";
-
-                }
-
-            }else{
-
-                $error = "Image Upload Failed";
-
-            }
+            $error = "Database Insert Failed";
 
         }
 
@@ -123,6 +110,14 @@ $banners = $query->fetchAll();
 <title>App Settings</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+
+<link rel="stylesheet" href="../assets/css/image-crop.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+
+<script src="../assets/js/image-crop.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -402,12 +397,16 @@ body{
                     Banner Image
                 </label>
 
-                <input 
+                <input
                     type="file"
                     name="image"
-                    accept=".jpg,.jpeg,.png,.webp"
+                    id="imageInput"
+                    accept="image/*"
+                    onchange="ImageCrop.open(this,'croppedImageData')"
                     required
                 >
+
+                <input type="hidden" name="cropped_image" id="croppedImageData">
 
             </div>
 
@@ -489,6 +488,24 @@ body{
     </div>
 
     <?php } ?>
+
+</div>
+
+<!-- CROP MODAL -->
+<div class="crop-modal" id="cropModal">
+
+    <div class="crop-box">
+
+        <div class="crop-image-wrap">
+            <img id="cropperImage">
+        </div>
+
+        <div class="crop-actions">
+            <button type="button" class="crop-skip-btn" onclick="ImageCrop.skip()">Skip Crop</button>
+            <button type="button" class="crop-use-btn" onclick="ImageCrop.apply()">Crop &amp; Use</button>
+        </div>
+
+    </div>
 
 </div>
 

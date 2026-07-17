@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'login.dart';
 import 'api_service.dart';
@@ -8,7 +7,6 @@ import 'api_service.dart';
 // 🔥 IMPORT PAGES
 import 'myorder.dart';
 import 'address.dart';
-import 'wallet.dart';
 import 'wishlist.dart';
 import 'language.dart';
 import 'mode.dart';
@@ -30,7 +28,8 @@ class _ProfilePageState
 
   String name = "Loading...";
   String phone = "";
-  String referralCode = "";
+  String username = "";
+  String gender = "";
   String appTheme = "light";
 
   bool get isDark =>
@@ -69,6 +68,14 @@ class _ProfilePageState
       phone =
           prefs.getString("phone") ??
               "";
+
+      username =
+          prefs.getString("username") ??
+              "";
+
+      gender =
+          prefs.getString("gender") ??
+              "";
     });
 
     if (userId == 0) {
@@ -98,9 +105,12 @@ class _ProfilePageState
             res["user"]["phone"] ??
                 "";
 
-        referralCode =
-            res["user"]
-            ["referral_code"] ??
+        username =
+            res["user"]["username"] ??
+                "";
+
+        gender =
+            res["user"]["gender"] ??
                 "";
 
         await prefs.setString(
@@ -111,6 +121,16 @@ class _ProfilePageState
         await prefs.setString(
           "phone",
           phone,
+        );
+
+        await prefs.setString(
+          "username",
+          username,
+        );
+
+        await prefs.setString(
+          "gender",
+          gender,
         );
 
         print(
@@ -125,17 +145,94 @@ class _ProfilePageState
       );
     }
 
+    if (!mounted) {
+      return;
+    }
+
     setState(() {
       isLoading = false;
     });
   }
 
-  void editName() {
+  void editProfile() {
 
-    final controller =
-    TextEditingController(
-      text: name,
-    );
+    final nameController = TextEditingController(text: name);
+    final phoneController = TextEditingController(text: phone);
+    final usernameController = TextEditingController(text: username);
+
+    String selectedGender = gender;
+    String? error;
+    bool submitting = false;
+
+    Widget genderChip(
+      String value,
+      String label,
+      void Function(void Function()) setModalState,
+    ) {
+
+      final selected = selectedGender == value;
+
+      return Expanded(
+        child: GestureDetector(
+          onTap: () {
+            setModalState(() {
+              selectedGender = value;
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFFEF4138)
+                  : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7)),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? const Color(0xFFEF4138) : Colors.transparent,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.black87),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget fieldLabel(String text) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 14),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+      );
+    }
+
+    InputDecoration fieldDecoration(String hint, IconData icon) {
+      return InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F7F7),
+        prefixIcon: Icon(icon, color: const Color(0xFFEF4138)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+      );
+    }
 
     showModalBottomSheet(
 
@@ -143,409 +240,229 @@ class _ProfilePageState
 
       isScrollControlled: true,
 
-      backgroundColor:
-      Colors.transparent,
+      backgroundColor: Colors.transparent,
 
       builder: (_) {
 
-        return Padding(
+        return StatefulBuilder(
+          builder: (context, setModalState) {
 
-          padding:
+            return Padding(
 
-          EdgeInsets.only(
-
-            bottom:
-
-            MediaQuery.of(
-              context,
-            )
-
-                .viewInsets
-                .bottom,
-
-          ),
-
-          child:
-
-          Container(
-
-            padding:
-            const EdgeInsets.all(
-              20,
-            ),
-
-            decoration:
-
-            BoxDecoration(
-
-              color:
-
-              isDark
-
-                  ?
-
-              const Color(
-                0xFF1E1E1E,
-              )
-
-                  :
-
-              Colors.white,
-
-              borderRadius:
-
-              const BorderRadius.vertical(
-
-                top:
-                Radius.circular(
-                  28,
-                ),
-
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
 
-            ),
+              child: Container(
 
-            child:
+                padding: const EdgeInsets.all(20),
 
-            Column(
-
-              mainAxisSize:
-              MainAxisSize.min,
-
-              children:[
-
-                Container(
-
-                  width:60,
-                  height:5,
-
-                  decoration:
-
-                  BoxDecoration(
-
-                    color:
-                    Colors.grey,
-
-                    borderRadius:
-                    BorderRadius.circular(
-                      20,
-                    ),
-
-                  ),
-
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 ),
 
-                const SizedBox(
-                  height:20,
-                ),
+                child: SingleChildScrollView(
 
-                Row(
+                  child: Column(
 
-                  children:[
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-                    Container(
+                    children: [
 
-                      width:54,
-                      height:54,
-
-                      decoration:
-
-                      BoxDecoration(
-
-                        color:
-
-                        const Color(
-                          0xFFDF6907,
-                        )
-
-                            .withOpacity(
-                          0.12,
+                      Center(
+                        child: Container(
+                          width: 60,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
-
-                        shape:
-                        BoxShape.circle,
-
                       ),
 
-                      child:
-
-                      const Icon(
-
-                        Icons.edit,
-
-                        color:
-                        Color(
-                          0xFFDF6907,
-                        ),
-
-                      ),
-
-                    ),
-
-                    const SizedBox(
-                      width:14,
-                    ),
-
-                    Expanded(
-
-                      child:
+                      const SizedBox(height: 20),
 
                       Text(
-
-                        "Update Name",
-
-                        style:
-
-                        TextStyle(
-
-                          fontSize:20,
-
-                          fontWeight:
-                          FontWeight.w800,
-
-                          color:
-
-                          isDark
-
-                              ?
-
-                          Colors.white
-
-                              :
-
-                          Colors.black,
-
+                        "Edit Profile",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
-
                       ),
 
-                    ),
-
-                  ],
-
-                ),
-
-                const SizedBox(
-                  height:18,
-                ),
-
-                TextField(
-
-                  controller:
-                  controller,
-
-                  style:
-
-                  TextStyle(
-
-                    color:
-
-                    isDark
-
-                        ?
-
-                    Colors.white
-
-                        :
-
-                    Colors.black,
-
-                  ),
-
-                  decoration:
-
-                  InputDecoration(
-
-                    hintText:
-                    "Enter display name",
-
-                    filled:true,
-
-                    fillColor:
-
-                    isDark
-
-                        ?
-
-                    const Color(
-                      0xFF2A2A2A,
-                    )
-
-                        :
-
-                    const Color(
-                      0xFFF7F7F7,
-                    ),
-
-                    prefixIcon:
-
-                    const Icon(
-
-                      Icons.person,
-
-                      color:
-                      Color(
-                        0xFFDF6907,
-                      ),
-
-                    ),
-
-                    border:
-
-                    OutlineInputBorder(
-
-                      borderRadius:
-                      BorderRadius.circular(
-                        18,
-                      ),
-
-                      borderSide:
-                      BorderSide.none,
-
-                    ),
-
-                  ),
-
-                ),
-
-                const SizedBox(
-                  height:18,
-                ),
-
-                SizedBox(
-
-                  width:
-                  double.infinity,
-
-                  height:54,
-
-                  child:
-
-                  ElevatedButton(
-
-                    onPressed:
-                        () async {
-
-                      if(
-                      controller.text
-                          .trim()
-                          .isEmpty
-                      ){
-
-                        return;
-
-                      }
-
-                      bool ok =
-
-                      await ApiService
-                          .updateProfile(
-
-                        userId,
-
-                        controller.text
-                            .trim(),
-
-                      );
-
-                      if(ok){
-
-                        final prefs =
-
-                        await SharedPreferences
-                            .getInstance();
-
-                        await prefs.setString(
-
-                          "name",
-
-                          controller.text
-                              .trim(),
-
-                        );
-
-                        setState(() {
-
-                          name =
-                              controller.text
-                                  .trim();
-
-                        });
-
-                      }
-
-                      if(context.mounted){
-
-                        Navigator.pop(
-                          context,
-                        );
-
-                      }
-
-                    },
-
-                    style:
-
-                    ElevatedButton
-                        .styleFrom(
-
-                      backgroundColor:
-
-                      const Color(
-                        0xFFDF6907,
-                      ),
-
-                      shape:
-
-                      RoundedRectangleBorder(
-
-                        borderRadius:
-                        BorderRadius.circular(
-                          16,
+                      if (error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          error!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
+                      ],
 
+                      fieldLabel("Full Name"),
+
+                      TextField(
+                        controller: nameController,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: fieldDecoration("Enter your name", Icons.person),
                       ),
 
-                    ),
+                      fieldLabel("Mobile Number"),
 
-                    child:
-
-                    const Text(
-
-                      "Update",
-
-                      style:
-
-                      TextStyle(
-                        color:
-                        Colors.white,
-                        fontSize:16,
-
-                        fontWeight:
-                        FontWeight.w700,
-
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 10,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: fieldDecoration("Enter mobile number", Icons.phone).copyWith(
+                          counterText: "",
+                        ),
                       ),
 
-                    ),
+                      fieldLabel("Username"),
 
+                      TextField(
+                        controller: usernameController,
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        decoration: fieldDecoration("Enter username", Icons.alternate_email),
+                      ),
+
+                      fieldLabel("Gender"),
+
+                      Row(
+                        children: [
+                          genderChip("male", "Male", setModalState),
+                          genderChip("female", "Female", setModalState),
+                          genderChip("other", "Other", setModalState),
+                        ],
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      SizedBox(
+
+                        width: double.infinity,
+                        height: 54,
+
+                        child: ElevatedButton(
+
+                          onPressed: submitting ? null : () async {
+
+                            final newName = nameController.text.trim();
+
+                            if (newName.isEmpty) {
+                              setModalState(() {
+                                error = "Name is required";
+                              });
+                              return;
+                            }
+
+                            final newPhone = phoneController.text.trim();
+
+                            if (newPhone.isNotEmpty && newPhone.length != 10) {
+                              setModalState(() {
+                                error = "Enter a valid 10-digit mobile number";
+                              });
+                              return;
+                            }
+
+                            setModalState(() {
+                              submitting = true;
+                              error = null;
+                            });
+
+                            final newUsername = usernameController.text.trim();
+
+                            final res = await ApiService.updateProfile(
+                              userId,
+                              newName,
+                              phone: newPhone.isEmpty ? null : newPhone,
+                              username: newUsername.isEmpty ? null : newUsername,
+                              gender: selectedGender.isEmpty ? null : selectedGender,
+                            );
+
+                            if (!context.mounted) {
+                              return;
+                            }
+
+                            if (res["status"] == true) {
+
+                              final prefs = await SharedPreferences.getInstance();
+
+                              await prefs.setString("name", newName);
+
+                              if (newPhone.isNotEmpty) {
+                                await prefs.setString("phone", newPhone);
+                              }
+
+                              if (newUsername.isNotEmpty) {
+                                await prefs.setString("username", newUsername);
+                              }
+
+                              if (selectedGender.isNotEmpty) {
+                                await prefs.setString("gender", selectedGender);
+                              }
+
+                              setState(() {
+                                name = newName;
+                                if (newPhone.isNotEmpty) phone = newPhone;
+                                if (newUsername.isNotEmpty) username = newUsername;
+                                if (selectedGender.isNotEmpty) gender = selectedGender;
+                              });
+
+                              Navigator.pop(context);
+
+                            } else {
+
+                              setModalState(() {
+                                submitting = false;
+                                error = res["message"]?.toString() ?? "Could not update profile";
+                              });
+                            }
+                          },
+
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4138),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+
+                          child: submitting
+                              ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                              : const Text(
+                            "Save Changes",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-
                 ),
-
-              ],
-
-            ),
-
-          ),
-
+              ),
+            );
+          },
         );
-
       },
-
     );
-
   }
-
 
   Future<void> _logout(
       BuildContext context,
@@ -605,7 +522,7 @@ class _ProfilePageState
         child: RefreshIndicator(
 
           color:
-          const Color(0xFFDF6907),
+          const Color(0xFFEF4138),
 
           onRefresh: loadUser,
 
@@ -730,7 +647,7 @@ class _ProfilePageState
                 // 🔥 USER CARD
                 GestureDetector(
 
-                  onTap: editName,
+                  onTap: editProfile,
 
                   child: Container(
 
@@ -798,7 +715,9 @@ class _ProfilePageState
 
                                   : Text(
 
-                                "+91 $phone",
+                                phone.isEmpty
+                                    ? "Add phone number"
+                                    : "+91 $phone",
 
                                 style:
                                  TextStyle(
@@ -815,8 +734,29 @@ class _ProfilePageState
 
                                 ),
                               ),
+
+                              const SizedBox(height: 2),
+
+                              Text(
+
+                                [
+                                  if (username.isNotEmpty) "@$username",
+                                  if (gender.isNotEmpty) gender[0].toUpperCase() + gender.substring(1),
+                                ].join("  •  "),
+
+                                style: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.black54,
+                                  fontSize: 11.8,
+                                ),
+                              ),
                             ],
                           ),
+                        ),
+
+                        Icon(
+                          Icons.edit,
+                          size: 16,
+                          color: isDark ? Colors.white70 : Colors.black45,
                         ),
                       ],
                     ),
@@ -825,306 +765,6 @@ class _ProfilePageState
 
                 const SizedBox(
                   height: 14,
-                ),
-
-                // 🔥 REFERRAL SECTION
-                Container(
-
-                  padding:
-                  const EdgeInsets.all(
-                    18,
-                  ),
-
-                  decoration:
-                  BoxDecoration(
-
-                    color:
-
-                    isDark
-
-                        ? const Color(
-                      0xFF1E1E1E,
-                    )
-
-                        : Colors.white,
-                    borderRadius:
-                    BorderRadius.circular(
-                      18,
-                    ),
-
-                    border: Border.all(
-                      color:
-                      const Color(
-                        0xFFDF6907,
-                      ),
-
-                      width: 1.4,
-                    ),
-
-                    boxShadow: [
-
-                      BoxShadow(
-                        color: Colors.black
-                            .withOpacity(
-                          0.04,
-                        ),
-
-                        blurRadius: 10,
-
-                        offset:
-                        const Offset(
-                          0,
-                          4,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
-
-                    children: [
-
-                      Row(
-                        children: [
-
-                          Container(
-
-                            width: 42,
-                            height: 42,
-
-                            decoration:
-                            BoxDecoration(
-
-                              color:
-                              const Color(
-                                0xFFDF6907,
-                              ).withOpacity(
-                                0.12,
-                              ),
-
-                              borderRadius:
-                              BorderRadius.circular(
-                                12,
-                              ),
-                            ),
-
-                            child: const Icon(
-                              Icons.card_giftcard,
-
-                              color:
-                              Color(
-                                0xFFDF6907,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(
-                            width: 12,
-                          ),
-
-                           Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment
-                                  .start,
-
-                              children: [
-
-                                Text(
-                                  "Referral Code",
-
-                                  style:
-                                  TextStyle(
-
-                                    fontSize:
-                                    15,
-
-                                    fontWeight:
-                                    FontWeight.w700,
-
-                                    color:
-
-                                    isDark
-
-                                        ? Colors.white
-
-                                        : Colors.black,
-                                  ),
-                                ),
-
-                                SizedBox(
-                                  height: 2,
-                                ),
-
-                                Text(
-                                  "Invite friends and earn rewards",
-
-                                  style:
-                                  TextStyle(
-                                    fontSize:
-                                    11,
-
-                                    color:
-
-                                    isDark
-
-                                        ? Colors.white70
-
-                                        : Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(
-                        height: 18,
-                      ),
-
-                      // 🔥 CODE BOX
-                      Container(
-
-                        width:
-                        double.infinity,
-
-                        padding:
-                        const EdgeInsets.symmetric(
-                          vertical: 18,
-                        ),
-
-                        decoration:
-                        BoxDecoration(
-
-                          color:
-
-                          isDark
-
-                              ? const Color(
-                            0xFF2A2A2A,
-                          )
-
-                              : const Color(
-                            0xFFFFF8ED,
-                          ),
-
-                          borderRadius:
-                          BorderRadius.circular(
-                            16,
-                          ),
-
-                          border: Border.all(
-                            color:
-                            const Color(
-                              0xFFDF6907,
-                            ),
-
-                            width: 1.2,
-                          ),
-                        ),
-
-                        child: Center(
-                          child: Text(
-
-                            referralCode
-                                .isEmpty
-
-                                ? "N/A"
-
-                                : referralCode,
-
-                            style:
-                            const TextStyle(
-
-                              fontSize: 24,
-
-                              letterSpacing:
-                              3,
-
-                              fontWeight:
-                              FontWeight.w800,
-
-                              color:
-                              Color(
-                                0xFFDF6907,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(
-                        height: 16,
-                      ),
-
-                      SizedBox(
-
-                        width:
-                        double.infinity,
-
-                        height: 50,
-
-                        child:
-                        ElevatedButton.icon(
-
-                          onPressed: () {
-
-                            final message =
-
-                                "🔥 Join ZapZapcart Shops and get amazing deals!\n\n"
-
-                                "Use my referral code: $referralCode\n\n"
-
-                                "Download App:\n"
-
-                                "https://play.google.com/store/apps/details?id=com.user.zipzapcart";
-
-                            Share.share(
-                              message,
-                            );
-                          },
-
-                          icon: const Icon(
-                            Icons.share,
-                          ),
-
-                          label: const Text(
-                            "Share Referral Code",
-                          ),
-
-                          style:
-                          ElevatedButton.styleFrom(
-
-                            backgroundColor:
-                            const Color(
-                              0xFFDF6907,
-                            ),
-
-                            foregroundColor:
-                            Colors.white,
-
-                            elevation: 0,
-
-                            shape:
-                            RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(
-                                14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 18,
                 ),
 
                 // 🔥 APP SETTINGS
@@ -1204,19 +844,6 @@ class _ProfilePageState
 
                 _settingTile(
 
-                  Icons.account_balance_wallet_outlined,
-
-                  "Wallet & Payments",
-
-                  "Cards, UPI, refunds and balance",
-
-                      () => nav(
-                    const WalletPage(),
-                  ),
-                ),
-
-                _settingTile(
-
                   Icons.rule_folder_outlined,
 
                   "Terms & Policies",
@@ -1277,7 +904,7 @@ class _ProfilePageState
 
                       backgroundColor:
                       const Color(
-                        0xFFDF6907,
+                        0xFFEF4138,
                       ),
 
                       foregroundColor:
@@ -1425,7 +1052,7 @@ class _ProfilePageState
 
                 color:
                 const Color(
-                  0xFFDF6907,
+                  0xFFEF4138,
                 ).withOpacity(
                   0.08,
                 ),
@@ -1441,7 +1068,7 @@ class _ProfilePageState
 
                 color:
                 const Color(
-                  0xFFDF6907,
+                  0xFFEF4138,
                 ),
 
                 size: 20,
@@ -1507,6 +1134,7 @@ class _ProfilePageState
 
              Icon(
               Icons.chevron_right_rounded,
+              size: 20,
               color:
 
               isDark
