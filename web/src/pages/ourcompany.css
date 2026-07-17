@@ -1,0 +1,166 @@
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.about-visual { position: relative; height: 420px; }
+.about-blob {
+  position: absolute;
+  inset: 30px;
+  border-radius: 42% 58% 60% 40% / 45% 40% 60% 55%;
+  background: linear-gradient(140deg, var(--navy-700), var(--red-500));
+  opacity: 0.9;
+}
+.about-card {
+  position: absolute;
+  background: white;
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 20px 40px -18px rgba(11,37,64,0.3);
+}
+.about-card svg { color: var(--red-500); flex-shrink: 0; }
+.about-card strong { display: block; font-family: 'Sora', sans-serif; font-size: 16px; color: var(--navy-900); }
+.about-card span { font-size: 12px; color: var(--text-500); }
+.about-card-1 { top: 8%; left: -4%; }
+.about-card-2 { top: 42%; right: -8%; }
+.about-card-3 { bottom: 6%; left: 12%; }
+
+.about-copy .eyebrow { display: block; }
+.about-copy h2 {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--text-700);
+}
+
+@media (max-width: 900px) {
+  .about-grid { grid-template-columns: 1fr; gap: 90px 0; }
+  .about-visual { height: 320px; }
+}
+
+/* ---------- About Zipzapcart showcase (image-matched design) ---------- */
+
+.about-showcase {
+  position: relative;
+}
+
+.about-showcase-grid {
+  display: grid;
+  grid-template-columns: 0.88fr 1fr;
+  gap: 72px;
+  align-items: center;
+}
+
+.about-showcase-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 460px;
+}
+
+.about-showcase-title {
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 800;
+  color: var(--navy-900);
+  position: relative;
+}
+.about-showcase-title::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 4px;
+  border-radius: 4px;
+  margin-top: 14px;
+  background: linear-gradient(90deg, var(--navy-700), var(--red-500));
+}
+.about-showcase-title span {
+  background: linear-gradient(90deg, var(--red-500), var(--orange-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.about-showcase-body {
+  font-size: 1.02rem;
+  line-height: 1.75;
+  color: var(--text-700);
+}
+
+.about-showcase-visual {
+  position: relative;
+  margin-top: -20px;
+  height: 420px;
+  width: 100%;
+}
+.about-showcase-visual .phone-scene {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  min-height: unset;
+  transform: scale(0.71);
+  transform-origin: left bottom;
+}
+.about-showcase-visual .cart-scene {
+  position: absolute;
+  left: 128px;
+  bottom: 6px;
+  width: 230px;
+}
+.about-showcase-visual .cart-shell {
+  width: 230px;
+}
+
+.about-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  padding-top: 6px;
+}
+
+.about-feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.about-feature-icon {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: linear-gradient(140deg, var(--navy-700), var(--red-500));
+  box-shadow: 0 14px 26px -12px rgba(11, 37, 64, 0.45);
+}
+
+.about-feature-row h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--navy-900);
+  margin-bottom: 6px;
+}
+
+.about-feature-row p {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--text-500);
+  max-width: 340px;
+}
+
+@media (max-width: 900px) {
+  .about-showcase-grid { grid-template-columns: 1fr; gap: 56px; }
+  .about-showcase-left { max-width: none; }
+  .about-showcase-visual { height: 340px; }
+  .about-showcase-visual .phone-scene { transform: scale(0.58); left: 50%; transform-origin: left bottom; margin-left: -80px; }
+  .about-showcase-visual .cart-scene { left: 50%; margin-left: 20px; width: 170px; }
+  .about-showcase-visual .cart-shell { width: 170px; }
+  .about-feature-list { gap: 36px; }
+}
